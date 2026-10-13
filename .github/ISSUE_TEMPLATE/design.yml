@@ -1,0 +1,60 @@
+name: Design
+description: Propose a design decision or trade study for cross-team review.
+title: "[Design]: "
+body:
+  - type: input
+    id: subsystem
+    attributes:
+      label: Subsystem
+      description: Identify the owning subsystem and responsible team.
+    validations:
+      required: true
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: What engineering problem does this design address?
+    validations:
+      required: true
+  - type: textarea
+    id: requirements
+    attributes:
+      label: Requirements
+      description: Link requirement IDs and official competition rule sources and revisions. Mark unknowns TBD.
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints
+      description: Record sourced space, mass, power, manufacturing, safety, or other limits; do not invent specifications.
+    validations:
+      required: true
+  - type: textarea
+    id: approach
+    attributes:
+      label: Proposed approach
+      description: Describe the candidate design and link a working engineering notebook entry.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Compare alternatives and decision criteria; include rejected approaches and rationale.
+    validations:
+      required: true
+  - type: textarea
+    id: interfaces
+    attributes:
+      label: Interfaces affected
+      description: Identify mechanical, electrical, software, and team interfaces requiring coordination. State none if applicable.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Define measurable design and verification outcomes and required evidence.
+    validations:
+      required: true

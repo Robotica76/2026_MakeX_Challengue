@@ -1,0 +1,46 @@
+name: Test
+description: Plan a verification activity and define its acceptance evidence.
+title: "[Test]: "
+body:
+  - type: input
+    id: item
+    attributes:
+      label: Item under test
+      description: Identify the component, subsystem, interface, robot, or mission and its revision.
+    validations:
+      required: true
+  - type: textarea
+    id: requirement
+    attributes:
+      label: Requirement
+      description: Link requirement IDs, applicable rule sources, and related issues.
+    validations:
+      required: true
+  - type: textarea
+    id: conditions
+    attributes:
+      label: Test conditions
+      description: Define verification level, setup, initial conditions, inputs, procedure, trials, and safety precautions.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+      description: Describe the expected observable outcome before executing the test.
+    validations:
+      required: true
+  - type: textarea
+    id: measurements
+    attributes:
+      label: Measurements
+      description: Specify quantities, units, instruments, uncertainty, and evidence to collect.
+    validations:
+      required: true
+  - type: textarea
+    id: criteria
+    attributes:
+      label: Pass/fail criteria
+      description: Define thresholds and completion criteria before execution; link the resulting test report when available.
+    validations:
+      required: true
