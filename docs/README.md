@@ -8,6 +8,7 @@ All technical values, task interpretations, and operating permissions are **TBD 
 
 | Stage | Shared workspace | Required record |
 | --- | --- | --- |
+| Define | [Project definition](00_project_definition.md) | Objectives, scope, constraints, and success criteria |
 | Understand | [Requirements](01_requirements/README.md) | Source-backed requirement and rule IDs |
 | Architect | [System architecture](02_system_architecture/README.md) | Interfaces, assumptions, budgets, decision records |
 | Design | [Subsystem design](03_design/README.md) | Alternatives, selected concept, prototype evidence |

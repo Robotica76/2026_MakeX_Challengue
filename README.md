@@ -12,7 +12,7 @@ unknown requirements, specifications, and selections remain **TBD**.
 
 | Area | Contents |
 | --- | --- |
-| [docs](docs/README.md) | Requirements, architecture, design, controls, integration, verification, strategy, and engineering notebook |
+| [docs](docs/README.md) | Project definition, requirements, architecture, design, controls, integration, verification, strategy, and engineering notebook |
 | [mechanical](mechanical/README.md) | Subsystem CAD, drawings, prototypes, manufacturing, and system assemblies |
 | [electrical](electrical/README.md) | Architecture, wiring, power, sensors, and bill of materials |
 | [software](software/README.md) | Future robot application, controls, autonomy, manual control, vision, and drivers |
