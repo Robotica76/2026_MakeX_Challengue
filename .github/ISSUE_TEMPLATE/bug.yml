@@ -1,0 +1,46 @@
+name: Bug
+description: Report an observed hardware, software, or integration defect.
+title: "[Bug]: "
+body:
+  - type: input
+    id: subsystem
+    attributes:
+      label: Subsystem
+      description: Identify the affected subsystem or interface.
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+      description: Describe what happened, frequency, and impact.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: Describe the expected outcome and link the requirement or design.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Provide repeatable steps and initial conditions, or explain why reproduction is unavailable.
+    validations:
+      required: true
+  - type: textarea
+    id: configuration
+    attributes:
+      label: Hardware/software configuration
+      description: Include component, CAD, wiring, firmware, software, and calibration revisions as applicable.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Link test reports, notebook entries, measurements, logs, photos, or video. State unavailable if needed; do not include secrets.
+    validations:
+      required: true

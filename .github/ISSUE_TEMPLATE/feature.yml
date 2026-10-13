@@ -1,0 +1,46 @@
+name: Feature
+description: Propose a robot capability or engineering improvement.
+title: "[Feature]: "
+body:
+  - type: input
+    id: capability
+    attributes:
+      label: Capability
+      description: What capability should the robot or engineering workflow gain?
+    validations:
+      required: true
+  - type: input
+    id: subsystem
+    attributes:
+      label: Subsystem
+      description: Name the owning subsystem or cross-team area.
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the need, scope, and related requirement or rule IDs.
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: Link prerequisite issues, affected teams, and interfaces. State none if applicable.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: List measurable outcomes required for completion.
+    validations:
+      required: true
+  - type: textarea
+    id: testing
+    attributes:
+      label: Testing required
+      description: Specify verification level, conditions, and evidence to collect.
+    validations:
+      required: true
