@@ -1,0 +1,11 @@
+{
+  "name": "robot_mecanum",
+  "drive": "mecanum",
+  "length_mm": 450,
+  "width_mm": 450,
+  "wheel_diameter_mm": 80,
+  "wheel_width_mm": 40,
+  "alliance": "red",
+  "start_area": "red_start_1",
+  "heading_deg": 0
+}
