@@ -171,7 +171,7 @@ class Dial:
         pygame.gfxdraw.filled_circle(screen, cx, cy, 4, UI_COLORS["text"])
         pygame.gfxdraw.aacircle(screen, cx, cy, 4, UI_COLORS["text"])
         img = font.render(f"{self.value:g}°", True, UI_COLORS["text"])
-        screen.blit(img, img.get_rect(center=(cx, cy + 24)))
+        screen.blit(img, img.get_rect(center=self._point(self.value + 180, 26)))  # opposite the hand
 
 
 class Dropdown:

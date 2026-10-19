@@ -1,8 +1,9 @@
-"""Side panel to set the robot start area, orientation and footprint, applied with Apply."""
+"""Side panel: robot start area, orientation and footprint (applied with Apply), plus
+loading and running an mBlock program."""
 
 from dataclasses import replace
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Optional
 
 import pygame
 
@@ -25,7 +26,7 @@ class RobotPanel:
     """Holds pending edits; nothing changes on the field until Apply (or Enter)."""
 
     def __init__(self, x: int, height: int, cfg: RobotConfig, config_path: Path,
-                 on_apply: Callable[[RobotConfig], str]):
+                 on_apply: Callable[[RobotConfig], str], program=None):
         self.rect = pygame.Rect(x, 0, PANEL_W, height)
         self.cfg = cfg
         self.config_path = config_path
@@ -55,9 +56,14 @@ class RobotPanel:
         half = (inner - gap) // 2
         self.reset_button = Button((left, y, half, 30), "Reset", self.reset)
         self.save_button = Button((left + half + gap, y, half, 30), "Save", self.save)
-        self.message_y = y + 44
+        y += 48
         self.boxes = [self.length_box, self.width_box]
         self.buttons = [self.apply_button, self.reset_button, self.save_button]
+        self.program = ProgramSection(left, y, inner, program) if program else None
+        if self.program:
+            self.buttons += self.program.buttons
+            y += ProgramSection.HEIGHT
+        self.message_y = y
 
     # --- actions ---------------------------------------------------------------
     @property
@@ -69,39 +75,39 @@ class RobotPanel:
         return self.start_dropdown.value
 
     def _select_start(self, start_area: str) -> None:
-        self._say(f"{self.start_dropdown.label()} selected, press Apply")
+        self.say(f"{self.start_dropdown.label()} selected, press Apply")
 
     def _select_heading(self, deg: float) -> None:
-        self._say(f"Heading {deg:g}° selected, press Apply")
+        self.say(f"Heading {deg:g}° selected, press Apply")
 
-    def _say(self, text: str, error: bool = False) -> None:
+    def say(self, text: str, error: bool = False) -> None:
         self.message, self.message_is_error = text, error
 
     def apply(self) -> None:
         length, width = self.length_box.value(), self.width_box.value()
         self.length_box.invalid, self.width_box.invalid = length is None, width is None
         if length is None or width is None:
-            self._say("Length and width must be numbers in mm", error=True)
+            self.say("Length and width must be numbers in mm", error=True)
             return
         try:
             cfg = replace(self.cfg.resized(length, width), heading_deg=float(self.pending_heading),
                           start_area=self.pending_start, alliance=self.pending_start.split("_")[0])
         except ValueError as exc:
-            self._say(str(exc), error=True)
+            self.say(str(exc), error=True)
             return
         self.set_config(cfg)
         warning = self.on_apply(cfg)
-        self._say(warning or f"Applied {self.start_dropdown.label()}, {length:g} x {width:g} mm, "
+        self.say(warning or f"Applied {self.start_dropdown.label()}, {length:g} x {width:g} mm, "
                              f"{self.pending_heading:g}°", bool(warning))
 
     def reset(self) -> None:
         self.set_config(load_config(self.config_path))
         self.on_apply(self.cfg)
-        self._say(f"Reloaded {self.config_path.name}")
+        self.say(f"Reloaded {self.config_path.name}")
 
     def save(self) -> None:
         save_config(self.cfg, self.config_path)
-        self._say(f"Saved applied values to {self.config_path.name}")
+        self.say(f"Saved applied values to {self.config_path.name}")
 
     def set_config(self, cfg: RobotConfig) -> None:
         """Show an externally changed config (e.g. arrow keys) in the boxes."""
@@ -172,6 +178,8 @@ class RobotPanel:
             color = UI_COLORS["error"] if self.message_is_error else UI_COLORS["muted"]
             for i, line in enumerate(_wrap(self.message, font, PANEL_W - 2 * PAD)):
                 screen.blit(font.render(line, True, color), (left, self.message_y + 46 + i * 18))
+        if self.program:
+            self.program.draw(screen, fonts)
         self.start_dropdown.draw_list(screen, font)  # open list goes on top of everything
 
 
@@ -185,3 +193,44 @@ def _wrap(text, font, width):
             lines.append(line)
             line = word
     return lines + [line] if line else lines
+
+
+class ProgramSection:
+    """Load / Run / Stop for an mBlock program, plus the run clock and status.
+
+    `controller` provides load(), run(), stop() and status() -> (file name or None,
+    sim time s, time limit s, status, message).
+    """
+
+    HEIGHT = 128
+    STATUS_COLORS = {"running": "dial_pending", "out_of_bounds": "error", "error": "error",
+                     "done": "muted", "stopped": "muted", "idle": "muted"}
+
+    def __init__(self, left: int, y: int, inner: int, controller):
+        self.left, self.y, self.inner = left, y, inner
+        self.controller = controller
+        gap = 6
+        third = (inner - 2 * gap) // 3
+        by = y + 58
+        self.load_button = Button((left, by, third, 30), "Load .py", controller.load)
+        self.run_button = Button((left + third + gap, by, third, 30), "Run", controller.run, primary=True)
+        self.stop_button = Button((left + 2 * (third + gap), by, third, 30), "Stop", controller.stop)
+        self.buttons = [self.load_button, self.run_button, self.stop_button]
+
+    def draw(self, screen, fonts) -> None:
+        name, t, limit, status, message = self.controller.status()
+        screen.blit(fonts.small.render("MBLOCK PROGRAM", True, UI_COLORS["muted"]), (self.left, self.y + 2))
+        box = pygame.Rect(self.left, self.y + 20, self.inner, 30)
+        pygame.draw.rect(screen, UI_COLORS["box"], box, border_radius=6)
+        pygame.draw.rect(screen, UI_COLORS["border"], box, 1, border_radius=6)
+        label = name or "No file loaded"
+        while fonts.body.size(label)[0] > self.inner - 16 and len(label) > 4:
+            label = "…" + label[2:]
+        color = UI_COLORS["text"] if name else UI_COLORS["muted"]
+        img = fonts.body.render(label, True, color)
+        screen.blit(img, (box.x + 8, box.centery - img.get_height() // 2))
+        clock = f"t {t:5.1f} s" + (f" / {limit:g} s" if limit else "")
+        status_color = UI_COLORS[self.STATUS_COLORS.get(status, "muted")]
+        screen.blit(fonts.mono.render(clock, True, UI_COLORS["text"]), (self.left, self.y + 98))
+        tag = fonts.label.render(status.replace("_", " ").upper(), True, status_color)
+        screen.blit(tag, tag.get_rect(topright=(self.left + self.inner, self.y + 98)))

@@ -7,5 +7,15 @@
   "wheel_width_mm": 40,
   "alliance": "red",
   "start_area": "red_start_1",
-  "heading_deg": 0
+  "heading_deg": 0,
+  "drive_train": {
+    "motors": {
+      "M1": {"wheel": "front_left", "direction": 1},
+      "M2": {"wheel": "front_right", "direction": 1},
+      "M3": {"wheel": "rear_left", "direction": 1},
+      "M4": {"wheel": "rear_right", "direction": 1}
+    },
+    "gear_ratio": 1.0,
+    "max_rpm": 580
+  }
 }

@@ -6,7 +6,7 @@ footprint centre. Length and width are the overall footprint, wheels included.
 
 import json
 import math
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass, fields, replace
 from pathlib import Path
 from typing import List, Tuple
 
@@ -51,13 +51,19 @@ class RobotConfig:
 
 
 def load_config(path: Path = DEFAULT_CONFIG) -> RobotConfig:
-    cfg = RobotConfig(**json.loads(Path(path).read_text()))
+    """Footprint/start fields only; other sections (e.g. drive_train) are read elsewhere."""
+    data = json.loads(Path(path).read_text())
+    cfg = RobotConfig(**{f.name: data[f.name] for f in fields(RobotConfig) if f.name in data})
     cfg.validate()
     return cfg
 
 
 def save_config(cfg: RobotConfig, path: Path = DEFAULT_CONFIG) -> None:
-    Path(path).write_text(json.dumps(asdict(cfg), indent=2) + "\n")
+    """Update the footprint/start fields, keeping any other sections in the file."""
+    path = Path(path)
+    data = json.loads(path.read_text()) if path.exists() else {}
+    data.update(asdict(cfg))
+    path.write_text(json.dumps(data, indent=2) + "\n")
 
 
 @dataclass(frozen=True)

@@ -5,8 +5,12 @@ Usage:
     python viewer.py --length 480 --width 420 --heading 90  # override robot size/heading
     python viewer.py --screenshot field.png   # render once and exit (headless OK)
 
-Side panel: pick an orientation, type length/width in mm, then Apply (or Enter).
+    python viewer.py --program programs/all_motors_forward.py  # preload an mBlock program
+
+Side panel: pick start, orientation and length/width, then Apply (or Enter).
 Reset reloads robot_config.json, Save writes the applied values to it.
+mBlock program: Load .py, Run (real time, stops at the time limit or when the robot
+leaves the field: "Out of boundaries"), Stop. Space also runs/stops.
 Keys (outside the text boxes): G grid, L labels, S screenshot, Esc quit,
 Up/Down length +/-10 mm, Right/Left width +/-10 mm (Shift: 1 mm).
 Hover shows the cursor position in field mm and the elements under it.
@@ -14,13 +18,16 @@ Hover shows the cursor position in field mm and the elements under it.
 
 import argparse
 import os
+import subprocess
 import sys
 from dataclasses import replace
 from pathlib import Path
 
 import field_layout as fl
 from panel import PANEL_W, RobotPanel
+from kinematics import load_drive_train
 from robot import DEFAULT_CONFIG, load_config, mecanum_wheels, start_pose
+from simulation import AUTO_STAGE_S, Simulation
 
 from theme import PALETTE as COLORS, RADIUS, Fonts
 
@@ -70,12 +77,13 @@ def _blend_polygon(surface, color, points):
     surface.blit(layer, (x0, y0))
 
 
-def draw_robot(screen, view, cfg, pose, ss=1):
+def draw_robot(screen, view, cfg, pose, ss=1, alert=False):
     """Chassis box, a mecanum wheel in each corner, and a heading arrow."""
     import pygame
 
+    accent = COLORS["robot_alert"] if alert else COLORS["robot"]
     body = [view.to_screen(*c) for c in pose.corners(cfg)]
-    _blend_polygon(screen, COLORS["robot_body"], body)
+    _blend_polygon(screen, COLORS["robot_alert_body"] if alert else COLORS["robot_body"], body)
     for wheel in mecanum_wheels(cfg):
         wx, wy = wheel.center
         tire = [view.to_screen(*c) for c in pose.box(wx, wy, cfg.wheel_diameter_mm, cfg.wheel_width_mm)]
@@ -88,16 +96,46 @@ def draw_robot(screen, view, cfg, pose, ss=1):
             a = pose.to_field(ox - dx * half, wy - dy * half)
             b = pose.to_field(ox + dx * half, wy + dy * half)
             pygame.draw.line(screen, COLORS["roller"], view.to_screen(*a), view.to_screen(*b), ss)
-    pygame.draw.polygon(screen, COLORS["robot"], body, 2 * ss)
+    pygame.draw.polygon(screen, accent, body, 2 * ss)
     center = view.to_screen(pose.x, pose.y)
     tip = view.to_screen(*pose.to_field(cfg.length_mm / 2 - cfg.wheel_diameter_mm / 2, 0))
-    pygame.draw.line(screen, COLORS["robot"], center, tip, 3 * ss)
-    pygame.draw.circle(screen, COLORS["robot"], tip, 4 * ss)
-    pygame.draw.circle(screen, COLORS["robot"], center, 3 * ss)
+    pygame.draw.line(screen, accent, center, tip, 3 * ss)
+    pygame.draw.circle(screen, accent, tip, 4 * ss)
+    pygame.draw.circle(screen, accent, center, 3 * ss)
 
 
-def draw_field(surface, view, elements, robot_cfg, pose, show_grid, ss=1):
-    """Everything that only changes when the robot config or toggles change."""
+class _SpriteView:
+    """Maps field mm into a supersampled sprite whose top-left is (x0, y0) on screen."""
+
+    def __init__(self, view, x0, y0, ss):
+        self.view, self.x0, self.y0, self.ss = view, x0, y0, ss
+
+    def to_screen(self, x, y):
+        v = self.view
+        return (int(round((v.ox + x * v.scale - self.x0) * self.ss)),
+                int(round((v.oy - y * v.scale - self.y0) * self.ss)))
+
+
+def blit_robot(screen, view, cfg, pose, alert=False):
+    """Draw the robot supersampled in its own small sprite (cheap enough per frame)."""
+    import pygame
+    pts = [view.to_screen(*c) for c in pose.corners(cfg)]
+    pad = 8
+    x0, y0 = min(p[0] for p in pts) - pad, min(p[1] for p in pts) - pad
+    w, h = max(p[0] for p in pts) + pad - x0, max(p[1] for p in pts) + pad - y0
+    big = pygame.Surface((w * SUPERSAMPLE, h * SUPERSAMPLE), pygame.SRCALPHA)
+    draw_robot(big, _SpriteView(view, x0, y0, SUPERSAMPLE), cfg, pose, SUPERSAMPLE, alert)
+    screen.blit(pygame.transform.smoothscale(big, (w, h)), (x0, y0))
+
+
+def draw_trail(screen, view, trail):
+    import pygame
+    if len(trail) > 1:
+        pygame.draw.aalines(screen, COLORS["trail"], False, [view.to_screen(x, y) for x, y in trail])
+
+
+def draw_field(surface, view, elements, show_grid, ss=1):
+    """The static field: redrawn only when the grid toggle changes."""
     import pygame
 
     surface.fill(COLORS["background"])
@@ -152,7 +190,6 @@ def draw_field(surface, view, elements, robot_cfg, pose, show_grid, ss=1):
                 pygame.draw.rect(surface, COLORS["overhead_edge"], r, ss, border_radius=small)
 
     pygame.draw.rect(surface, COLORS["frame"], field, 2 * ss, border_radius=radius)
-    draw_robot(surface, view, robot_cfg, pose, ss)
 
 
 class FieldLayer:
@@ -164,12 +201,12 @@ class FieldLayer:
         self.big_view = View(size[0] * SUPERSAMPLE, size[1] * SUPERSAMPLE, SUPERSAMPLE)
         self._key, self._image = None, None
 
-    def image(self, elements, robot_cfg, pose, show_grid):
+    def image(self, elements, show_grid):
         import pygame
-        key = (robot_cfg, pose.x, pose.y, pose.theta, show_grid)
+        key = show_grid
         if key != self._key:
             big = pygame.Surface((self.size[0] * SUPERSAMPLE, self.size[1] * SUPERSAMPLE))
-            draw_field(big, self.big_view, elements, robot_cfg, pose, show_grid, SUPERSAMPLE)
+            draw_field(big, self.big_view, elements, show_grid, SUPERSAMPLE)
             self._image = pygame.transform.smoothscale(big, self.size)
             self._key = key
         return self._image
@@ -218,11 +255,23 @@ def draw_hud(screen, view, elements, fonts, hover=None, status=""):
         screen.blit(img, (bar.x + 4, bar.y - img.get_height() - 6))
 
 
+def draw_banner(screen, view, fonts, text):
+    import pygame
+    img = fonts.title.render(text, True, COLORS["background"])
+    box = img.get_rect(center=(int(view.ox + fl.FIELD_W * view.scale / 2), int(view.oy - fl.FIELD_H * view.scale / 2)))
+    pygame.draw.rect(screen, COLORS["warning"], box.inflate(36, 18), border_radius=RADIUS)
+    screen.blit(img, box)
+
+
 def draw(screen, layer, elements, robot_cfg, pose, show_grid, show_labels, fonts, hover=None,
-         status=""):
-    screen.blit(layer.image(elements, robot_cfg, pose, show_grid), (0, 0))
+         status="", trail=(), alert=False):
+    screen.blit(layer.image(elements, show_grid), (0, 0))
     if show_labels:
         draw_labels(screen, layer.view, elements, fonts, robot_cfg)
+    draw_trail(screen, layer.view, trail)
+    blit_robot(screen, layer.view, robot_cfg, pose, alert)
+    if alert:
+        draw_banner(screen, layer.view, fonts, "OUT OF BOUNDARIES")
     draw_hud(screen, layer.view, elements, fonts, hover, status)
 
 
@@ -234,14 +283,84 @@ def footprint_warning(cfg, pose, elements) -> str:
     return f"Footprint leaves {cfg.start_area} at {cfg.heading_deg:g}° (start area is 500 x 500 mm)"
 
 
+PROGRAMS_DIR = Path(__file__).with_name("programs")
+
+_TK_DIALOG = """
+import sys, tkinter, tkinter.filedialog
+root = tkinter.Tk(); root.withdraw()
+print(tkinter.filedialog.askopenfilename(initialdir=sys.argv[1], title="Select an mBlock Python program",
+                                         filetypes=[("Python", "*.py")]) or "")
+"""
+
+
+def choose_python_file(initial_dir: Path):
+    """Native file picker in a separate process (keeps it out of the pygame event loop)."""
+    try:
+        if sys.platform == "darwin":
+            script = (f'POSIX path of (choose file with prompt "Select an mBlock Python program" '
+                      f'default location (POSIX file "{initial_dir}"))')
+            out = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
+        else:
+            out = subprocess.run([sys.executable, "-c", _TK_DIALOG, str(initial_dir)],
+                                 capture_output=True, text=True)
+    except OSError:
+        return None
+    path = out.stdout.strip()
+    return Path(path) if path else None
+
+
+class ProgramController:
+    """Glue between the panel's Load / Run / Stop buttons and the simulation."""
+
+    def __init__(self, sim: Simulation, say):
+        self.sim, self.say = sim, say
+
+    def load(self):
+        if self.sim.running:
+            self.sim.stop()
+        path = choose_python_file(self.sim.program.parent if self.sim.program else PROGRAMS_DIR)
+        if path is None:
+            return
+        if path.suffix != ".py":
+            self.say(f"{path.name} is not a .py file", True)
+            return
+        self.sim.program = path
+        self.sim.reset()
+        self.say(f"Loaded {path.name}, press Run")
+
+    def run(self):
+        self.sim.run()
+        if self.sim.state.status == "error":
+            self.say(self.sim.state.message, True)
+
+    def stop(self):
+        if self.sim.running:
+            self.sim.stop()
+        else:
+            self.sim.reset()  # second press puts the robot back on its start pose
+
+    def toggle(self):
+        self.stop() if self.sim.running else self.run()
+
+    def status(self):
+        name = self.sim.program.name if self.sim.program else None
+        st = self.sim.state
+        return name, self.sim.time, self.sim.time_limit, st.status, st.message
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG, help="robot config JSON")
-    parser.add_argument("--size", default="1440x860", help="window size WxH in px (panel included)")
+    parser.add_argument("--size", default="1440x900", help="window size WxH in px (panel included)")
     parser.add_argument("--screenshot", type=Path, help="render once to this PNG and exit")
     parser.add_argument("--length", type=float, help="robot length in mm (overrides config)")
     parser.add_argument("--width", type=float, help="robot width in mm (overrides config)")
     parser.add_argument("--heading", type=float, help="robot heading in degrees, CCW from +x")
+    parser.add_argument("--program", type=Path, help="mBlock Python program to preload")
+    parser.add_argument("--time-limit", type=float, default=AUTO_STAGE_S,
+                        help="stop the run after this many simulated seconds (0 = no limit)")
+    parser.add_argument("--run-for", type=float, default=0,
+                        help="with --screenshot: run the program this many seconds first")
     args = parser.parse_args(argv)
 
     if args.screenshot:
@@ -259,7 +378,12 @@ def main(argv=None):
             parser.error(str(exc))
     if args.heading is not None:
         robot_cfg = replace(robot_cfg, heading_deg=args.heading)
-    pose = start_pose(robot_cfg, elements)
+    sim = Simulation(robot_cfg, start_pose(robot_cfg, elements), load_drive_train(args.config),
+                     args.time_limit)
+    if args.program:
+        if not args.program.is_file():
+            parser.error(f"--program {args.program} not found")
+        sim.program = args.program
 
     pygame.init()
     screen = pygame.display.set_mode((width, height))
@@ -269,27 +393,40 @@ def main(argv=None):
     view = layer.view
 
     def apply_config(cfg) -> str:
-        nonlocal robot_cfg, pose
-        robot_cfg, pose = cfg, start_pose(cfg, elements)
-        return footprint_warning(robot_cfg, pose, elements)
+        nonlocal robot_cfg
+        robot_cfg = cfg
+        sim.reset(cfg, start_pose(cfg, elements))
+        return footprint_warning(cfg, sim.pose, elements)
 
-    panel = RobotPanel(width - PANEL_W, height, robot_cfg, args.config, apply_config)
-    status = footprint_warning(robot_cfg, pose, elements)
+    controller = ProgramController(sim, say=None)
+    panel = RobotPanel(width - PANEL_W, height, robot_cfg, args.config, apply_config, controller)
+    controller.say = panel.say
+    note = footprint_warning(robot_cfg, sim.pose, elements)
 
-    def render(hover=None, status=""):
-        draw(screen, layer, elements, robot_cfg, pose, show_grid, show_labels, fonts, hover, status)
+    def render(hover=None):
+        st = sim.state
+        alert = st.status == "out_of_bounds"
+        message = st.message if st.status in ("out_of_bounds", "error") else note
+        draw(screen, layer, elements, robot_cfg, sim.pose, show_grid, show_labels, fonts, hover,
+             message, st.trail, alert)
         panel.draw(screen, fonts)
 
     show_grid, show_labels = True, True
     if args.screenshot:
-        render(status=status)
+        if args.run_for and sim.program:
+            sim.run()
+            for _ in range(int(args.run_for * 60)):
+                sim.step(1 / 60)
+        render()
         pygame.image.save(screen, str(args.screenshot))
+        sim.reset()
         pygame.quit()
         return 0
 
     clock = pygame.time.Clock()
     running = True
     while running:
+        frame_s = clock.tick(60) / 1000.0
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -305,10 +442,12 @@ def main(argv=None):
                     dl, dw = sizes[event.key]
                     try:
                         cfg = robot_cfg.resized(robot_cfg.length_mm + dl, robot_cfg.width_mm + dw)
-                        status = apply_config(cfg)
+                        note = apply_config(cfg)
                         panel.set_config(cfg)
                     except ValueError as exc:
-                        status = str(exc)
+                        note = str(exc)
+                elif event.key == pygame.K_SPACE:
+                    controller.toggle()
                 elif event.key == pygame.K_ESCAPE:
                     running = False
                 elif event.key == pygame.K_g:
@@ -317,12 +456,16 @@ def main(argv=None):
                     show_labels = not show_labels
                 elif event.key == pygame.K_s:
                     pygame.image.save(screen, "field_screenshot.png")
+        was_running = sim.running
+        sim.step(frame_s)
+        if was_running and not sim.running:
+            panel.say(sim.state.message, sim.state.status in ("out_of_bounds", "error"))
         mx, my = pygame.mouse.get_pos()
         hx, hy = view.to_field(mx, my)
         inside = mx < width - PANEL_W and 0 <= hx <= fl.FIELD_W and 0 <= hy <= fl.FIELD_H
-        render((hx, hy) if inside else None, status)
+        render((hx, hy) if inside else None)
         pygame.display.flip()
-        clock.tick(30)
+    sim.reset()
     pygame.quit()
     return 0
 
