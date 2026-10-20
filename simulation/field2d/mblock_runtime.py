@@ -11,15 +11,18 @@ The program runs unchanged in a worker thread. Its imports of `novapi`,
 Anything else the program calls raises UnsupportedAPI, reported in the viewer,
 so missing stand-ins are obvious instead of silently ignored.
 
-Stop works even for loops that never call a simulated API (`while True: pass`):
-a line tracer on the program thread raises ProgramStopped at the next line of
-the program file. Only a single long call into C code (no Python lines run) can
-outlive Stop; ProgramRunner.stop() reports that case.
+Stop works even for loops that never call a simulated API (`while True: pass`)
+or that catch everything (`except BaseException`): ProgramRunner.stop() injects
+ProgramStopped into the program thread (CPython async exception) repeatedly
+until the thread exits. Only a single long call into C code, which never returns
+to the interpreter, can outlive Stop; stop() reports that case.
 """
 
 import builtins
+import ctypes
 import sys
 import threading
+import time
 import traceback
 import types
 from pathlib import Path
@@ -196,21 +199,20 @@ class ProgramRunner:
         sim_builtins = dict(vars(builtins), __import__=sim_import)
         program_globals = {"__name__": "__main__", "__file__": str(self.path), "__builtins__": sim_builtins}
 
-        tracer = _stop_tracer(str(self.path), self.stop_event)
-
         def run():
-            sys.settrace(tracer)  # this thread only
             try:
-                exec(code, program_globals)
-            except ProgramStopped:
+                try:
+                    exec(code, program_globals)
+                except ProgramStopped:
+                    pass
+                except UnsupportedAPI as exc:
+                    self.error = f"Unsupported: {exc}"
+                except Exception:  # report the user's traceback, trimmed to their file
+                    lines = traceback.format_exc().strip().splitlines()
+                    self.error = lines[-1] + _user_line(sys.exc_info()[2], self.path)
+            except ProgramStopped:  # a stop injected while handling the program's exit
                 pass
-            except UnsupportedAPI as exc:
-                self.error = f"Unsupported: {exc}"
-            except Exception:  # report the user's traceback, trimmed to their file
-                lines = traceback.format_exc().strip().splitlines()
-                self.error = lines[-1] + _user_line(sys.exc_info()[2], self.path)
             finally:
-                sys.settrace(None)
                 self.finished = True
                 self.clock.mark_finished()
 
@@ -218,25 +220,29 @@ class ProgramRunner:
         self._thread.start()
 
     def stop(self, timeout: float = 1.0) -> bool:
-        """Stop the program; True once its thread has exited."""
+        """Stop the program; True once its thread has exited.
+
+        Cooperative first (simulated APIs check stop_event), then ProgramStopped
+        is injected into the thread every few ms, so a loop that swallows one
+        injection still gets the next.
+        """
         self.stop_event.set()
-        if self._thread:
-            self._thread.join(timeout)
-            return not self._thread.is_alive()
-        return True
+        thread = self._thread
+        if thread is None:
+            return True
+        thread.join(0.05)
+        deadline = time.monotonic() + timeout
+        while thread.is_alive() and not self.finished and time.monotonic() < deadline:
+            _raise_in_thread(thread, ProgramStopped)
+            thread.join(0.01)
+        thread.join(max(0.0, deadline - time.monotonic()))  # finished: let it return
+        return not thread.is_alive()
 
 
-def _stop_tracer(filename: str, stop: threading.Event):
-    """sys.settrace hook raising ProgramStopped on the next line of the program file."""
-    def local(frame, event, arg):
-        if event == "line" and stop.is_set():
-            raise ProgramStopped()
-        return local
-
-    def global_(frame, event, arg):
-        return local if frame.f_code.co_filename == filename else None
-
-    return global_
+def _raise_in_thread(thread: threading.Thread, exc_type) -> None:
+    """Ask CPython to raise exc_type in `thread` at its next bytecode boundary."""
+    if thread.ident is not None:
+        ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_ulong(thread.ident), ctypes.py_object(exc_type))
 
 
 def _user_line(tb, path: Path) -> str:
