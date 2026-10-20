@@ -80,9 +80,9 @@ for simulator stand-ins (`mblock_runtime.py`). Supported so far:
 The program thread and the simulation run in lockstep: commands after a
 `time.sleep(t)` take effect exactly `t` simulated seconds later. As on the robot,
 motors keep their last speed after the program ends. A loop that never sleeps
-still runs, without lockstep. Stop ends any program at its next line, even a
-loop that calls no simulated API; only a single long call into C code could
-outlive it, and the run message then says so. Commanded speeds are clamped to
+still runs, without lockstep. Stop ends any program, even a loop that calls no
+simulated API or catches every exception; only a single long call into C code
+could outlive it, and the run message then says so. Commanded speeds are clamped to
 `max_rpm` for every port, so `get_value("speed")` matches the simulated motion.
 An unreadable or non-UTF-8 program file is reported as an error.
 
@@ -110,6 +110,27 @@ limits, rollers in the standard layout. Wheel surface speed = rpm / 60 x pi x 80
 (10 RPM = 41.9 mm/s). No collisions with field elements yet; only the field edge
 stops the run.
 
+## Emulated Bluetooth gamepad
+
+![Gamepad](gamepad.png)
+
+**Open gamepad** in the panel (or `python gamepad.py`) opens a separate window with
+the Makeblock controller layout. Every physical control is clickable:
+
+| Control | Id | Behaviour |
+| --- | --- | --- |
+| Shoulders L1, L2, R2, R1 | `L1` `L2` `R2` `R1` | Held while the mouse is down |
+| Arrow keys | `up` `down` `left` `right` | Held while the mouse is down |
+| Menu, Bluetooth, Plus | `menu` `bluetooth` `plus` | Held while the mouse is down |
+| Number buttons 1-4 | `button_1` .. `button_4` | Held while the mouse is down |
+| Left / right joystick | `left_stick` `right_stick` | Drag; x, y in -1..1 (+y up), springs back to centre |
+| On / Off switch | `power` | Toggle; while off nothing else responds |
+
+Each change is printed as one JSON line (`{"event": "press", "control": "L1"}`,
+`{"event": "axis", "control": "left_stick", "x": 0.42, "y": -1.0}`, ...) to the
+terminal that started the viewer. **The simulation does not consume these events
+yet**; wiring them to the robot is the next step.
+
 ## Files
 
 | File | Contents |
@@ -125,7 +146,9 @@ stops the run.
 | `simulation.py` | Run state, integration, time limit and out-of-boundaries check |
 | `programs/` | Example mBlock programs |
 | `test_field_layout.py` | Layout, robot size/wheels and headless panel checks |
+| `gamepad.py` | Emulated Makeblock Bluetooth gamepad window (own process) |
 | `test_simulation.py` | Kinematics, runtime (sleep, errors, stop) and boundary checks |
+| `test_gamepad.py` | Gamepad controls, hit areas, events, rendering |
 
 ## Frame and conventions
 

@@ -309,6 +309,35 @@ def choose_python_file(initial_dir: Path):
     return Path(path) if path else None
 
 
+class GamepadLauncher:
+    """Opens the emulated gamepad (gamepad.py) in its own process and window.
+
+    Its JSON event lines go to this terminal for now; the simulation does not
+    read them yet.
+    """
+
+    SCRIPT = Path(__file__).with_name("gamepad.py")
+
+    def __init__(self, say):
+        self.say = say
+        self.proc = None
+
+    def open(self):
+        if self.proc and self.proc.poll() is None:
+            self.say("Gamepad window is already open")
+            return
+        try:
+            self.proc = subprocess.Popen([sys.executable, str(self.SCRIPT)])
+        except OSError as exc:
+            self.say(f"Could not open the gamepad: {exc}", True)
+            return
+        self.say("Gamepad window opened")
+
+    def close(self):
+        if self.proc and self.proc.poll() is None:
+            self.proc.terminate()
+
+
 class ProgramController:
     """Glue between the panel's Load / Run / Stop buttons and the simulation."""
 
@@ -399,8 +428,9 @@ def main(argv=None):
         return footprint_warning(cfg, sim.pose, elements)
 
     controller = ProgramController(sim, say=None)
-    panel = RobotPanel(width - PANEL_W, height, robot_cfg, args.config, apply_config, controller)
-    controller.say = panel.say
+    gamepad = GamepadLauncher(say=None)
+    panel = RobotPanel(width - PANEL_W, height, robot_cfg, args.config, apply_config, controller, gamepad)
+    controller.say = gamepad.say = panel.say
     note = footprint_warning(robot_cfg, sim.pose, elements)
 
     def render(hover=None):
@@ -466,6 +496,7 @@ def main(argv=None):
         render((hx, hy) if inside else None)
         pygame.display.flip()
     sim.reset()
+    gamepad.close()
     pygame.quit()
     return 0
 
