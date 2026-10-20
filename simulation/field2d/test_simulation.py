@@ -1,6 +1,7 @@
 """Kinematics, mBlock runtime and simulation checks: python -m unittest (this directory)."""
 
 import math
+import threading
 import unittest
 from dataclasses import replace
 from pathlib import Path
@@ -8,6 +9,7 @@ from tempfile import TemporaryDirectory
 
 import field_layout as fl
 from kinematics import DriveTrain, MotorPort, body_velocity, integrate, load_drive_train
+from mblock_runtime import MotorBus
 from robot import RobotPose, load_config, start_pose
 from simulation import Simulation
 
@@ -133,6 +135,76 @@ class SimulationTest(unittest.TestCase):
         sim = self.make(program=self.program(src), time_limit=1)
         run_until_done(sim, seconds=2)
         self.assertEqual(sim.state.status, "done")
+
+    # --- regressions from the PR #26 review ---------------------------------
+    def assert_no_program_threads(self):
+        alive = [t for t in threading.enumerate() if t.name == "mblock-program" and t.is_alive()]
+        self.assertEqual(alive, [])
+
+    def run_then_stop(self, src, frames=10):
+        sim = self.make(program=self.program(src), time_limit=0)
+        sim.run()
+        for _ in range(frames):
+            sim.step(1 / 60)
+        sim.stop()
+        return sim
+
+    def test_stop_kills_loop_without_api_calls(self):
+        sim = self.run_then_stop("while True:\n    pass\n")
+        self.assertEqual(sim.state.status, "stopped")
+        self.assertNotIn("warning", sim.state.message)
+        self.assert_no_program_threads()
+
+    def test_stop_kills_loop_in_helper_function_with_bare_except(self):
+        src = ("import math\n"
+               "def spin():\n"
+               "    while True:\n"
+               "        try:\n"
+               "            math.sqrt(2)\n"
+               "        except BaseException:\n"
+               "            pass\n"
+               "spin()\n")
+        sim = self.run_then_stop(src)
+        self.assertEqual(sim.state.status, "stopped")
+        self.assert_no_program_threads()
+
+    def test_repeated_runs_do_not_accumulate_workers(self):
+        sim = self.make(program=self.program("while True:\n    pass\n"), time_limit=0.1)
+        for _ in range(3):
+            run_until_done(sim, seconds=1)
+            sim.reset()
+        self.assert_no_program_threads()
+
+    def test_motor_bus_clamps_commands(self):
+        bus = MotorBus(max_rpm=580)
+        bus.set("M5", 1000)
+        bus.set("M6", -1000)
+        self.assertEqual(bus.snapshot(), {"M5": 580, "M6": -580})
+
+    def test_speed_feedback_matches_motion_limit(self):
+        src = ("from mbuild.encoder_motor import encoder_motor_class\n"
+               "drive = [encoder_motor_class(p, 'INDEX1') for p in ('M1', 'M2', 'M3', 'M4')]\n"
+               "shooter = encoder_motor_class('M5', 'INDEX1')  # not a drive wheel\n"
+               "for m in drive + [shooter]: m.set_speed(1000)\n"
+               "assert drive[0].get_value('speed') == 580, drive[0].get_value('speed')\n"
+               "assert shooter.get_value('speed') == 580, shooter.get_value('speed')\n")
+        sim = run_until_done(self.make(program=self.program(src), time_limit=1), seconds=2)
+        self.assertEqual(sim.state.status, "done", sim.state.message)
+        self.assertAlmostEqual(sim.pose.x - sim.start_pose.x, 580 / 60 * math.pi * 80, delta=2)
+
+    def test_missing_program_file_is_reported(self):
+        sim = self.make(program=Path(self.program("pass\n").parent, "deleted.py"))
+        sim.run()  # must not raise into the viewer
+        self.assertEqual(sim.state.status, "error")
+        self.assertIn("Cannot read deleted.py", sim.state.message)
+
+    def test_undecodable_program_file_is_reported(self):
+        path = self.program("")
+        path.write_bytes(b"\xff\xfe\x00 not utf-8")
+        sim = self.make(program=path)
+        sim.run()
+        self.assertEqual(sim.state.status, "error")
+        self.assertIn("Cannot read", sim.state.message)
 
 
 if __name__ == "__main__":

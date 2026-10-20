@@ -80,7 +80,11 @@ for simulator stand-ins (`mblock_runtime.py`). Supported so far:
 The program thread and the simulation run in lockstep: commands after a
 `time.sleep(t)` take effect exactly `t` simulated seconds later. As on the robot,
 motors keep their last speed after the program ends. A loop that never sleeps
-still runs, without lockstep.
+still runs, without lockstep. Stop ends any program at its next line, even a
+loop that calls no simulated API; only a single long call into C code could
+outlive it, and the run message then says so. Commanded speeds are clamped to
+`max_rpm` for every port, so `get_value("speed")` matches the simulated motion.
+An unreadable or non-UTF-8 program file is reported as an error.
 
 ### Motor mapping (`drive_train` in `robot_config.json`)
 

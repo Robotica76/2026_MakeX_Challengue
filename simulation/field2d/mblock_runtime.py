@@ -10,6 +10,11 @@ The program runs unchanged in a worker thread. Its imports of `novapi`,
 
 Anything else the program calls raises UnsupportedAPI, reported in the viewer,
 so missing stand-ins are obvious instead of silently ignored.
+
+Stop works even for loops that never call a simulated API (`while True: pass`):
+a line tracer on the program thread raises ProgramStopped at the next line of
+the program file. Only a single long call into C code (no Python lines run) can
+outlive Stop; ProgramRunner.stop() reports that case.
 """
 
 import builtins
@@ -95,8 +100,10 @@ class MotorBus:
         self._lock = threading.Lock()
 
     def set(self, port: str, rpm: float) -> None:
+        """Store the command clamped to the motor limit, so feedback matches motion."""
+        rpm = max(-self.max_rpm, min(self.max_rpm, float(rpm)))
         with self._lock:
-            self._rpm[port] = float(rpm)
+            self._rpm[port] = rpm
 
     def snapshot(self) -> Dict[str, float]:
         with self._lock:
@@ -174,7 +181,8 @@ class ProgramRunner:
         self._thread: Optional[threading.Thread] = None
 
     def start(self) -> None:
-        code = compile(self.path.read_text(), str(self.path), "exec")  # syntax errors surface here
+        # OSError / UnicodeDecodeError (unreadable file) and SyntaxError surface here.
+        code = compile(self.path.read_text(encoding="utf-8"), str(self.path), "exec")
         fakes = _build_modules(self.clock, self.motors, self.stop_event)
         real_import = builtins.__import__
 
@@ -188,7 +196,10 @@ class ProgramRunner:
         sim_builtins = dict(vars(builtins), __import__=sim_import)
         program_globals = {"__name__": "__main__", "__file__": str(self.path), "__builtins__": sim_builtins}
 
+        tracer = _stop_tracer(str(self.path), self.stop_event)
+
         def run():
+            sys.settrace(tracer)  # this thread only
             try:
                 exec(code, program_globals)
             except ProgramStopped:
@@ -199,16 +210,33 @@ class ProgramRunner:
                 lines = traceback.format_exc().strip().splitlines()
                 self.error = lines[-1] + _user_line(sys.exc_info()[2], self.path)
             finally:
+                sys.settrace(None)
                 self.finished = True
                 self.clock.mark_finished()
 
         self._thread = threading.Thread(target=run, name="mblock-program", daemon=True)
         self._thread.start()
 
-    def stop(self) -> None:
+    def stop(self, timeout: float = 1.0) -> bool:
+        """Stop the program; True once its thread has exited."""
         self.stop_event.set()
         if self._thread:
-            self._thread.join(timeout=0.5)
+            self._thread.join(timeout)
+            return not self._thread.is_alive()
+        return True
+
+
+def _stop_tracer(filename: str, stop: threading.Event):
+    """sys.settrace hook raising ProgramStopped on the next line of the program file."""
+    def local(frame, event, arg):
+        if event == "line" and stop.is_set():
+            raise ProgramStopped()
+        return local
+
+    def global_(frame, event, arg):
+        return local if frame.f_code.co_filename == filename else None
+
+    return global_
 
 
 def _user_line(tb, path: Path) -> str:

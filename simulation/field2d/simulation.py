@@ -76,6 +76,10 @@ class Simulation:
             self._runner = None
             self._end("error", f"SyntaxError: {exc.msg} (line {exc.lineno})")
             return
+        except (OSError, UnicodeDecodeError) as exc:
+            self._runner = None
+            self._end("error", f"Cannot read {self.program.name}: {exc}")
+            return
         self.state = SimState("running", f"Running {self.program.name}", [(self.pose.x, self.pose.y)])
 
     def stop(self) -> None:
@@ -116,11 +120,15 @@ class Simulation:
             self._end("done", f"Time limit reached ({self.time_limit:g} s)")
 
     def _end(self, status: str, message: str) -> None:
-        self._stop_runner()
+        if not self._stop_runner():
+            message += " (warning: the program thread is stuck in a long call and did not exit)"
         trail = self.state.trail + [(self.pose.x, self.pose.y)]
         self.state = SimState(status, message, trail)
 
-    def _stop_runner(self) -> None:
+    def _stop_runner(self) -> bool:
+        """Stop and drop the runner; False if its thread is still alive."""
+        stopped = True
         if self._runner:
-            self._runner.stop()
+            stopped = self._runner.stop()
             self._runner = None
+        return stopped
