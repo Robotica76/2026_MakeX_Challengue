@@ -17,9 +17,11 @@ Hover shows the cursor position in field mm and the elements under it.
 """
 
 import argparse
+import json
 import os
 import subprocess
 import sys
+import threading
 from dataclasses import replace
 from pathlib import Path
 
@@ -27,7 +29,7 @@ import field_layout as fl
 from panel import PANEL_W, RobotPanel
 from kinematics import load_drive_train
 from robot import DEFAULT_CONFIG, load_config, mecanum_wheels, start_pose
-from simulation import AUTO_STAGE_S, Simulation
+from simulation import AUTO_STAGE_S, Simulation, load_gyro_sign
 
 from theme import PALETTE as COLORS, RADIUS, Fonts
 
@@ -283,7 +285,7 @@ def footprint_warning(cfg, pose, elements) -> str:
     return f"Footprint leaves {cfg.start_area} at {cfg.heading_deg:g}° (start area is 500 x 500 mm)"
 
 
-PROGRAMS_DIR = Path(__file__).with_name("programs")
+PROGRAMS_DIR = Path(__file__).resolve().parent.parent / "control"  # simulation/control
 
 _TK_DIALOG = """
 import sys, tkinter, tkinter.filedialog
@@ -310,31 +312,42 @@ def choose_python_file(initial_dir: Path):
 
 
 class GamepadLauncher:
-    """Opens the emulated gamepad (gamepad.py) in its own process and window.
-
-    Its JSON event lines go to this terminal for now; the simulation does not
-    read them yet.
-    """
+    """Opens the emulated gamepad (gamepad.py) in its own process and window, and
+    feeds its JSON event lines to the simulation as the Bluetooth link."""
 
     SCRIPT = Path(__file__).with_name("gamepad.py")
 
-    def __init__(self, say):
-        self.say = say
+    def __init__(self, gamepad_input, say):
+        self.input, self.say = gamepad_input, say
         self.proc = None
 
+    @property
+    def connected(self) -> bool:
+        return self.proc is not None and self.proc.poll() is None
+
     def open(self):
-        if self.proc and self.proc.poll() is None:
+        if self.connected:
             self.say("Gamepad window is already open")
             return
         try:
-            self.proc = subprocess.Popen([sys.executable, str(self.SCRIPT)])
+            self.proc = subprocess.Popen([sys.executable, str(self.SCRIPT)], stdout=subprocess.PIPE,
+                                         text=True, bufsize=1)
         except OSError as exc:
             self.say(f"Could not open the gamepad: {exc}", True)
             return
-        self.say("Gamepad window opened")
+        threading.Thread(target=self._read, args=(self.proc,), name="gamepad-link", daemon=True).start()
+        self.say("Gamepad connected")
+
+    def _read(self, proc):
+        for line in proc.stdout:
+            try:
+                self.input.apply_event(json.loads(line))
+            except (ValueError, TypeError):
+                continue  # not an event line
+        self.input.disconnect()  # window closed: sticks to 0, keys released
 
     def close(self):
-        if self.proc and self.proc.poll() is None:
+        if self.connected:
             self.proc.terminate()
 
 
@@ -408,7 +421,7 @@ def main(argv=None):
     if args.heading is not None:
         robot_cfg = replace(robot_cfg, heading_deg=args.heading)
     sim = Simulation(robot_cfg, start_pose(robot_cfg, elements), load_drive_train(args.config),
-                     args.time_limit)
+                     args.time_limit, load_gyro_sign(args.config))
     if args.program:
         if not args.program.is_file():
             parser.error(f"--program {args.program} not found")
@@ -428,7 +441,7 @@ def main(argv=None):
         return footprint_warning(cfg, sim.pose, elements)
 
     controller = ProgramController(sim, say=None)
-    gamepad = GamepadLauncher(say=None)
+    gamepad = GamepadLauncher(sim.gamepad, say=None)
     panel = RobotPanel(width - PANEL_W, height, robot_cfg, args.config, apply_config, controller, gamepad)
     controller.say = gamepad.say = panel.say
     note = footprint_warning(robot_cfg, sim.pose, elements)

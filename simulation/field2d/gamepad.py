@@ -11,7 +11,7 @@ LED and the On/Off switch. Every physical control is clickable:
 Each change is printed to stdout as one JSON line, e.g.
     {"event": "press", "control": "L1"}
     {"event": "axis", "control": "left_stick", "x": 0.42, "y": -1.0}
-so the simulator can later consume it as the Bluetooth link. Nothing reads it yet.
+which the viewer reads as the Bluetooth link (mbuild.gamepad in the program).
 
 Run standalone:  python gamepad.py   (the viewer's "Open gamepad" button does this)
 """
@@ -216,7 +216,7 @@ def draw(screen, fonts, shell, controls, state, hover: Optional[str]):
     screen.fill(PALETTE["background"])
     title = fonts.title.render("Makeblock gamepad (emulated)", True, PALETTE["text"])
     screen.blit(title, (24, 18))
-    sub = fonts.body.render("Click buttons, drag the joysticks. Not connected to the simulation yet.",
+    sub = fonts.body.render("Click buttons, drag the joysticks. Opened from the viewer, it drives mbuild.gamepad.",
                             True, PALETTE["muted"])
     screen.blit(sub, (24, 46))
 

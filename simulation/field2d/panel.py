@@ -63,6 +63,7 @@ class RobotPanel:
         if self.program:
             self.buttons += self.program.buttons
             y += ProgramSection.HEIGHT
+        self.gamepad_link = gamepad
         if gamepad:  # gamepad.open() launches the emulated Bluetooth controller window
             self.gamepad_label_y = y
             self.gamepad_button = Button((left, y + 20, inner, 30), "Open gamepad", gamepad.open)
@@ -190,6 +191,10 @@ class RobotPanel:
         if self.gamepad_label_y is not None:
             screen.blit(fonts.small.render("BLUETOOTH GAMEPAD", True, UI_COLORS["muted"]),
                         (left, self.gamepad_label_y + 2))
+            linked = getattr(self.gamepad_link, "connected", False)
+            tag = fonts.label.render("CONNECTED" if linked else "NOT OPEN", True,
+                                     UI_COLORS["dial_pending"] if linked else UI_COLORS["muted"])
+            screen.blit(tag, tag.get_rect(topright=(left + PANEL_W - 2 * PAD, self.gamepad_label_y + 2)))
         self.start_dropdown.draw_list(screen, font)  # open list goes on top of everything
 
 
