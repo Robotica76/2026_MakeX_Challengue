@@ -4,7 +4,7 @@ Use the [entry template](entry_template.md) for requirement interpretation, arch
 
 | Log ID / entry link | Date / authors / reviewer | Lifecycle stage | Requirement / rule / interface IDs | Decision / test / issue IDs | Status / next action |
 | --- | --- | --- | --- | --- | --- |
-| TBD | TBD | TBD | TBD | TBD | TBD |
+| [DL-T05-001](DL-T05-001_chassis_motion_software.md) | 2026-10-24 / TBD (T05 assignees) / TBD | Concept + software implementation | T05-R1 to T05-R9 | Issue #6, PR #27, PR #28 | Open: confirm sensor API, calibrate, run T05-R8/R9 |
 
 ## Entry workflow
 
