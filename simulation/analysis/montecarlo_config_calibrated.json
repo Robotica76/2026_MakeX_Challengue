@@ -1,0 +1,43 @@
+{
+  "notes": [
+    "Scenario 'calibrated': the same robot after per-unit calibration, so only the calibration",
+    "measurement error remains (wheel diameter 0.2 %, slip 0.3-0.5 %, gyro scale 0.2 %).",
+    "This is a TARGET for the calibration procedure, not a measured robot. Use with tighter",
+    "chassis tolerances: --set TOL_CM=0.3 --set TOL_DEGREES=0.5 (see README).",
+    "Every range below is an ESTIMATE, not a measurement: replace with robot data as it comes in.",
+    "Spec format: number (fixed) | {dist: normal, mean, sd} | {dist: uniform, low, high}, optional min/max.",
+    "wheel_scale and motor_gain are drawn per wheel / per motor port."
+  ],
+  "trials": 300,
+  "seed": 2026,
+  "routine": "mc_routine_chassis.py",
+  "start": {
+    "x_mm": 1400,
+    "y_mm": 1527.5,
+    "heading_deg": 0
+  },
+  "criteria": {
+    "drive_error_cm": 1.0,
+    "drive_relative": 0.01,
+    "turn_error_deg": 1.5,
+    "required_rate": 0.95,
+    "confidence": 0.95
+  },
+  "ranges": {
+    "wheel_scale": {"dist": "normal", "mean": 1.0, "sd": 0.002},
+    "motor_gain": {"dist": "normal", "mean": 1.0, "sd": 0.02, "min": 0.9, "max": 1.1},
+    "motor_tau_s": {"dist": "uniform", "low": 0.02, "high": 0.08},
+    "slip_forward": {"dist": "normal", "mean": 1.0, "sd": 0.003, "max": 1.0},
+    "slip_strafe": {"dist": "normal", "mean": 1.0, "sd": 0.005, "max": 1.0},
+    "slip_turn": {"dist": "normal", "mean": 1.0, "sd": 0.005, "max": 1.0},
+    "gyro_bias_dps": {"dist": "uniform", "low": -1.0, "high": 1.0},
+    "gyro_drift_dps": {"dist": "uniform", "low": 0.0, "high": 0.05},
+    "gyro_noise_dps": {"dist": "uniform", "low": 0.05, "high": 0.3},
+    "gyro_scale": {"dist": "normal", "mean": 0.0, "sd": 0.002},
+    "encoder_res_deg": 1.0,
+    "sleep_jitter_s": {"dist": "uniform", "low": 0.0, "high": 0.003},
+    "start_dx_mm": {"dist": "normal", "mean": 0.0, "sd": 5.0},
+    "start_dy_mm": {"dist": "normal", "mean": 0.0, "sd": 5.0},
+    "start_dtheta_deg": {"dist": "normal", "mean": 0.0, "sd": 1.0}
+  }
+}

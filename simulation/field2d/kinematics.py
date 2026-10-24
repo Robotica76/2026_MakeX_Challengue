@@ -16,7 +16,7 @@ import json
 import math
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 from robot import DEFAULT_CONFIG, RobotConfig, RobotPose, mecanum_wheels
 
@@ -61,10 +61,13 @@ def load_drive_train(path: Path = DEFAULT_CONFIG) -> DriveTrain:
                       float(data.get("max_rpm", FIELD_MOTOR_MAX_RPM)))
 
 
-def body_velocity(cfg: RobotConfig, wheel_rpms: Dict[str, float]) -> Tuple[float, float, float]:
-    """(vx mm/s, vy mm/s, omega rad/s) in the robot frame."""
+def body_velocity(cfg: RobotConfig, wheel_rpms: Dict[str, float],
+                  wheel_scale: Optional[Dict[str, float]] = None) -> Tuple[float, float, float]:
+    """(vx mm/s, vy mm/s, omega rad/s) in the robot frame. wheel_scale: real /
+    nominal diameter per wheel (uncertainty studies); missing wheels are nominal."""
     circumference = math.pi * cfg.wheel_diameter_mm
-    v = {w: rpm / 60.0 * circumference for w, rpm in wheel_rpms.items()}
+    scale = wheel_scale or {}
+    v = {w: rpm / 60.0 * circumference * scale.get(w, 1.0) for w, rpm in wheel_rpms.items()}
     lx, ly = (abs(c) for c in mecanum_wheels(cfg)[0].center)
     vx = (v["front_left"] + v["front_right"] + v["rear_left"] + v["rear_right"]) / 4
     vy = (-v["front_left"] + v["front_right"] + v["rear_left"] - v["rear_right"]) / 4

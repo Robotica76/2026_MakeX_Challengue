@@ -27,6 +27,7 @@ to the interpreter, can outlive Stop; stop() reports that case.
 
 import builtins
 import ctypes
+import math
 import sys
 import threading
 import time
@@ -104,11 +105,18 @@ class SimClock:
 class MotorBus:
     """Per motor port: commanded speed (rpm), encoder angle and pending move().
 
-    Written by the program, integrated by the simulation every step.
+    Written by the program, integrated by the simulation every step. Optional
+    imperfections (uncertainty.Variation): per-port speed gain, a first-order
+    speed lag, and encoder resolution. With the defaults the motor is ideal.
     """
 
-    def __init__(self, max_rpm: float):
+    def __init__(self, max_rpm: float, gains: Optional[Dict[str, float]] = None,
+                 tau_s: float = 0.0, encoder_res_deg: float = 0.0):
         self.max_rpm = max_rpm
+        self.gains = dict(gains or {})
+        self.tau_s = tau_s
+        self.encoder_res_deg = encoder_res_deg
+        self._actual: Dict[str, float] = {}       # real shaft speed, lags the command
         self._rpm: Dict[str, float] = {}
         self._angle: Dict[str, float] = {}
         self._move_left: Dict[str, float] = {}  # degrees still to turn for move()
@@ -140,16 +148,21 @@ class MotorBus:
             self._move_left[port] = abs(degrees)
 
     def integrate(self, dt: float) -> Dict[str, float]:
-        """Advance encoders by dt seconds; returns the average rpm per port over
+        """Advance encoders by dt seconds; returns the average real rpm per port over
         the step (a move() that finishes mid-step only counts its remaining part)."""
         avg = {}
+        follow = 1.0 if self.tau_s <= 0 else 1.0 - math.exp(-dt / self.tau_s)
         with self._lock:
-            for port, rpm in self._rpm.items():
+            for port, command in self._rpm.items():
+                target = command * self.gains.get(port, 1.0)
+                rpm = self._actual.get(port, 0.0)
+                rpm += (target - rpm) * follow
+                self._actual[port] = rpm
                 step = rpm * 6.0 * dt  # rpm -> degrees per second
                 left = self._move_left.get(port)
                 if left is not None and abs(step) >= left:
-                    step = left if rpm > 0 else -left
-                    self._rpm[port] = 0.0
+                    step = left if command > 0 else -left
+                    self._rpm[port] = self._actual[port] = 0.0  # move() holds its end position
                     del self._move_left[port]
                 elif left is not None:
                     self._move_left[port] = left - abs(step)
@@ -162,8 +175,11 @@ class MotorBus:
             return dict(self._rpm)
 
     def angle(self, port: str) -> float:
+        """Encoder reading, rounded to the encoder resolution when one is set."""
         with self._lock:
-            return self._angle.get(port, 0.0)
+            angle = self._angle.get(port, 0.0)
+        res = self.encoder_res_deg
+        return round(angle / res) * res if res > 0 else angle
 
 
 class Sensors:
@@ -255,7 +271,8 @@ class GamepadInput:
 
 
 def _build_modules(clock: SimClock, motors: MotorBus, stop: threading.Event,
-                   sensors: Sensors, gamepad: GamepadInput):
+                   sensors: Sensors, gamepad: GamepadInput, variation=None, trace=None,
+                   trace_options=None):
     def check():
         if stop.is_set():
             raise ProgramStopped()
@@ -294,9 +311,13 @@ def _build_modules(clock: SimClock, motors: MotorBus, stop: threading.Event,
 
     start = {"t": 0.0}
 
+    jitter = variation.sleep_jitter_s if variation else 0.0
+    rng = variation.program_rng if variation else None
+
     def sleep(seconds):
         check()
-        clock.wait_until(clock.now + max(0.0, float(seconds)), stop)
+        extra = rng.uniform(0.0, jitter) if jitter > 0 else 0.0
+        clock.wait_until(clock.now + max(0.0, float(seconds)) + extra, stop)
 
     def now():
         check()
@@ -334,7 +355,14 @@ def _build_modules(clock: SimClock, motors: MotorBus, stop: threading.Event,
     mbuild.encoder_motor = encoder_motor
     mbuild.gamepad = _Gamepad()
 
-    return {"time": time_mod, "novapi": novapi, "mbuild": mbuild, "mbuild.encoder_motor": encoder_motor}
+    # Simulator-only: lets an analysis program record the true pose at chosen
+    # moments (Monte Carlo). Not available on the robot.
+    simtrace = types.ModuleType("simtrace")
+    simtrace.mark = lambda label, **info: (check(), trace(label, info) if trace else None)[1]
+    simtrace.options = lambda: dict(trace_options or {})  # study settings, e.g. constant overrides
+
+    return {"time": time_mod, "novapi": novapi, "mbuild": mbuild, "mbuild.encoder_motor": encoder_motor,
+            "simtrace": simtrace}
 
 
 class ProgramRunner:
@@ -342,8 +370,9 @@ class ProgramRunner:
 
     def __init__(self, path: Path, clock: SimClock, motors: MotorBus,
                  sensors: Optional[Sensors] = None, gamepad: Optional[GamepadInput] = None,
-                 module_roots: Sequence[Path] = ()):
+                 module_roots: Sequence[Path] = (), variation=None, trace=None, trace_options=None):
         self.path = Path(path)
+        self.variation, self.trace, self.trace_options = variation, trace, trace_options
         self.module_roots = [Path(r) for r in module_roots]
         self.clock, self.motors = clock, motors
         self.sensors = sensors or Sensors()
@@ -356,14 +385,15 @@ class ProgramRunner:
     def start(self) -> None:
         # OSError / UnicodeDecodeError (unreadable file) and SyntaxError surface here.
         code = compile(self.path.read_text(encoding="utf-8"), str(self.path), "exec")
-        fakes = _build_modules(self.clock, self.motors, self.stop_event, self.sensors, self.gamepad)
+        fakes = _build_modules(self.clock, self.motors, self.stop_event, self.sensors, self.gamepad,
+                               self.variation, self.trace, self.trace_options)
         real_import = builtins.__import__
         local_modules: Dict[str, types.ModuleType] = {}  # project files, fresh for each run
         self._project_files = {str(self.path)}
 
         def sim_import(name, globals=None, locals=None, fromlist=(), level=0):
             top = name.split(".")[0]
-            if level == 0 and (name in fakes or top in ("novapi", "mbuild")):
+            if level == 0 and (name in fakes or top in ("novapi", "mbuild", "simtrace")):
                 if name not in fakes:
                     raise UnsupportedAPI(f"module {name!r} is not simulated yet")
                 return fakes[name] if fromlist else fakes[top]

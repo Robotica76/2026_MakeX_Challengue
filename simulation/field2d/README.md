@@ -203,6 +203,7 @@ through the fortress is not flagged.
 | `test_field_layout.py` | Layout, robot size/wheels and headless panel checks |
 | `gamepad.py` | Emulated Makeblock Bluetooth gamepad window (own process) |
 | `test_simulation.py` | Kinematics, runtime (sleep, errors, stop) and boundary checks |
+| `uncertainty.py` | Optional error model for Monte Carlo studies (ideal by default), see `../analysis` |
 | `test_chassis_programs.py` | Sensors, `move`, gamepad mapping, project imports, both chassis demos |
 | `test_gamepad.py` | Gamepad controls, hit areas, events, rendering |
 

@@ -20,6 +20,7 @@ import field_layout as fl
 from kinematics import DriveTrain, body_velocity, integrate
 from mblock_runtime import GamepadInput, MotorBus, ProgramRunner, Sensors, SimClock
 from robot import DEFAULT_CONFIG, RobotConfig, RobotPose
+from uncertainty import Variation
 
 SUBSTEP_S = 1 / 240          # integration step
 AUTO_STAGE_S = 30.0          # rules p.52: automatic stage lasts 30 s
@@ -57,8 +58,11 @@ def out_of_bounds(cfg: RobotConfig, pose: RobotPose) -> bool:
 class Simulation:
     def __init__(self, cfg: RobotConfig, start: RobotPose, drive: DriveTrain,
                  time_limit: float = AUTO_STAGE_S, gyro_sign: int = 1,
-                 gamepad: Optional[GamepadInput] = None):
+                 gamepad: Optional[GamepadInput] = None, variation: Optional[Variation] = None):
         self.cfg, self.start_pose, self.drive = cfg, start, drive
+        self.variation = variation or Variation()  # ideal robot unless a study passes one
+        self.marks: List[dict] = []                # simtrace.mark() records, see Monte Carlo
+        self.trace_options: dict = {}              # simtrace.options() for the program
         self.time_limit = time_limit  # 0 = no limit
         self.gyro_sign = gyro_sign
         self.gamepad = gamepad or GamepadInput()
@@ -66,8 +70,9 @@ class Simulation:
         self.pose = start
         self.state = SimState()
         self.clock = SimClock()
-        self.motors = MotorBus(drive.max_rpm)
+        self.motors = self._new_motors()
         self.sensors = Sensors()
+        self._gyro_drift = 0.0
         self._velocity = (0.0, 0.0, 0.0)   # robot frame vx, vy (mm/s), omega (rad/s)
         self._accel = (0.0, 0.0)           # low-passed, m/s^2
         self._runner: Optional[ProgramRunner] = None
@@ -89,9 +94,11 @@ class Simulation:
             self.start_pose = start
         self.pose = self.start_pose
         self.clock = SimClock()
-        self.motors = MotorBus(self.drive.max_rpm)
+        self.motors = self._new_motors()
         self.sensors = Sensors()
         self._velocity, self._accel = (0.0, 0.0, 0.0), (0.0, 0.0)
+        self._gyro_drift = 0.0
+        self.marks = []
         self.state = SimState()
 
     def run(self) -> None:
@@ -100,7 +107,7 @@ class Simulation:
             return
         self.reset()
         self._runner = ProgramRunner(self.program, self.clock, self.motors, self.sensors, self.gamepad,
-                                     MODULE_ROOTS)
+                                     MODULE_ROOTS, self.variation, self._record_mark, self.trace_options)
         try:
             self._runner.start()
         except SyntaxError as exc:
@@ -135,7 +142,9 @@ class Simulation:
                 break
             remaining -= dt
             rpms = self.motors.integrate(dt)  # also advances encoders and move()
-            vx, vy, omega = body_velocity(self.cfg, self.drive.wheel_rpms(rpms))
+            var = self.variation
+            vx, vy, omega = body_velocity(self.cfg, self.drive.wheel_rpms(rpms), var.wheel_scale)
+            vx, vy, omega = vx * var.slip_forward, vy * var.slip_strafe, omega * var.slip_turn
             self.pose = integrate(self.pose, vx, vy, omega, dt)
             self._update_sensors(vx, vy, omega, dt)
             self.clock.advance(dt)
@@ -153,7 +162,25 @@ class Simulation:
         fx, fy = self._accel
         self._accel = (fx + k * (ax - fx), fy + k * (ay - fy))
         self._velocity = (vx, vy, omega)
-        self.sensors.set(self.gyro_sign * math.degrees(omega), *self._accel)
+        self.sensors.set(self._gyro_reading(omega, dt), *self._accel)
+
+    def _gyro_reading(self, omega: float, dt: float) -> float:
+        """True yaw rate in the configured sign, plus the Variation's gyro errors."""
+        var = self.variation
+        rate = self.gyro_sign * math.degrees(omega) * (1.0 + var.gyro_scale)
+        if var.gyro_drift_dps:
+            self._gyro_drift += var.sim_rng.gauss(0.0, var.gyro_drift_dps * math.sqrt(dt))
+        noise = var.sim_rng.gauss(0.0, var.gyro_noise_dps) if var.gyro_noise_dps else 0.0
+        return rate + var.gyro_bias_dps + self._gyro_drift + noise
+
+    def _new_motors(self) -> MotorBus:
+        var = self.variation
+        return MotorBus(self.drive.max_rpm, var.motor_gain, var.motor_tau_s, var.encoder_res_deg)
+
+    def _record_mark(self, label: str, info: dict) -> None:
+        """simtrace.mark() from the program thread; the sim is paused meanwhile (lockstep)."""
+        p = self.pose
+        self.marks.append({"label": label, "t": self.clock.now, "x": p.x, "y": p.y, "theta": p.theta, **info})
 
     def _check(self) -> None:
         if out_of_bounds(self.cfg, self.pose):
