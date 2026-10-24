@@ -4,20 +4,42 @@ States: idle -> running -> one of finished-by-time-limit, out_of_bounds, error,
 stopped. The program thread keeps the last commanded speeds after it returns
 (like the real robot, motors keep turning), so the run ends on the time limit,
 leaving the field, or Stop.
+
+Each step also produces what the robot's sensors would read: encoder angles
+(MotorBus), the gyroscope z rate and the accelerometer (Sensors). The gamepad
+state (GamepadInput) outlives runs, like the Bluetooth link.
 """
 
+import json
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional, Tuple
 
 import field_layout as fl
 from kinematics import DriveTrain, body_velocity, integrate
-from mblock_runtime import MotorBus, ProgramRunner, SimClock
-from robot import RobotConfig, RobotPose
+from mblock_runtime import GamepadInput, MotorBus, ProgramRunner, Sensors, SimClock
+from robot import DEFAULT_CONFIG, RobotConfig, RobotPose
 
 SUBSTEP_S = 1 / 240          # integration step
 AUTO_STAGE_S = 30.0          # rules p.52: automatic stage lasts 30 s
 MAX_FRAME_S = 0.1            # clamp long frames (e.g. while a file dialog is open)
+REPO_ROOT = Path(__file__).resolve().parents[2]
+MODULE_ROOTS = (REPO_ROOT / "software",)  # where `import chassis` & co. are found
+ACCEL_TAU_S = 0.02           # low-pass on the accelerometer: ideal wheels change speed instantly
+GRAVITY = 9.81
+
+
+def load_gyro_sign(path: Path = DEFAULT_CONFIG) -> int:
+    """Multiplier from the simulator's CCW-positive yaw rate to the gyro reading.
+
+    robot_config.json "sensors": {"gyro_z_positive": "clockwise" | "counterclockwise"}.
+    """
+    data = json.loads(Path(path).read_text()).get("sensors", {})
+    direction = data.get("gyro_z_positive", "counterclockwise")
+    if direction not in ("clockwise", "counterclockwise"):
+        raise ValueError('sensors.gyro_z_positive must be "clockwise" or "counterclockwise"')
+    return -1 if direction == "clockwise" else 1
 
 
 @dataclass
@@ -34,14 +56,20 @@ def out_of_bounds(cfg: RobotConfig, pose: RobotPose) -> bool:
 
 class Simulation:
     def __init__(self, cfg: RobotConfig, start: RobotPose, drive: DriveTrain,
-                 time_limit: float = AUTO_STAGE_S):
+                 time_limit: float = AUTO_STAGE_S, gyro_sign: int = 1,
+                 gamepad: Optional[GamepadInput] = None):
         self.cfg, self.start_pose, self.drive = cfg, start, drive
         self.time_limit = time_limit  # 0 = no limit
+        self.gyro_sign = gyro_sign
+        self.gamepad = gamepad or GamepadInput()
         self.program: Optional[Path] = None
         self.pose = start
         self.state = SimState()
         self.clock = SimClock()
         self.motors = MotorBus(drive.max_rpm)
+        self.sensors = Sensors()
+        self._velocity = (0.0, 0.0, 0.0)   # robot frame vx, vy (mm/s), omega (rad/s)
+        self._accel = (0.0, 0.0)           # low-passed, m/s^2
         self._runner: Optional[ProgramRunner] = None
 
     @property
@@ -62,6 +90,8 @@ class Simulation:
         self.pose = self.start_pose
         self.clock = SimClock()
         self.motors = MotorBus(self.drive.max_rpm)
+        self.sensors = Sensors()
+        self._velocity, self._accel = (0.0, 0.0, 0.0), (0.0, 0.0)
         self.state = SimState()
 
     def run(self) -> None:
@@ -69,7 +99,8 @@ class Simulation:
             self._end("error", "Load a program first")
             return
         self.reset()
-        self._runner = ProgramRunner(self.program, self.clock, self.motors)
+        self._runner = ProgramRunner(self.program, self.clock, self.motors, self.sensors, self.gamepad,
+                                     MODULE_ROOTS)
         try:
             self._runner.start()
         except SyntaxError as exc:
@@ -103,12 +134,26 @@ class Simulation:
                 self._check()
                 break
             remaining -= dt
-            vx, vy, omega = body_velocity(self.cfg, self.drive.wheel_rpms(self.motors.snapshot()))
+            rpms = self.motors.integrate(dt)  # also advances encoders and move()
+            vx, vy, omega = body_velocity(self.cfg, self.drive.wheel_rpms(rpms))
             self.pose = integrate(self.pose, vx, vy, omega, dt)
+            self._update_sensors(vx, vy, omega, dt)
             self.clock.advance(dt)
             self._check()
         if self.running and self.state.trail[-1] != (self.pose.x, self.pose.y):
             self.state.trail.append((self.pose.x, self.pose.y))
+
+    def _update_sensors(self, vx: float, vy: float, omega: float, dt: float) -> None:
+        """Gyro z = yaw rate; accelerometer = d(v)/dt in the rotating robot frame
+        plus the centripetal term, low-passed so ideal speed steps stay finite."""
+        pvx, pvy, _ = self._velocity
+        ax = ((vx - pvx) / dt - omega * vy) / 1000.0
+        ay = ((vy - pvy) / dt + omega * vx) / 1000.0
+        k = dt / (ACCEL_TAU_S + dt)
+        fx, fy = self._accel
+        self._accel = (fx + k * (ax - fx), fy + k * (ay - fy))
+        self._velocity = (vx, vy, omega)
+        self.sensors.set(self.gyro_sign * math.degrees(omega), *self._accel)
 
     def _check(self) -> None:
         if out_of_bounds(self.cfg, self.pose):

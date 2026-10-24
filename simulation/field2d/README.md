@@ -9,6 +9,18 @@ played back on the field with mecanum kinematics.
 
 ## Run
 
+**Windows:** double-click `run_simulator.bat`. The first time it creates `.venv` at
+the repository root and installs pygame (needs Python 3.8+ on PATH and internet),
+then shows a menu: empty simulator, automatic chassis demo, or manual chassis demo.
+Arguments are passed to `viewer.py` (e.g. `run_simulator.bat --time-limit 0`).
+
+**macOS:** double-click `run_simulator.command` (opens Terminal, same first-run
+setup with `python3`, same menu; `./run_simulator.command --time-limit 0` passes
+arguments). If macOS blocks it as coming from an unidentified developer (e.g. after
+downloading a ZIP), right-click it > Open once. Also works on Linux from a terminal.
+
+**Manual setup:**
+
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r simulation/field2d/requirements.txt
@@ -55,8 +67,9 @@ parallel, front-right/rear-left parallel).
 
 ![Out of boundaries](field_layout_run.png)
 
-1. **Load .py** opens a file picker; choose a Python file exported from mBlock
-   (example: `programs/all_motors_forward.py`).
+1. **Load .py** opens a file picker in `simulation/control/`; choose a Python file
+   written for the robot (e.g. `simulation/control/test_chassis_control_automatico.py`,
+   see [chassis demos](#chassis-demos-simulationcontrol)).
 2. **Run** (or `Space`) resets the robot to its start pose and runs the program in
    real time, leaving a trail. The run ends when:
    - the time limit is reached (30 s, the automatic stage; `--time-limit 0` = none),
@@ -71,44 +84,107 @@ for simulator stand-ins (`mblock_runtime.py`). Supported so far:
 
 | API | Behaviour |
 | --- | --- |
-| `encoder_motor_class(port, index)` | Motor on port `M1`..`M4` (index ignored) |
+| `encoder_motor_class(port, index)` | Motor on a port such as `M1` (index ignored) |
 | `.set_speed(rpm)` | Commanded speed in RPM, clamped to `max_rpm` |
 | `.set_power(pct)` | -100..100 % of `max_rpm` |
-| `.stop()`, `.get_value("speed")` | Speed 0 / last commanded speed |
-| `time.sleep`, `time.time`, `novapi.timer`, `novapi.reset_timer` | Simulated time |
+| `.move(degrees, rpm)` | Turns that many degrees at that speed, then stops; returns at once |
+| `.stop()` | Speed 0 (cancels a `move`) |
+| `.get_value("speed")`, `.get_value("angle")` | Last commanded RPM / accumulated encoder degrees |
+| `novapi.get_gyroscope(axis)` | Yaw rate (deg/s) on `z`, sign from `sensors.gyro_z_positive`; `x`, `y` = 0 (flat floor) |
+| `novapi.get_acceleration(axis)` | m/s², robot frame (`x` forward, `y` left, `z` = 9.81), low-passed 20 ms |
+| `mbuild.gamepad.get_joystick(name)` | `Lx`, `Ly`, `Rx`, `Ry` in -100..100 (+y up) from the gamepad window |
+| `mbuild.gamepad.is_key_pressed(name)` | `Up` `Down` `Left` `Right` `N1`..`N4` `L1` `L2` `R1` `R2` `≡` `+` `Bluetooth` |
+| `time.sleep`, `time.time`, `time.ticks_ms`, `novapi.timer`, `novapi.reset_timer` | Simulated time |
+| `import x` (project module) | `x.py` beside the program, else the one `x.py` under `software/` |
 
 The program thread and the simulation run in lockstep: commands after a
 `time.sleep(t)` take effect exactly `t` simulated seconds later. As on the robot,
 motors keep their last speed after the program ends. A loop that never sleeps
-still runs, without lockstep. Stop ends any program at its next line, even a
-loop that calls no simulated API; only a single long call into C code could
-outlive it, and the run message then says so. Commanded speeds are clamped to
+still runs, without lockstep. Stop ends any program, even a loop that calls no
+simulated API or catches every exception; only a single long call into C code
+could outlive it, and the run message then says so. Commanded speeds are clamped to
 `max_rpm` for every port, so `get_value("speed")` matches the simulated motion.
 An unreadable or non-UTF-8 program file is reported as an error.
 
-### Motor mapping (`drive_train` in `robot_config.json`)
+### Motor mapping and sensors (`robot_config.json`)
 
 ```json
-"motors": {
-  "M1": {"wheel": "front_left",  "direction": 1},
-  "M2": {"wheel": "front_right", "direction": 1},
-  "M3": {"wheel": "rear_left",   "direction": 1},
-  "M4": {"wheel": "rear_right",  "direction": 1}
+"drive_train": {
+  "motors": {
+    "M4": {"wheel": "front_left",  "direction": -1},
+    "M1": {"wheel": "front_right", "direction": 1},
+    "M3": {"wheel": "rear_left",   "direction": -1},
+    "M2": {"wheel": "rear_right",  "direction": 1}
+  },
+  "gear_ratio": 1.0,
+  "max_rpm": 580
 },
-"gear_ratio": 1.0,
-"max_rpm": 580
+"sensors": {"gyro_z_positive": "clockwise"}
 ```
 
-`direction: 1` means a positive speed drives that wheel forward. **Set it to `-1`
-for motors mounted mirrored** (usually one side of the chassis), so the simulator
-matches the real robot. Ports not listed (e.g. a shooter motor) are accepted and
+This is the wiring in `software/controls/drivetrain/chassis.py` (deduced there from
+the 2025 code): left motors are mirror-mounted, so `direction: -1` (a positive
+speed drives that wheel backward). With it, the same `set_speed` on all four
+motors spins the robot in place, as on the real robot. **`gyro_z_positive` is
+"clockwise" to match `GYRO_SIGN = 1` in chassis.py; neither has been measured on
+the robot yet.** If the robot shows otherwise, change both. Ports not listed (e.g. a shooter motor) are accepted and
 ignored by the drive. `max_rpm` 580 is the 180 smart encoder motor no-load speed
 (rules p.57).
+
+Project modules are looked up beside the program first, then anywhere under the
+repository's `software/` folder; two files with the same name there are reported
+as an ambiguous import. Errors inside a project module name its file and line.
 
 Kinematics (`kinematics.py`): ideal mecanum wheels, no slip, no acceleration
 limits, rollers in the standard layout. Wheel surface speed = rpm / 60 x pi x 80 mm
 (10 RPM = 41.9 mm/s). No collisions with field elements yet; only the field edge
 stops the run.
+
+## Emulated Bluetooth gamepad
+
+![Gamepad](gamepad.png)
+
+**Open gamepad** in the panel (or `python gamepad.py`) opens a separate window with
+the Makeblock controller layout. Every physical control is clickable:
+
+| Control | Id | Behaviour |
+| --- | --- | --- |
+| Shoulders L1, L2, R2, R1 | `L1` `L2` `R2` `R1` | Held while the mouse is down |
+| Arrow keys | `up` `down` `left` `right` | Held while the mouse is down |
+| Menu, Bluetooth, Plus | `menu` `bluetooth` `plus` | Held while the mouse is down |
+| Number buttons 1-4 | `button_1` .. `button_4` | Held while the mouse is down |
+| Left / right joystick | `left_stick` `right_stick` | Drag; x, y in -1..1 (+y up), springs back to centre |
+| On / Off switch | `power` | Toggle; while off nothing else responds |
+
+Each change is sent as one JSON line (`{"event": "press", "control": "L1"}`,
+`{"event": "axis", "control": "left_stick", "x": 0.42, "y": -1.0}`, ...). Opened
+from the viewer, these lines are the Bluetooth link: the program reads them through
+`mbuild.gamepad` (the panel shows CONNECTED). Closing the window releases every key
+and centres the sticks. Run standalone, the lines just print to the terminal.
+
+## Chassis demos (`simulation/control`)
+
+Simulation programs live in `simulation/control/`; the robot code they exercise
+stays in `software/` and is imported by name, unchanged.
+
+| Program | What it shows | Run |
+| --- | --- | --- |
+| `test_chassis_control_automatico.py` | `chassis.py` closed loop (encoders + gyro): out of the start corner, a 60 cm square with `turn_to`, strafes, diagonals, back to the start; prints each step and the odometry pose | `--time-limit 60`, Load .py, Run (takes ~44 s, longer than the 30 s automatic stage) |
+| `test_chassis_control_manual.py` | `chassis.joystick_drive` with S-curve smoothing and heading hold; `≡`/`+` pick front F1/F2, `N1` resets odometry; prints the pose every second | `--time-limit 100`, Open gamepad, Load .py, Run, drive with the sticks |
+
+```bash
+cd simulation/field2d
+../../.venv/bin/python viewer.py --program ../control/test_chassis_control_automatico.py --time-limit 60
+../../.venv/bin/python viewer.py --program ../control/test_chassis_control_manual.py --time-limit 100
+```
+
+Their `print` output goes to the terminal. Measured in the simulator (ideal wheels,
+so this checks the logic, not the robot): every automatic step arrives, the
+odometry agrees with the simulated true pose to 0.1 cm, and the robot ends 2.7 cm /
+1.4 deg from the start (the sum of each move's 1 cm / 1.5 deg tolerance). Relative
+`turn()` adds that tolerance up (four `turn(-90)` drift ~4 deg), absolute
+`turn_to()` does not. There are no collisions with field elements yet, so a route
+through the fortress is not flagged.
 
 ## Files
 
@@ -125,7 +201,10 @@ stops the run.
 | `simulation.py` | Run state, integration, time limit and out-of-boundaries check |
 | `programs/` | Example mBlock programs |
 | `test_field_layout.py` | Layout, robot size/wheels and headless panel checks |
+| `gamepad.py` | Emulated Makeblock Bluetooth gamepad window (own process) |
 | `test_simulation.py` | Kinematics, runtime (sleep, errors, stop) and boundary checks |
+| `test_chassis_programs.py` | Sensors, `move`, gamepad mapping, project imports, both chassis demos |
+| `test_gamepad.py` | Gamepad controls, hit areas, events, rendering |
 
 ## Frame and conventions
 

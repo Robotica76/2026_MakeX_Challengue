@@ -154,8 +154,9 @@ class Dial:
             else:
                 pygame.draw.aaline(screen, color, self._point(deg, inner), self._point(deg, r - 3))
         for deg in (0, 90, 180, 270):
-            if min(abs(deg - self.value), 360 - abs(deg - self.value)) < 15:
-                continue  # the hand covers this label
+            gap = abs(deg - self.value) % 360
+            if min(gap, 360 - gap) < 15 or abs(gap - 180) < 15:
+                continue  # covered by the hand, or by the value label opposite it
             img = font.render(f"{deg}", True, UI_COLORS["muted"])
             screen.blit(img, img.get_rect(center=self._point(deg, r - 28)))
         # Applied heading (faint) and pending heading (hand plus knob on the rim).
