@@ -9,6 +9,13 @@ played back on the field with mecanum kinematics.
 
 ## Run
 
+**Windows:** double-click `run_simulator.bat`. The first time it creates `.venv` at
+the repository root and installs pygame (needs Python 3.8+ on PATH and internet),
+then shows a menu: empty simulator, automatic chassis demo, or manual chassis demo.
+Arguments are passed to `viewer.py` (e.g. `run_simulator.bat --time-limit 0`).
+
+**macOS / Linux / manual setup:**
+
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r simulation/field2d/requirements.txt
