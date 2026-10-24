@@ -35,7 +35,7 @@ own `TOL_DEGREES`, since no turn target was given. All in `criteria` of the conf
 
 **Full report with figures, calibration steps and the chassis.py parameters to
 write: [reports/chassis_montecarlo](reports/chassis_montecarlo/README.md)** (in
-Spanish), regenerated with `make_chassis_report.py` (needs `pip install -r
+Spanish and English), regenerated with `make_chassis_report.py` (needs `pip install -r
 simulation/analysis/requirements.txt` for matplotlib; ~3 min).
 
 300 trials take about 40 s on 6 cores. Each run writes `report.md` (table,
