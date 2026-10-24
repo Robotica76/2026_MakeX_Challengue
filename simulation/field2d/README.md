@@ -14,7 +14,12 @@ the repository root and installs pygame (needs Python 3.8+ on PATH and internet)
 then shows a menu: empty simulator, automatic chassis demo, or manual chassis demo.
 Arguments are passed to `viewer.py` (e.g. `run_simulator.bat --time-limit 0`).
 
-**macOS / Linux / manual setup:**
+**macOS:** double-click `run_simulator.command` (opens Terminal, same first-run
+setup with `python3`, same menu; `./run_simulator.command --time-limit 0` passes
+arguments). If macOS blocks it as coming from an unidentified developer (e.g. after
+downloading a ZIP), right-click it > Open once. Also works on Linux from a terminal.
+
+**Manual setup:**
 
 ```bash
 python3 -m venv .venv
