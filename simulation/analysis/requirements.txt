@@ -1,0 +1,1 @@
+matplotlib>=3.5,<3.10  # report figures only (make_chassis_report.py)

@@ -158,8 +158,10 @@ def _wrap_deg_rad(a):
 
 
 def run_trial(args):
-    """Worker: (index, config dict, ideal flag) -> trial result dict."""
-    index, cfg, ideal = args
+    """Worker: (index, config dict, ideal flag[, keep_trail]) -> trial result dict.
+    keep_trail adds the true path (field mm, at most ~400 points) for figures."""
+    index, cfg, ideal = args[:3]
+    keep_trail = len(args) > 3 and args[3]
     seed = cfg["seed"] + index
     drive = load_drive_train()
     var = Variation(seed=seed) if ideal else sample_variation(cfg["ranges"], seed, tuple(drive.motors))
@@ -177,9 +179,29 @@ def run_trial(args):
         error = sim._runner.error if sim._runner else None
         status, message = sim.state.status, sim.state.message
         sim.stop()
+    result = {"index": index, "seed": seed, "failed": "", "moves": [], "params": var.flat(),
+              "duration_s": sim.time}
+    if keep_trail:
+        trail = sim.state.trail
+        result["trail"] = trail[::max(1, len(trail) // 400)] + trail[-1:]
     if error or status in ("out_of_bounds", "error"):
-        return {"index": index, "seed": seed, "failed": error or message, "moves": [], "params": var.flat()}
-    return {"index": index, "seed": seed, "failed": "", "moves": measure_moves(sim.marks), "params": var.flat()}
+        result["failed"] = error or message
+        return result
+    result["moves"] = measure_moves(sim.marks)
+    return result
+
+
+def run_study(cfg, ideal=False, jobs=0, keep_trail=False, progress=None):
+    """All trials of one configuration, in parallel; results sorted by trial index."""
+    jobs = jobs or os.cpu_count() or 1
+    tasks = [(i, cfg, ideal, keep_trail) for i in range(cfg["trials"])]
+    results = []
+    with multiprocessing.get_context("spawn").Pool(jobs) as pool:
+        for k, r in enumerate(pool.imap_unordered(run_trial, tasks), 1):
+            results.append(r)
+            if progress and (k % max(1, len(tasks) // 10) == 0 or k == len(tasks)):
+                progress(f"  {k}/{len(tasks)} trials")
+    return sorted(results, key=lambda r: r["index"])
 
 
 # ---------------------------------------------------------------- report
@@ -309,16 +331,8 @@ def main(argv=None):
     out = args.out or RESULTS / f"chassis_{datetime.now():%Y%m%d_%H%M%S}{tag}"
     out.mkdir(parents=True, exist_ok=True)
 
-    jobs = args.jobs or os.cpu_count() or 1
-    tasks = [(i, cfg, args.ideal) for i in range(cfg["trials"])]
     t0 = time.time()
-    results = []
-    with multiprocessing.get_context("spawn").Pool(jobs) as pool:
-        for k, r in enumerate(pool.imap_unordered(run_trial, tasks), 1):
-            results.append(r)
-            if k % max(1, len(tasks) // 10) == 0 or k == len(tasks):
-                print(f"  {k}/{len(tasks)} trials", flush=True)
-    results.sort(key=lambda r: r["index"])
+    results = run_study(cfg, args.ideal, args.jobs, progress=lambda m: print(m, flush=True))
     rows = summarize(results, cfg["criteria"])
     overall = write_report(out / "report.md", cfg, results, rows, time.time() - t0, args.ideal)
     write_csvs(out, results)

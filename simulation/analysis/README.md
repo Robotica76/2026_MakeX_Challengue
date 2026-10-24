@@ -33,6 +33,11 @@ own `TOL_DEGREES`, since no turn target was given. All in `criteria` of the conf
     --config simulation/analysis/montecarlo_config_calibrated.json --set TOL_CM=0.3 --set TOL_DEGREES=0.5
 ```
 
+**Full report with figures, calibration steps and the chassis.py parameters to
+write: [reports/chassis_montecarlo](reports/chassis_montecarlo/README.md)** (in
+Spanish), regenerated with `make_chassis_report.py` (needs `pip install -r
+simulation/analysis/requirements.txt` for matplotlib; ~3 min).
+
 300 trials take about 40 s on 6 cores. Each run writes `report.md` (table,
 sensitivity ranking, failed trials), `trials.csv` (sampled parameters) and
 `moves.csv` (every move) under `results/` (not committed). `--set NAME=VALUE`
