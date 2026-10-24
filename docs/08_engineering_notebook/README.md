@@ -14,7 +14,7 @@ Maintain a shared evidence trail throughout requirements, architecture, design, 
 
 | Log ID / date | Lifecycle stage | Student authors / reviewer | Objective | Requirement / rule / interface IDs | Decision / test / issue IDs | Entry / evidence link | Next action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| TBD | TBD | TBD | TBD | TBD | TBD | TBD | TBD |
+| DL-T05-001 / 2026-10-24 | Concept + software implementation | TBD (T05 assignees) / TBD | Carry over 2025 mecanum drive with sensor odometry and smoothing | T05-R1 to T05-R9 | Issue #6, PR #27, PR #28 | [Entry](design_log/DL-T05-001_chassis_motion_software.md) | Confirm sensor API, calibrate, run T05-R8/R9 |
 
 ## Recording conventions
 
