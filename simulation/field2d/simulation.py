@@ -19,6 +19,7 @@ from typing import List, Optional, Tuple
 import field_layout as fl
 from balls import Ball, Intake, field_balls
 from kinematics import DriveTrain, body_velocity, integrate
+from mechanisms import Mechanisms
 from mblock_runtime import DCBus, GamepadInput, MotorBus, ProgramRunner, Sensors, SimClock
 from robot import DEFAULT_CONFIG, RobotConfig, RobotPose
 from uncertainty import Variation
@@ -60,11 +61,13 @@ class Simulation:
     def __init__(self, cfg: RobotConfig, start: RobotPose, drive: DriveTrain,
                  time_limit: float = AUTO_STAGE_S, gyro_sign: int = 1,
                  gamepad: Optional[GamepadInput] = None, variation: Optional[Variation] = None,
-                 ball_scenario: str = "none", intake: Optional[Intake] = None):
+                 ball_scenario: str = "none", intake: Optional[Intake] = None,
+                 mechanisms: Optional[Mechanisms] = None):
         self.cfg, self.start_pose, self.drive = cfg, start, drive
         self.ball_scenario, self.intake = ball_scenario, intake   # see balls.py
         self.balls: List[Ball] = field_balls(fl.build_field(), ball_scenario)
         self.dc = DCBus()                          # power expansion board ports (intake, ...)
+        self.mechanisms = mechanisms or Mechanisms()  # elevator, intake lift, rollers (mechanisms.py)
         self.variation = variation or Variation()  # ideal robot unless a study passes one
         self.marks: List[dict] = []                # simtrace.mark() records, see Monte Carlo
         self.trace_options: dict = {}              # simtrace.options() for the program
@@ -106,6 +109,7 @@ class Simulation:
         self.motors = self._new_motors()
         self.sensors = Sensors()
         self.dc = DCBus()
+        self.mechanisms.reset()
         self.balls = field_balls(fl.build_field(), self.ball_scenario)
         if self.intake:
             self.intake.reset()
@@ -160,7 +164,8 @@ class Simulation:
             vx, vy, omega = body_velocity(self.cfg, self.drive.wheel_rpms(rpms), var.wheel_scale)
             vx, vy, omega = vx * var.slip_forward, vy * var.slip_strafe, omega * var.slip_turn
             self.pose = integrate(self.pose, vx, vy, omega, dt)
-            if self.intake:
+            self.mechanisms.step(self.dc, dt)
+            if self.intake and self.mechanisms.position("intake_lift") <= self.intake.max_lift_mm:
                 self.intake.update(self.pose, self.balls, self.dc.power(self.intake.port))
             self._update_sensors(vx, vy, omega, dt)
             self.clock.advance(dt)

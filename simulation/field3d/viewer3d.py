@@ -12,7 +12,9 @@ can follow the same run.
 
 Keys: O open program, Space run/stop, R reset, J gamepad window, 1-4 cameras
 (orbit, follow, top, driver), mouse drag rotate, right drag pan, wheel zoom,
-E/Q carriage up/down, M flag mast, L labels, S screenshot, H help, Esc quit.
+E/Q carriage up/down, T/G intake head up/down, M flag mast, L labels,
+S screenshot, H help, Esc quit. The carriage, intake head and rollers also
+follow the program's power_expand_board ports (robot_config.json "mechanisms").
 """
 
 import argparse
@@ -31,6 +33,7 @@ os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 import field_layout as fl  # noqa: E402
 from balls import SCENARIOS as BALL_SCENARIOS, load_intake  # noqa: E402
 from kinematics import load_drive_train  # noqa: E402
+from mechanisms import load_mechanisms  # noqa: E402
 from mblock_runtime import GamepadInput  # noqa: E402
 from robot import DEFAULT_CONFIG, load_config, start_pose  # noqa: E402
 from simulation import AUTO_STAGE_S, Simulation, load_gyro_sign  # noqa: E402
@@ -38,9 +41,12 @@ from state_stream import DEFAULT_RATE_HZ, DEFAULT_TARGET, StatePublisher, parse_
 
 CAMERAS = ("orbit", "follow", "top", "driver")
 CARRIAGE_SPEED_MM_S = 200.0
+INTAKE_LIFT_KEY_MM_S = 120.0
+SPIN_DISPLAY_CAP_DPS = 900.0   # faster rollers (e.g. the brushless shooter) would strobe on screen
 MM = 1 / 1000.0
 HELP = ("O open program   Space run/stop   R reset   J gamepad   1-4 cameras (orbit, follow, top, driver)\n"
-        "drag rotate   right-drag pan   wheel zoom   E/Q carriage   M flag mast   L labels   S screenshot   H help")
+        "drag rotate   right-drag pan   wheel zoom   E/Q carriage   T/G intake head   M flag mast   L labels   "
+        "S screenshot   H help")
 
 
 def wheel_state(sim):
@@ -60,7 +66,10 @@ def build_simulation(args, gamepad):
     elements = fl.build_field()
     sim = Simulation(cfg, start_pose(cfg, elements), load_drive_train(args.config), args.time_limit,
                      load_gyro_sign(args.config), gamepad, ball_scenario=args.balls,
-                     intake=load_intake(args.config))
+                     intake=load_intake(args.config), mechanisms=load_mechanisms(args.config))
+    if "elevator" in sim.mechanisms.linear:
+        sim.mechanisms.linear["elevator"].start_mm = args.carriage
+        sim.mechanisms.reset()
     if args.program:
         sim.program = args.program.resolve()
     return sim, elements
@@ -109,7 +118,6 @@ class Viewer3D:
         self.robot = RobotModel(load_model_spec(self.args.model))
         self.robot.root.reparent_to(render)
         self.robot.show_mast(self.args.mast)
-        self.robot.set_carriage(self.args.carriage)
         ambient = AmbientLight("ambient")
         ambient.set_color((0.45, 0.45, 0.48, 1))
         sun = DirectionalLight("sun")
@@ -160,10 +168,30 @@ class Viewer3D:
             if hidden != node.is_hidden():
                 node.hide() if hidden else node.show()
 
-    def _place_robot(self):
+    def _place_robot(self, dt=0.0):
         pose = self.sim.pose
         self.robot.set_pose(pose.x, pose.y, pose.theta)
         self.robot.set_wheel_angles({w: a for w, (_, a) in wheel_state(self.sim).items()})
+        mech = self.sim.mechanisms
+        if "elevator" in mech.linear:
+            self.robot.set_carriage(mech.position("elevator"))
+        self.robot.set_intake_lift(mech.position("intake_lift"))
+        self.robot.set_spinner_angles(self._spin_display(dt))
+
+    def _spin_display(self, dt):
+        """Displayed spinner angles: follow the simulation, but never faster than
+        SPIN_DISPLAY_CAP_DPS so fast rollers do not strobe."""
+        state = getattr(self, "_spin_state", {})
+        out = {}
+        for name, spinner in self.sim.mechanisms.spinners.items():
+            last_true, shown = state.get(name, (spinner.angle, spinner.angle))
+            delta = spinner.angle - last_true
+            cap = SPIN_DISPLAY_CAP_DPS * dt if dt > 0 else abs(delta)
+            shown += max(-cap, min(cap, delta))
+            state[name] = (spinner.angle, shown)
+            out[name] = shown
+        self._spin_state = state
+        return out
 
     def _update_trail(self):
         trail = self.sim.state.trail
@@ -281,7 +309,7 @@ class Viewer3D:
         stream = f"   stream {self.publisher.target[0]}:{self.publisher.target[1]}" if self.publisher else ""
         self.hud.setText(f"{name}   t = {sim.time:5.1f}{limit} s   {sim.state.status}\n"
                          f"x {pose.x:6.0f}  y {pose.y:6.0f} mm   heading {math.degrees(pose.theta) % 360:5.1f} deg   "
-                         f"carriage {self.robot.carriage_mm:3.0f} mm   mast {'on' if self.robot.mast_visible else 'off'}   "
+                         f"carriage {self.robot.carriage_mm:3.0f} mm   intake head {self.robot.intake_lift_mm:3.0f} mm   mast {'on' if self.robot.mast_visible else 'off'}   "
                          f"camera {self.cam_mode}{stream}"
                          + (f"\nballs collected {sim.balls_collected} / {sim.intake.capacity}" if sim.intake and sim.balls else ""))
         message = sim.state.message if sim.state.status in ("error", "out_of_bounds", "done", "stopped") else self.message
@@ -294,7 +322,7 @@ class Viewer3D:
         base = self.base
         self.programs = ProgramController(self.sim, self.say)
         self.gamepad_window = GamepadLauncher(self.gamepad, self.say)
-        self._keys = {"e": False, "q": False}
+        self._keys = {"e": False, "q": False, "t": False, "g": False}
         base.accept("escape", self.quit)
         base.accept("o", self.programs.load)
         base.accept("space", self.programs.toggle)
@@ -308,7 +336,7 @@ class Viewer3D:
         base.accept("mouse3-up", setattr, [self, "_drag", None])
         base.accept("wheel_up", self._zoom, [0.9])
         base.accept("wheel_down", self._zoom, [1.1])
-        for key in ("e", "q"):
+        for key in ("e", "q", "t", "g"):
             base.accept(key, self._keys.__setitem__, [key, True])
             base.accept(f"{key}-up", self._keys.__setitem__, [key, False])
         base.accept("m", self._toggle_mast)
@@ -335,7 +363,7 @@ class Viewer3D:
             return
         msg = state_message(self.robot.spec["name"], self.sim.time, self.sim.state.status, self.sim.pose,
                             self.sim._velocity, wheel_state(self.sim), self.robot.carriage_mm,
-                            self.robot.mast_visible, self.sim.balls_collected)
+                            self.robot.mast_visible, self.sim.balls_collected, self.robot.intake_lift_mm)
         self.publisher.maybe_send(now, msg)
 
     def _update(self, task):
@@ -344,10 +372,16 @@ class Viewer3D:
         clock = ClockObject.get_global_clock()
         dt = clock.get_dt()
         self.sim.step(dt)
+        mech = self.sim.mechanisms
         if self._keys["e"] != self._keys["q"]:
             sign = 1 if self._keys["e"] else -1
-            self.robot.set_carriage(self.robot.carriage_mm + sign * CARRIAGE_SPEED_MM_S * dt)
-        self._place_robot()
+            if "elevator" in mech.linear:
+                mech.linear["elevator"].nudge(sign * CARRIAGE_SPEED_MM_S * dt)
+            else:
+                self.robot.set_carriage(self.robot.carriage_mm + sign * CARRIAGE_SPEED_MM_S * dt)
+        if self._keys["t"] != self._keys["g"] and "intake_lift" in mech.linear:
+            mech.linear["intake_lift"].nudge((1 if self._keys["t"] else -1) * INTAKE_LIFT_KEY_MM_S * dt)
+        self._place_robot(dt)
         self._sync_balls()
         self._update_trail()
         self._drag_camera()

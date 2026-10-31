@@ -3,8 +3,9 @@
 The GLB (tools/scripts/step_to_glb.py) keeps the CAD frame in metres: +y forward
 (intake), +x right (gripper), +z up, origin on the floor under the footprint
 centre. robot_model.json says which parts belong to each wheel, to the elevator
-carriage, and to the flag mast, so a new CAD revision only needs a new GLB and,
-if part names change, an edited JSON.
+carriage, to the intake lift, to each spinning roller / gear set, and to the flag
+mast, so a new CAD revision only needs a new GLB and, if part names change, an
+edited JSON.
 
 Mesh loading (load_parts) uses trimesh only, so it can be tested without a window;
 RobotModel builds the Panda3D scene graph.
@@ -75,15 +76,31 @@ def load_parts(asset: Path) -> List[Part]:
 
 
 def classify(name: str, spec: dict) -> Dict[str, Optional[str]]:
-    """Which groups a part belongs to: wheel name (or None), carriage, mast, hidden."""
+    """Which groups a part belongs to: wheel name, spinner name (or None), carriage,
+    intake lift, mast, hidden."""
     wheel = next((w for w, info in spec["wheels"].items()
                   if any(name.startswith(p) for p in info["parts"])), None)
+    spinner = next((sp["name"] for sp in spec.get("spinners", []) if name in sp["parts"]), None)
     return {
         "wheel": wheel,
+        "spinner": spinner,
         "carriage": any(name.startswith(p) for p in spec["carriage"]["prefixes"]),
+        "intake_lift": name in spec.get("intake_lift", {}).get("parts", []),
         "mast": any(name.startswith(p) for p in spec["mast"]["prefixes"]),
         "hidden": any(name.startswith(p) for p in spec.get("hide_prefixes", [])),
     }
+
+
+def spinner_centres(parts: List[Part], spec: dict) -> Dict[str, tuple]:
+    """Rotation centre (m, CAD frame) of each spinner: bounding-box centre of its parts."""
+    by_name = {p.name: p for p in parts}
+    out = {}
+    for sp in spec.get("spinners", []):
+        verts = [by_name[n].vertices for n in sp["parts"] if n in by_name]
+        if verts:
+            v = np.vstack(verts)
+            out[sp["name"]] = tuple(float(c) for c in (v.min(0) + v.max(0)) / 2)
+    return out
 
 
 def _geom_node(part: Part):
@@ -112,6 +129,9 @@ class RobotModel:
           wheel_<name>      pivot at the wheel axle, spins about +x (CAD right axis)
           carriage          elevator carriage, gripper, mast (moves in z)
             mast            flag mast + flag (Modification Stage)
+          intake_lift       intake head on its rails (moves in z)
+            spin_<name>     spinners whose parent is the intake lift
+          spin_<name>       roller / gear / wheel sets, pivot at their centre
     """
 
     def __init__(self, spec: Optional[dict] = None, parts: Optional[List[Part]] = None):
@@ -122,6 +142,18 @@ class RobotModel:
         self.body = self.root.attach_new_node("body")
         self.carriage = self.root.attach_new_node("carriage")
         self.mast = self.carriage.attach_new_node("mast")
+        self.intake_lift = self.root.attach_new_node("intake_lift")
+        centres = spinner_centres(parts, self.spec)
+        self.spinners = {}
+        self.spinner_specs = {}
+        for sp in self.spec.get("spinners", []):
+            if sp["name"] not in centres:
+                continue
+            parent = self.intake_lift if sp.get("parent") == "intake_lift" else self.root
+            pivot = parent.attach_new_node(f"spin_{sp['name']}")
+            pivot.set_pos(*centres[sp["name"]])
+            self.spinners[sp["name"]] = pivot
+            self.spinner_specs[sp["name"]] = sp
         self.wheels = {}
         for wheel, info in self.spec["wheels"].items():
             pivot = self.root.attach_new_node(f"wheel_{wheel}")
@@ -135,20 +167,28 @@ class RobotModel:
                 continue
             if groups["wheel"]:
                 parent = self.wheels[groups["wheel"]]
+            elif groups["spinner"] in self.spinners:
+                parent = self.spinners[groups["spinner"]]
             elif groups["mast"]:
                 parent = self.mast
             elif groups["carriage"]:
                 parent = self.carriage
+            elif groups["intake_lift"]:
+                parent = self.intake_lift
             else:
                 parent = self.body
             node = parent.attach_new_node(_geom_node(part))
             if groups["wheel"]:  # vertices are in the CAD frame; the pivot sits at the axle
                 node.set_pos(*(-c / 1000.0 for c in self.spec["wheels"][groups["wheel"]]["center_mm"]))
+            elif groups["spinner"] in self.spinners:
+                node.set_pos(*(-c for c in centres[groups["spinner"]]))
             node.set_color(*part.rgba)
             if part.rgba[3] < 0.99:
                 node.set_transparency(TransparencyAttrib.M_alpha)
         self.carriage_mm = 0.0
+        self.intake_lift_mm = 0.0
         self.set_carriage(0.0)
+        self.set_intake_lift(0.0)
         self.show_mast(False)
 
     # --- articulation -------------------------------------------------------------
@@ -169,6 +209,25 @@ class RobotModel:
         info = self.spec["carriage"]
         self.carriage_mm = max(0.0, min(info["travel_mm"], height_mm))
         self.carriage.set_z((self.carriage_mm - info["asset_height_mm"]) / 1000.0)
+
+    def set_intake_lift(self, height_mm: float) -> None:
+        """Intake head height above its lowest position (mm, clamped by the simulation)."""
+        self.intake_lift_mm = max(0.0, height_mm)
+        self.intake_lift.set_z(self.intake_lift_mm / 1000.0)
+
+    def set_spinner_angles(self, mechanism_angles: Dict[str, float]) -> None:
+        """mechanism_angles: angle (deg) per mechanism (e.g. "intake_rollers"); each
+        spinner turns by angle x its ratio about its axis."""
+        for name, pivot in self.spinners.items():
+            sp = self.spinner_specs[name]
+            angle = mechanism_angles.get(sp["mechanism"], 0.0) * sp.get("ratio", 1.0)
+            axis = sp.get("axis", "x")
+            if axis == "x":
+                pivot.set_p(angle)
+            elif axis == "y":
+                pivot.set_r(angle)
+            else:
+                pivot.set_h(angle)
 
     def show_mast(self, visible: bool) -> None:
         self.mast_visible = bool(visible)

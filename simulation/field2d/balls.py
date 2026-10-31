@@ -12,7 +12,8 @@ Scenarios:
                 the manual stage (p.32). Where they come to rest is an estimate.
 
 Intake model (robot_config.json "intake"): while the power on the intake port is at
-least min_power (times direction), every ball on the field whose centre is inside
+least min_power (times direction) and the intake head is down (lift <= max_lift_mm,
+see mechanisms.py), every ball on the field whose centre is inside
 the intake zone (robot frame box at the front) and not higher than
 max_ball_center_z_mm is collected, up to capacity. No ball physics: balls do not
 roll, bounce or get pushed.
@@ -101,6 +102,7 @@ class Intake:
     y_max: float = 208.0
     max_ball_center_z: float = 60.0    # floor balls (centre 35 mm) only
     capacity: int = 18
+    max_lift_mm: float = 20.0          # intake head must be down (mechanisms "intake_lift")
     collected: List[str] = field(default_factory=list)
 
     def running(self, power: float) -> bool:
@@ -141,4 +143,5 @@ def load_intake(path: Path = DEFAULT_CONFIG) -> Optional[Intake]:
                   x_min=float(zone.get("x_min", 200.0)), x_max=float(zone.get("x_max", 285.0)),
                   y_min=float(zone.get("y_min", -190.0)), y_max=float(zone.get("y_max", 208.0)),
                   max_ball_center_z=float(data.get("max_ball_center_z_mm", 60.0)),
-                  capacity=int(data.get("capacity", 18)))
+                  capacity=int(data.get("capacity", 18)),
+                  max_lift_mm=float(data.get("max_lift_mm", 20.0)))

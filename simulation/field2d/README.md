@@ -130,6 +130,15 @@ at the robot front (v22 CAD: 200–285 mm ahead, 190 mm right to 208 mm left) wh
 6 + 12). Balls do not roll or get pushed, and balls on the shelves or the central levels are
 out of reach. `sim.balls_collected` and the [3D viewer](../field3d/README.md) show the count.
 
+### Mechanisms ([`mechanisms.py`](mechanisms.py))
+
+`Simulation(..., mechanisms=load_mechanisms())` moves the mechanism motors from the
+`power_expand_board` ports, kinematically (no load, no inertia): the elevator carriage
+(`DC3`, 0–358 mm, 150 mm/s), the intake head lift (`DC2`, 0–380 mm, 53 mm/s, estimate) and the
+spinning roller sets (intake `DC1`, tower `DC4`, feeder `DC5`, shooter `BL1`). Ports are
+assumptions until the wiring is fixed. The [3D viewer](../field3d/README.md#mechanisms) animates
+the CAD parts with these values.
+
 ### Motor mapping and sensors (`robot_config.json`)
 
 ```json

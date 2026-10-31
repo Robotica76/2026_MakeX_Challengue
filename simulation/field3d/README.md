@@ -37,7 +37,8 @@ cd simulation/field3d
 | `J` | Open the emulated gamepad window (manual programs) |
 | `1` `2` `3` `4` | Cameras: orbit (field), follow (behind the robot), top (orthographic), driver (red side) |
 | Drag / right-drag / wheel | Rotate / pan / zoom |
-| `E` / `Q` | Elevator carriage up / down (0–358 mm, visual) |
+| `E` / `Q` | Elevator carriage up / down (0–358 mm); a program moves it through `DC3` |
+| `T` / `G` | Intake head up / down (0–380 mm); a program moves it through `DC2` |
 | `M` | Flag mast on/off (installed in the Modification Stage) |
 | `L` | Field labels |
 | `S` | Screenshot (`field3d_screenshot.png`) |
@@ -53,9 +54,28 @@ stops when a footprint corner leaves the field, on a program error, or on Stop.
 | --- | --- | --- |
 | Robot pose | Whole model | Simulated pose (`Simulation.pose`) |
 | 4 mecanum wheels | Tyre, rollers, hub, coupling per corner | Encoder angle of each drive motor port |
-| Elevator carriage | `CAR_`, `GR_`, `FLAG_receptor` (the 18 parts that move 358 mm between the two v22 STEP files) | `E`/`Q` keys or `--carriage` (the simulator has no elevator motor model yet) |
+| Elevator carriage | `CAR_`, `GR_`, `FLAG_receptor` (the 18 parts that move 358 mm between the two v22 STEP files) | `DC3` power (150 mm/s at 100 %), `E`/`Q` keys, `--carriage` |
+| Intake head | 16 `INT_UR_` parts on the `INT_UR` rails: arms, slides, nut, fingered roller, belts, pulleys, roller motor | `DC2` power (53 mm/s at 100 %, estimate), `T`/`G` keys |
+| Rollers and gears | Intake head roller, lower roller, star roller, helical centring roller and their gears; tower elbow roller and gears; basket feed roller; shooter friction wheels (16 sets) | `DC1` intake, `DC4` tower, `DC5` feeder, `BL1` shooter (displayed speed capped at 900 °/s) |
 | Flag mast | `FLAG_mastil`, `FLAG_cabeza`, `FLAG_pasador`, `FLAG_ligas`, reference flag | `M` key or `--mast` |
 | Balls | The 70 balls of the simulation (`simulation/field2d/balls.py`); collected balls disappear and the HUD counts them | Intake model on `DC1` (`power_expand_board`) |
+
+## Mechanisms
+
+The mechanism motors follow the program's `power_expand_board` ports, with the kinematic
+model of [`simulation/field2d/mechanisms.py`](../field2d/mechanisms.py) and the ports, speeds
+and travels in `robot_config.json` "mechanisms". The CAD only has the intake in one position,
+so the intake-head parts, its travel (≈ 380 mm from the 428 mm rails) and the roller axes are
+inferred from the part geometry (`robot_model.json`); ports and some speeds are assumptions
+until the wiring is fixed. The intake only collects balls with its head down (≤ 20 mm).
+
+Menu option 5, or `viewer3d.py --program ../control/test_mechanisms.py --camera follow`, runs
+[`test_mechanisms.py`](../control/test_mechanisms.py): rollers on, intake head up, tower,
+feeder and shooter on, carriage to the top and back down.
+
+| Intake head down (0.5 s) | Intake head 212 mm up, carriage at the top (7.5 s) |
+| --- | --- |
+| ![head down](docs/mechanisms_0.5s.png) | ![head up](docs/mechanisms_7.5s.png) |
 
 ## Ball collection demo
 
@@ -124,7 +144,7 @@ is documented in [`state_stream.py`](state_stream.py):
  "pose": {"x_mm": 1234.5, "y_mm": 567.8, "theta_deg": 90.0},
  "velocity": {"vx_mm_s": 0.0, "vy_mm_s": 0.0, "omega_deg_s": 0.0},
  "wheels": {"front_left": {"rpm": 0.0, "angle_deg": 0.0}, "...": {}},
- "carriage_mm": 0.0, "mast": false, "balls_collected": 0}
+ "carriage_mm": 0.0, "mast": false, "balls_collected": 0, "intake_lift_mm": 0.0}
 ```
 
 `python stream_listener.py` prints the messages and is the starting point for a bridge:
@@ -141,7 +161,7 @@ The stream is one-way (simulator → tools); nothing outside can drive the simul
 
 ## Checks
 
-`python -m unittest` in this directory (15 tests): wheel, carriage and mast groups match
+`python -m unittest` in this directory (20 tests): wheel, carriage and mast groups match
 the CAD; the model stands on the floor with the 499.5 × 499.0 mm footprint; wheel pivots at
 the measured axles; the CAD forward axis follows the simulated heading; every field element
 is built at its height and the rules details are present (16 pins, 20 + 30 balls, 16 letter cubes, shelf at 758.5 mm, 290 mm pins); stream messages round-trip and respect the rate; and an offscreen
@@ -151,6 +171,6 @@ render of the automatic demo (skipped when no graphics context is available).
 
 - Visual only: the 3D field has no collisions; the simulation still checks only the field
   boundary, as in 2D. Physics (contacts, tipping, the fortress) is not modelled.
-- The elevator, intake, shooter and gripper motors are not simulated; the carriage height
-  is set by hand.
+- Mechanisms are kinematic (no load, no inertia); the gripper jaw, the shooter hood servo and
+  ball flow through the tower and shooter are not simulated.
 - Field element placements carry the estimates noted in `field_layout.py`.

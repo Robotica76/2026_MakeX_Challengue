@@ -16,6 +16,9 @@ unchanged:
   prints whether each arrived and the odometry pose.
 - `test_chassis_control_manual.py`: `joystick_drive` driven from the emulated
   gamepad (Open gamepad in the viewer).
+- `test_mechanisms.py`: moves every simulated mechanism (intake rollers and head,
+  tower, feeder, shooter, elevator carriage) through the `power_expand_board` ports
+  (menu option 5 of the 3D launcher).
 - `test_ball_collection.py`: collects the balls released from both red own resource
   areas with the intake on `DC1` (`viewer3d.py --balls released`, menu option 4 of the
   3D launcher). In simulation it fills the intake (18 balls) in about 19 s. It shows how

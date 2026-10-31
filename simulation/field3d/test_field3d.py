@@ -15,7 +15,7 @@ sys.path[:0] = [str(HERE), str(HERE.parent / "field2d")]
 import field_layout as fl  # noqa: E402
 from field_model import field_parts, prop_base  # noqa: E402
 from robot import RobotPose  # noqa: E402
-from robot_model import RobotModel, classify, load_model_spec, load_parts  # noqa: E402
+from robot_model import RobotModel, classify, load_model_spec, load_parts, spinner_centres  # noqa: E402
 from state_stream import SCHEMA_VERSION, StatePublisher, parse_target, state_message  # noqa: E402
 
 # Parts that move 358 mm between the carriage-down and carriage-up v22 STEP files.
@@ -70,6 +70,23 @@ class ModelSpecTest(unittest.TestCase):
         self.assertTrue({"FLAG_mastil_tubo_CF_8x6", "FLAG_cabeza_C_PETG"} <= mast)
         self.assertNotIn("FLAG_receptor_mastil_PETG", mast)   # the receptor stays on the robot
 
+    def test_intake_lift_and_spinner_parts_exist(self):
+        names = {p.name for p in parts()}
+        lift = self.spec["intake_lift"]["parts"]
+        self.assertTrue(set(lift) <= names, set(lift) - names)
+        spun = [n for sp in self.spec["spinners"] for n in sp["parts"]]
+        self.assertTrue(set(spun) <= names, set(spun) - names)
+        self.assertEqual(len(spun), len(set(spun)))                 # no part in two spinners
+        rails = [n for n in names if n.startswith("INT_UR_riel")]
+        self.assertTrue(rails and not set(rails) & set(lift))        # the rails stay put
+
+    def test_spinner_centres_lie_on_the_roller_axes(self):
+        centres = {k: [c * 1000 for c in v] for k, v in spinner_centres(parts(), self.spec).items()}
+        for name, (y, z) in {"intake_head_roller": (208, 95), "intake_lower_roller": (71, 22),
+                             "intake_star_roller": (19, 150), "tower_elbow_roller": (-59, 443)}.items():
+            self.assertAlmostEqual(centres[name][1], y, delta=1.5, msg=name)
+            self.assertAlmostEqual(centres[name][2], z, delta=1.5, msg=name)
+
     def test_reference_balls_are_hidden(self):
         balls = [n for n, g in self.groups.items() if n.startswith("REF_pelota")]
         self.assertTrue(balls)
@@ -104,9 +121,40 @@ class RobotNodeTest(unittest.TestCase):
         self.robot.set_wheel_angles({"front_left": 90})
         self.assertAlmostEqual(pivot.get_p(), 90)
 
+    def test_intake_lift_carries_its_roller(self):
+        pivot = self.robot.spinners["intake_head_roller"]
+        z0 = pivot.get_pos(self.robot.root).z
+        self.robot.set_intake_lift(150)
+        self.assertAlmostEqual(pivot.get_pos(self.robot.root).z - z0, 0.150, places=5)
+        lower = self.robot.spinners["intake_lower_roller"]
+        self.assertAlmostEqual(lower.get_pos(self.robot.root).z, 0.022, delta=0.002)   # not on the lift
+
+    def test_spinner_angles_follow_mechanism_and_ratio(self):
+        self.robot.set_spinner_angles({"intake_rollers": 30.0, "feeder": 10.0})
+        self.assertAlmostEqual(self.robot.spinners["intake_star_roller"].get_p(), -90.0, places=4)   # ratio -3, axis x
+        self.assertAlmostEqual(self.robot.spinners["feeder_roller"].get_r(), 30.0, places=4)        # ratio 3, axis y
+        self.assertAlmostEqual(self.robot.spinners["shooter_wheels"].get_r(), 0.0, places=4)
+
     def test_mast_hidden_by_default(self):
         self.assertFalse(self.robot.mast_visible)
         self.assertTrue(self.robot.mast.is_hidden())
+
+
+class MechanismViewerTest(unittest.TestCase):
+    def test_mechanism_demo_moves_the_cad_parts(self):
+        import viewer3d
+        args = viewer3d.parse_args(["--screenshot", "unused.png", "--no-stream", "--size", "320x200",
+                                    "--program", str(HERE.parent / "control" / "test_mechanisms.py")])
+        try:
+            viewer = viewer3d.Viewer3D(args)
+        except Exception as exc:  # no OpenGL context (e.g. headless CI)
+            self.skipTest(f"no offscreen graphics: {exc}")
+        viewer.run_headless(7.5)            # intake head up, carriage at the top
+        self.assertAlmostEqual(viewer.robot.carriage.get_z(), 0.0, places=3)          # 358 mm = asset height
+        self.assertGreater(viewer.robot.intake_lift.get_z(), 0.2)
+        self.assertNotEqual(viewer.robot.spinners["shooter_wheels"].get_r(), 0.0)
+        viewer.sim.stop()
+        viewer.base.destroy()
 
 
 class FieldTest(unittest.TestCase):

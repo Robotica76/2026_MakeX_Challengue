@@ -13,7 +13,8 @@ Default target: 127.0.0.1:5005, 30 messages per second. Message (schema v1):
       "wheels": {"front_left": {"rpm": 0.0, "angle_deg": 0.0}, ...},
       "carriage_mm": 0.0,              elevator carriage above its lowest position
       "mast": false,                   flag mast installed (Modification Stage)
-      "balls_collected": 0             balls taken by the intake in this run
+      "balls_collected": 0,            balls taken by the intake in this run
+      "intake_lift_mm": 0.0            intake head above its lowest position
     }
 
 Frames: pose in the field frame (origin at the red-side field corner, x toward the
@@ -43,7 +44,7 @@ def parse_target(text: str) -> Tuple[str, int]:
 
 def state_message(robot: str, t: float, status: str, pose, velocity: Tuple[float, float, float],
                   wheels: Dict[str, Tuple[float, float]], carriage_mm: float, mast: bool,
-                  balls_collected: int = 0) -> dict:
+                  balls_collected: int = 0, intake_lift_mm: float = 0.0) -> dict:
     vx, vy, omega = velocity
     return {
         "v": SCHEMA_VERSION,
@@ -59,6 +60,7 @@ def state_message(robot: str, t: float, status: str, pose, velocity: Tuple[float
         "carriage_mm": round(carriage_mm, 1),
         "mast": bool(mast),
         "balls_collected": int(balls_collected),
+        "intake_lift_mm": round(intake_lift_mm, 1),
     }
 
 

@@ -64,6 +64,52 @@
     },
     "max_ball_center_z_mm": 60.0,
     "capacity": 18,
-    "source": "v22 CAD: INT_ parts span y_left -190..208 mm and reach the front edge (x 249 mm); capacity = 6 basket + 12 tower REF balls. Port DC1 is an assumption (TBD)."
+    "source": "v22 CAD: INT_ parts span y_left -190..208 mm and reach the front edge (x 249 mm); capacity = 6 basket + 12 tower REF balls. Port DC1 is an assumption (TBD).",
+    "max_lift_mm": 20.0
+  },
+  "mechanisms": {
+    "source": "v22 CAD parts and motors. Ports are assumptions (TBD with the electrical team); speeds marked estimate.",
+    "linear": {
+      "elevator": {
+        "port": "DC3",
+        "travel_mm": 358.0,
+        "speed_mm_s": 150.0,
+        "direction": 1,
+        "note": "carriage travel from the two v22 STEP files; DC37 50 rpm x 90T GT2 pulley (180 mm/rev) = 150 mm/s"
+      },
+      "intake_lift": {
+        "port": "DC2",
+        "travel_mm": 380.0,
+        "speed_mm_s": 53.0,
+        "direction": 1,
+        "note": "INT_UR head on 428 mm rails (z 102-530 mm, 40 mm slides): ~380 mm travel; DC25 ~200 rpm x 16 mm lead (T8x16) = 53 mm/s, estimate"
+      }
+    },
+    "spinners": {
+      "intake_rollers": {
+        "port": "DC1",
+        "rpm": 200.0,
+        "direction": 1,
+        "note": "INT_motor_DC37_200rpm (same port as the intake model)"
+      },
+      "tower": {
+        "port": "DC4",
+        "rpm": 200.0,
+        "direction": 1,
+        "note": "TW_motor_DC37_200rpm"
+      },
+      "feeder": {
+        "port": "DC5",
+        "rpm": 200.0,
+        "direction": 1,
+        "note": "CN_motor_DC25_200rpm"
+      },
+      "shooter": {
+        "port": "BL1",
+        "rpm": 3000.0,
+        "direction": 1,
+        "note": "brushless friction wheels, estimate; the 3D view caps the displayed speed"
+      }
+    }
   }
 }

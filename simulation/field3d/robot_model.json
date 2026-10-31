@@ -3,21 +3,256 @@
   "asset": "assets/storm_breaker_v22.glb",
   "cad_source": "mechanical/assemblies/full_robot/v22/cad/Robot_StormBreaker_v22_con_mastil_y_bandera_carro_arriba.step.zip",
   "frame": "CAD frame, metres: +y forward (intake), +x right (gripper), +z up, origin at the floor under the footprint centre",
-  "hide_prefixes": ["REF_pelota"],
+  "hide_prefixes": [
+    "REF_pelota"
+  ],
   "carriage": {
-    "prefixes": ["CAR_", "GR_", "FLAG_", "REF_bandera"],
+    "prefixes": [
+      "CAR_",
+      "GR_",
+      "FLAG_",
+      "REF_bandera"
+    ],
     "asset_height_mm": 358.0,
     "travel_mm": 358.0,
     "source": "parts that move 358 mm in z between the carro_abajo (inicial) and carro_arriba STEP files"
   },
   "mast": {
-    "prefixes": ["FLAG_mastil", "FLAG_cabeza", "FLAG_pasador", "FLAG_ligas", "REF_bandera"],
+    "prefixes": [
+      "FLAG_mastil",
+      "FLAG_cabeza",
+      "FLAG_pasador",
+      "FLAG_ligas",
+      "REF_bandera"
+    ],
     "note": "installed in the Modification Stage; hidden by default"
   },
   "wheels": {
-    "front_left":  {"parts": ["CH_mecanum_80_L_del_izq", "CH_hub_mecanum_80_del_izq", "CH_coupling_mecanum_80_del_izq"], "center_mm": [-221.2, 45.0, 40.0]},
-    "front_right": {"parts": ["CH_mecanum_80_R_del_der", "CH_hub_mecanum_80_del_der", "CH_coupling_mecanum_80_del_der"], "center_mm": [221.2, 45.0, 40.0]},
-    "rear_left":   {"parts": ["CH_mecanum_80_R_tras_izq", "CH_hub_mecanum_80_tras_izq", "CH_coupling_mecanum_80_tras_izq"], "center_mm": [-221.2, -203.0, 40.0]},
-    "rear_right":  {"parts": ["CH_mecanum_80_L_tras_der", "CH_hub_mecanum_80_tras_der", "CH_coupling_mecanum_80_tras_der"], "center_mm": [221.2, -203.0, 40.0]}
-  }
+    "front_left": {
+      "parts": [
+        "CH_mecanum_80_L_del_izq",
+        "CH_hub_mecanum_80_del_izq",
+        "CH_coupling_mecanum_80_del_izq"
+      ],
+      "center_mm": [
+        -221.2,
+        45.0,
+        40.0
+      ]
+    },
+    "front_right": {
+      "parts": [
+        "CH_mecanum_80_R_del_der",
+        "CH_hub_mecanum_80_del_der",
+        "CH_coupling_mecanum_80_del_der"
+      ],
+      "center_mm": [
+        221.2,
+        45.0,
+        40.0
+      ]
+    },
+    "rear_left": {
+      "parts": [
+        "CH_mecanum_80_R_tras_izq",
+        "CH_hub_mecanum_80_tras_izq",
+        "CH_coupling_mecanum_80_tras_izq"
+      ],
+      "center_mm": [
+        -221.2,
+        -203.0,
+        40.0
+      ]
+    },
+    "rear_right": {
+      "parts": [
+        "CH_mecanum_80_L_tras_der",
+        "CH_hub_mecanum_80_tras_der",
+        "CH_coupling_mecanum_80_tras_der"
+      ],
+      "center_mm": [
+        221.2,
+        -203.0,
+        40.0
+      ]
+    }
+  },
+  "intake_lift": {
+    "mechanism": "intake_lift",
+    "note": "INT_UR head: slides on the INT_UR rails (z), driven by INT_UR_motor_DC25_elevacion and INT_UR_tornillo_T8x16; parts inferred from the CAD geometry",
+    "parts": [
+      "INT_UR_brazo_der_CF3",
+      "INT_UR_brazo_izq_CF3",
+      "INT_UR_patin_impreso_2020_der_PETG",
+      "INT_UR_patin_impreso_2020_izq_PETG",
+      "INT_UR_tuerca_brazo_PETG",
+      "INT_UR_eje_nariz_D8_Al",
+      "INT_UR_eje_cola_D8_Al",
+      "INT_UR_nucleo_D32",
+      "INT_UR_dedos_TPU_espiga",
+      "INT_UR_anillos_banda_D60_PETG",
+      "INT_UR_bandas_PU_redondas_x5",
+      "INT_UR_poleas_PU_20mm_kit_nariz_y_cola_x10",
+      "INT_UR_munon_D8_acero",
+      "INT_UR_rodamiento_8x16x5",
+      "INT_UR_motor_DC25_giro_interno",
+      "INT_UR_estribo_motor_PETG"
+    ]
+  },
+  "spinners": [
+    {
+      "name": "intake_head_roller",
+      "parts": [
+        "INT_UR_nucleo_D32",
+        "INT_UR_dedos_TPU_espiga",
+        "INT_UR_anillos_banda_D60_PETG"
+      ],
+      "axis": "x",
+      "mechanism": "intake_rollers",
+      "ratio": -1.0,
+      "parent": "intake_lift"
+    },
+    {
+      "name": "intake_lower_roller",
+      "parts": [
+        "INT_LR_manguito_TPU_D44"
+      ],
+      "axis": "x",
+      "mechanism": "intake_rollers",
+      "ratio": -1.0
+    },
+    {
+      "name": "intake_star_roller",
+      "parts": [
+        "INT_R3_entrada_estrellas_TPU",
+        "INT_R3_entrada_nucleo",
+        "INT_R3_entrada_eje_D8"
+      ],
+      "axis": "x",
+      "mechanism": "intake_rollers",
+      "ratio": -3.0
+    },
+    {
+      "name": "intake_centering_roller",
+      "parts": [
+        "INT_centrador_helicoidal_TPU",
+        "INT_centrador_nucleo",
+        "INT_centrador_eje_D8"
+      ],
+      "axis": "x",
+      "mechanism": "intake_rollers",
+      "ratio": 3.0
+    },
+    {
+      "name": "intake_gear_motor_48T",
+      "parts": [
+        "INT_engrane_48T_kit_motor"
+      ],
+      "axis": "x",
+      "mechanism": "intake_rollers",
+      "ratio": 1.0
+    },
+    {
+      "name": "intake_gear_idler_48T",
+      "parts": [
+        "INT_engrane_48T_kit_loco"
+      ],
+      "axis": "x",
+      "mechanism": "intake_rollers",
+      "ratio": -1.0
+    },
+    {
+      "name": "intake_gear_idler_R3_48T",
+      "parts": [
+        "INT_engrane_48T_kit_loco_R3"
+      ],
+      "axis": "x",
+      "mechanism": "intake_rollers",
+      "ratio": 1.0
+    },
+    {
+      "name": "intake_gear_R3_16T",
+      "parts": [
+        "INT_engrane_16T_kit_R3"
+      ],
+      "axis": "x",
+      "mechanism": "intake_rollers",
+      "ratio": -3.0
+    },
+    {
+      "name": "intake_gear_centering_16T",
+      "parts": [
+        "INT_engrane_16T_kit_centrador"
+      ],
+      "axis": "x",
+      "mechanism": "intake_rollers",
+      "ratio": 3.0
+    },
+    {
+      "name": "tower_elbow_roller",
+      "parts": [
+        "TW_rodillo_codo_manga_PETG_TPU_D40"
+      ],
+      "axis": "x",
+      "mechanism": "tower",
+      "ratio": 1.0
+    },
+    {
+      "name": "tower_gear_motor_48T",
+      "parts": [
+        "TW_engrane_48T_kit_motor"
+      ],
+      "axis": "x",
+      "mechanism": "tower",
+      "ratio": 1.0
+    },
+    {
+      "name": "tower_gear_idler_48T",
+      "parts": [
+        "TW_engrane_48T_kit_loco"
+      ],
+      "axis": "x",
+      "mechanism": "tower",
+      "ratio": -1.0
+    },
+    {
+      "name": "tower_gear_16T",
+      "parts": [
+        "TW_engrane_16T_kit_eje"
+      ],
+      "axis": "x",
+      "mechanism": "tower",
+      "ratio": 3.0
+    },
+    {
+      "name": "feeder_roller",
+      "parts": [
+        "CN_rodillo_alimentador_TPU_D30",
+        "CN_engrane_16T_kit_alimentador"
+      ],
+      "axis": "y",
+      "mechanism": "feeder",
+      "ratio": 3.0
+    },
+    {
+      "name": "feeder_gear_motor_48T",
+      "parts": [
+        "CN_engrane_48T_kit_motor_alimentador"
+      ],
+      "axis": "y",
+      "mechanism": "feeder",
+      "ratio": -1.0
+    },
+    {
+      "name": "shooter_wheels",
+      "parts": [
+        "SH_friction_wheel_D45x19_5_kit_x2",
+        "SH_friction_wheel_ring_D28x7_kit_x2"
+      ],
+      "axis": "y",
+      "mechanism": "shooter",
+      "ratio": 1.0
+    }
+  ],
+  "spinners_note": "Axes and centres come from the part meshes (centre = bounding-box centre of the listed parts). Gear ratios from the tooth counts in the part names (48T / 16T = 3); directions are illustrative."
 }

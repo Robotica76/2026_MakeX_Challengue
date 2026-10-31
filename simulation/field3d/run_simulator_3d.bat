@@ -45,9 +45,12 @@ echo   1. Simulator (empty)
 echo   2. Chassis demo - automatic  (Space starts it, about 44 s)
 echo   3. Chassis demo - manual     (J opens the gamepad, then Space)
 echo   4. Ball collection demo      (Space starts it, about 19 s)
+echo   5. Mechanisms demo           (Space starts it: intake head, rollers, carriage)
 echo.
-choice /c 1234 /n /m "Choose 1, 2, 3 or 4: "
-if errorlevel 4 (
+choice /c 12345 /n /m "Choose 1-5: "
+if errorlevel 5 (
+    "%PY%" viewer3d.py --program ..\control\test_mechanisms.py --camera follow
+) else if errorlevel 4 (
     "%PY%" viewer3d.py --program ..\control\test_ball_collection.py --balls released --time-limit 100
 ) else if errorlevel 3 (
     "%PY%" viewer3d.py --program ..\control\test_chassis_control_manual.py --time-limit 100 --camera follow
