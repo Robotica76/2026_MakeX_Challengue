@@ -21,10 +21,11 @@ from ball_physics import BallWorld, load_ball_path
 from balls import Ball, Intake, field_balls
 from kinematics import DriveTrain, body_velocity, integrate
 from ball_physics import named_colliders
-from match import CollisionMonitor, MatchMonitor
+from match import CollisionMonitor, HalfMonitor, MatchMonitor
 from mechanisms import Mechanisms
 from props import Gripper, Prop, field_props, rake_props
 import referee
+from flag import load_flag
 from mblock_runtime import DCBus, GamepadInput, MotorBus, ProgramRunner, Sensors, ServoBus, SimClock
 from robot import DEFAULT_CONFIG, RobotConfig, RobotPose
 from uncertainty import Variation
@@ -93,6 +94,9 @@ class Simulation:
         self.motors = self._new_motors()
         self.sensors = Sensors()
         self.bonus_judged = None                   # referee.manual_stage_start() at 30 s
+        self.modification = None                   # referee.modification_stage() at 130 s
+        self.flag = load_flag(cfg.alliance, elements=self.elements)
+        self.half = self._new_half()
         self.servos = ServoBus()                   # smart servos (angles), mbuild.smartservo
         self._ranging = json.loads(DEFAULT_CONFIG.read_text()).get("ranging_sensors", {})
         self._colliders = [box for _, box in named_colliders(self.elements)]
@@ -121,6 +125,16 @@ class Simulation:
         bx0, by0, _, bx1, by1, _ = data.get("body_box_mm", (-self.cfg.length_mm / 2, -self.cfg.width_mm / 2, 0.0,
                                                            self.cfg.length_mm / 2, self.cfg.width_mm / 2, 642.0))
         return MatchMonitor(self.cfg.alliance, (bx0, by0, bx1, by1))
+
+    def _new_half(self) -> Optional[HalfMonitor]:
+        """Own half of the alliance area (two robots per alliance), robot_config.json "own_half"."""
+        spec = json.loads(DEFAULT_CONFIG.read_text()).get("own_half")
+        if not spec:
+            return None
+        data = self._path_data or {}
+        bx0, by0, _, bx1, by1, _ = data.get("body_box_mm", (-self.cfg.length_mm / 2, -self.cfg.width_mm / 2, 0.0,
+                                                           self.cfg.length_mm / 2, self.cfg.width_mm / 2, 642.0))
+        return HalfMonitor(spec.get("half", "lower"), (bx0, by0, bx1, by1))
 
     def _new_collisions(self) -> CollisionMonitor:
         """Robot body and intake head against the field structures (match.py)."""
@@ -154,6 +168,9 @@ class Simulation:
         self.motors = self._new_motors()
         self.sensors = Sensors()
         self.bonus_judged = None
+        self.modification = None
+        self.flag = load_flag(self.cfg.alliance, elements=self.elements)
+        self.half = self._new_half()
         self.servos = ServoBus()
         self.dc = DCBus()
         self.mechanisms.reset()
@@ -234,7 +251,13 @@ class Simulation:
                                     self.mechanisms.position("gripper_jaw"), self.props, self.elements)
             mech_moving = any(abs(self.dc.power(m.port)) >= 5 for m in self.mechanisms.linear.values())
             self.monitor.update(self.clock.now, dt, self.pose, (vx, vy, omega), mech_moving)
-            self.collisions.update(self.clock.now, self.pose, self.mechanisms.position("intake_lift"))
+            in_play = not (referee.MODIFICATION_START_S <= self.clock.now < referee.FINAL_START_S)
+            if in_play:
+                self.collisions.update(self.clock.now, self.pose, self.mechanisms.position("intake_lift"))
+                if self.half:
+                    self.half.update(self.clock.now, dt, self.pose)
+            if self.flag:
+                self.flag.update(self.clock.now, self.pose, self.mechanisms.position("elevator"))
             self.clock.advance(dt)
             self._referee()
             self._check()
@@ -309,6 +332,9 @@ class Simulation:
                 and (not self.time_limit or self.time_limit > referee.MANUAL_START_S)
                 and self.clock.now >= referee.MANUAL_START_S - 1e-9):
             self.bonus_judged = referee.manual_stage_start(self)
+        if (self.modification is None and (not self.time_limit or self.time_limit > referee.MODIFICATION_START_S)
+                and self.clock.now >= referee.MODIFICATION_START_S - 1e-9):
+            self.modification = referee.modification_stage(self)
 
     def _check(self) -> None:
         if out_of_bounds(self.cfg, self.pose):

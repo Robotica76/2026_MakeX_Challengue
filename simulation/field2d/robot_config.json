@@ -370,5 +370,21 @@
       "lateral": 40.0,
       "z": 45.0
     }
+  },
+  "own_half": {
+    "half": "lower",
+    "note": "two robots per alliance: this robot (Red Start 1) plays y <= 1527.5 mm, the partner the upper half (team decision 2026-10-31)"
+  },
+  "team_flag": {
+    "source": "v22 CAD con_mastil_y_bandera_carro_arriba: REF_bandera spans CAD y -214..86 mm (robot x), CAD x 190-198 mm (robot y -194), top 1128 mm with the carriage up 358 mm -> 770 mm with it down; FLAG_mastil at robot (x -64, y -64..-68 CAD x 181)",
+    "rod_front_mm": 86.0,
+    "rod_back_mm": -214.0,
+    "rod_y_mm": -194.0,
+    "rod_z_mm": 770.0,
+    "rod_front_override_mm": 249.0,
+    "override_note": "design proposal (simulated): flag rod on the LEFT side (launcher side, y +194 mm) reaching the front edge of the projection (249 mm). Facing the back wall, the chassis front must stay at x >= 312 mm (pin area x < 195 mm, 405 mm high) while the rod reaches the pole (x 0-120 mm, 961 mm high): a 37 mm window, intake head up (>= 364 mm) over the pin area. With the CAD mast (right side, front 86 mm) the cone post (x 180-220, y 868-908) keeps the rod >= 150 mm short. Set both overrides to null for the CAD mast",
+    "min_overlap_mm": 20.0,
+    "y_tolerance_mm": 15.0,
+    "rod_y_override_mm": 194.0
   }
 }

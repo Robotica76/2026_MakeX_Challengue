@@ -1,11 +1,12 @@
-"""Play a whole match (automatic + manual, 130 s) headless and print the timeline and the score.
+"""Play a whole match (automatic, manual, modification, final: 280 s) headless; print the timeline and score.
 
     .venv/bin/python simulation/analysis/simulate_match.py
     .venv/bin/python simulation/analysis/simulate_match.py --program simulation/control/match_2026.py
 
 The program runs in the 2D simulator with the rules' initial ball state; at 30 s the referee
-exchanges the valid bonus cubes and the observers release the own resource balls (referee.py).
-The score follows the rules guide table (p.53-54); pins, the X mark and the flag are not simulated.
+exchanges the valid bonus cubes and the observers release the own resource balls; at 130 s the
+robot must be partly in its starting area and comes back with the flag mast (referee.py). The
+score follows the rules guide table (p.53-54); pins and the X mark are not simulated.
 """
 
 import argparse
@@ -20,7 +21,7 @@ FIELD2D = ROOT / "simulation" / "field2d"
 DEFAULT = ROOT / "simulation" / "control" / "match_2026.py"
 
 
-def play(program: Path, seconds: float = 130.0, options=None):
+def play(program: Path, seconds: float = 280.0, options=None):
     os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
     sys.path.insert(0, str(FIELD2D))
     import field_layout as fl
@@ -49,7 +50,7 @@ def play(program: Path, seconds: float = 130.0, options=None):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--program", type=Path, default=DEFAULT)
-    ap.add_argument("--seconds", type=float, default=130.0)
+    ap.add_argument("--seconds", type=float, default=280.0)
     ap.add_argument("--strategy", help="automatic strategy for match_2026.py (bonus, balls, mixed, props)")
     ap.add_argument("--compare", action="store_true", help="score every automatic strategy with the same manual stage")
     args = ap.parse_args()
@@ -64,6 +65,11 @@ def main():
     print("collisions:", [(e["element"], e["part"], round(e["start"], 1)) for e in sim.collisions.collisions] or "none")
     print("R06 penalties:", sim.monitor.r06_penalties, "| R19:", sim.monitor.report()[:1])
     print("bonus judged at 30 s:", sim.bonus_judged and sim.bonus_judged["red"])
+    print("modification stage at 130 s:", sim.modification)
+    print("own half:", (sim.half.report() or ["never crossed"]) if sim.half else "not set")
+    if sim.flag:
+        print(f"flag: {sim.flag.state} on {sim.flag.pole} at {sim.flag.hung_at and round(sim.flag.hung_at, 1)} s, "
+              f"touching robot {sim.flag.touching}")
     w = sim.world
     print(f"balls shot {w.shots}, in the blue fortress now {score['balls']}")
     print("SCORE red:", score)

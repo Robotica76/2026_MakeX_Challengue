@@ -169,3 +169,36 @@ class CollisionMonitor:
         if not out and self.collisions:
             out.append(f"collisions so far: {len(self.collisions)}")
         return out
+
+
+@dataclass
+class HalfMonitor:
+    """Two robots per alliance: this robot keeps to its half of the alliance area (team rule,
+    robot_config.json "own_half"): lower = y <= field centre line (1527.5 mm), upper = y >= it.
+    Records the time the body spends over the line and the deepest intrusion."""
+    half: str = "lower"
+    body_box: Tuple[float, float, float, float] = (-249.5, -250.0, 115.0, 250.0)
+    seconds: float = 0.0
+    max_mm: float = 0.0
+    events: List[float] = field(default_factory=list)   # start times of each crossing
+    _over: bool = False
+
+    def intrusion(self, pose) -> float:
+        x0, y0, x1, y1 = self.body_box
+        ys = [pose.to_field(x, y)[1] for x in (x0, x1) for y in (y0, y1)]
+        return max(ys) - fl.CY if self.half == "lower" else fl.CY - min(ys)
+
+    def update(self, t: float, dt: float, pose) -> None:
+        depth = self.intrusion(pose)
+        over = depth > COLLISION_MIN_MM
+        if over:
+            if not self._over:
+                self.events.append(t)
+            self.seconds += dt
+            self.max_mm = max(self.max_mm, depth)
+        self._over = over
+
+    def report(self) -> List[str]:
+        if not self.events:
+            return []
+        return [f"partner half: {len(self.events)} crossings, {self.seconds:.1f} s, up to {self.max_mm:.0f} mm"]

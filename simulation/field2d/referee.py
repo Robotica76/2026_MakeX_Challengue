@@ -12,7 +12,11 @@ Match score at the end (p.36-50, table p.53-54), per alliance:
                       the bonus quantity, 10 each beyond
   cones               20 each, hung on the alliance's cone posts
   letter cubes        30 each in a strategy channel (+50 per complete MAKE side, not judged)
-  not simulated       pins (10 / 30), X mark (30), team flag (50, final stage)
+  team flag           50, hung on an own flagpole in the final stage (flag.py)
+  not simulated       pins (10 / 30), X mark (30)
+
+End of the manual stage (p.53): the robot goes back (partly) into its starting area, is taken out
+for the modification stage (60 s, flag mast installed) and returns to the starting area.
 """
 
 from typing import Dict, List
@@ -23,6 +27,8 @@ from balls import BALL_D, RELEASE_GAP, Ball
 from props import bonus_state, score_preview
 
 MANUAL_START_S = 30.0
+MODIFICATION_START_S = 130.0     # after the manual stage (100 s); the final stage starts at 190 s
+FINAL_START_S = 190.0
 OPPONENT = {"red": "blue", "blue": "red"}
 
 
@@ -52,6 +58,21 @@ def manual_stage_start(sim) -> Dict[str, dict]:
     return judged
 
 
+def modification_stage(sim) -> Dict[str, object]:
+    """End of the manual stage: the robot must be (partly) in its starting area to be taken out and
+    modified (p.53); it comes back in the starting area with the flag mast for the final stage."""
+    area = next(el for el in sim.elements if el.name == sim.cfg.start_area)
+    x0, y0, x1, y1 = area.bounds()
+    corners = sim.pose.corners(sim.cfg)
+    cx = [x for x, _ in corners]
+    cy = [y for _, y in corners]
+    in_start = min(cx) < x1 and max(cx) > x0 and min(cy) < y1 and max(cy) > y0
+    sim.pose = sim.start_pose                  # back in the starting area after the modification
+    if sim.flag is not None and in_start:
+        sim.flag.state = "carried"
+    return {"in_start_area": in_start, "flag_mounted": bool(sim.flag and in_start)}
+
+
 def balls_scored(sim, alliance: str) -> int:
     """Balls with their projection completely inside the opponent fortress upper area (p.36)."""
     if not sim.world:
@@ -67,6 +88,7 @@ def match_score(sim, alliance: str = "red") -> Dict[str, object]:
     precision = min(n, extra) * 20 + max(0, n - extra) * 10
     prev = score_preview(sim.props, sim.elements, alliance)
     cones, letters = prev["cones"] * 20, prev["letter_cubes"] * 30
+    flag = sim.flag.points if getattr(sim, "flag", None) and alliance == sim.cfg.alliance else 0
     return {"balls": n, "bonus_balls": extra, "bonus_cubes": bonus["valid"], "precision": precision,
-            "cones": cones, "letter_cubes": letters, "total": precision + cones + letters,
-            "not_simulated": "pins, X mark, team flag"}
+            "cones": cones, "letter_cubes": letters, "flag": flag, "total": precision + cones + letters + flag,
+            "not_simulated": "pins, X mark"}

@@ -55,8 +55,8 @@ class ManualStageStartTest(unittest.TestCase):
 
 
 class WinningMatchTest(unittest.TestCase):
-    def test_bonus_automatic_and_manual_cycles(self):
-        sim = new_sim()
+    def test_whole_match_in_our_half_with_the_flag(self):
+        sim = new_sim(280.0)
         self.addCleanup(sim.reset)
         sim.program = MATCH
         out = io.StringIO()
@@ -69,9 +69,33 @@ class WinningMatchTest(unittest.TestCase):
         self.assertTrue(sim.monitor.auto_end["stationary"])                   # R19 at 30 s
         self.assertEqual(sim.monitor.r06_penalties, 0)
         self.assertEqual(sim.collisions.collisions, [], out.getvalue())
+        self.assertEqual(sim.half.events, [], out.getvalue())                 # never in the partner half
+        self.assertTrue(sim.modification["in_start_area"])                    # taken out for the modification
+        self.assertEqual((sim.flag.state, sim.flag.pole, sim.flag.touching), ("hung", "red_flag_2", False))
+        self.assertLess(sim.flag.hung_at - referee.FINAL_START_S, 15.0)       # flag in the first 15 s
         score = referee.match_score(sim, "red")
-        self.assertGreaterEqual(score["balls"], 14, out.getvalue())
-        self.assertGreaterEqual(score["total"], 260)
+        self.assertEqual(score["flag"], 50)
+        self.assertGreaterEqual(score["balls"], 10, out.getvalue())
+        self.assertGreaterEqual(score["total"], 250)
+
+
+class FlagTest(unittest.TestCase):
+    def test_rod_must_be_over_the_pole_and_lowered(self):
+        from flag import load_flag
+        from robot import RobotPose
+        f = load_flag("red")
+        f.state = "carried"
+        far = RobotPose(700.0, 1204.0, 3.14159265)
+        f.update(1.0, far, 160.0)                                             # low, but not over the pole
+        self.assertEqual(f.state, "carried")
+        over = RobotPose(330.0, 1204.0, 3.14159265)                          # facing the wall, rod on the left
+        f.update(2.0, over, 230.0)                                            # over it, rod above the pole
+        self.assertEqual(f.state, "carried")
+        f.update(3.0, over, 160.0)                                            # lowered onto it
+        self.assertEqual((f.state, f.pole), ("hung", "red_flag_2"))
+        self.assertEqual(f.points, 0)                                         # still on the robot
+        f.update(4.0, RobotPose(1100.0, 1204.0, 3.14159265), 160.0)         # holder clear of the flag
+        self.assertEqual(f.points, 50)
 
 
 if __name__ == "__main__":

@@ -93,8 +93,9 @@ GRAB_RIGHT, GRAB_BACK = 228.5, 89.0
 PINNED_MM = 177.0          # a prop pulled by the head rides this far in front of the robot centre
 X12_LANE_Y = 839.5         # default prop card: X12 on the lower strategy area, third spot
 EXCHANGE_DROP = (1520.0, 340.0)   # cube centre: overlaps red exchange area 1 (x 1361-1679, y <= 318)
-PARK = (1968.0, 745.0)     # waiting spot at 30 s: clear of the released balls and the cone; head
-                           # front 2217 (< 2220, clear of the strategy area)
+PARK = (2000.0, 745.0)     # waiting spot at 30 s: the body (x 1750-2115) clears the balls the
+                           # observers release in front of resource area 1 (x <= 1715) and the cone
+PARK_HEAD = 250.0          # head over the strategy area top (259 mm) at the park spot
 
 T0 = time.time()
 jobs = []
@@ -246,7 +247,10 @@ def bonus_pass(name, next_height):
     report(name + " over the area", go_to(EXCHANGE_DROP[0] + GRAB_BACK, EXCHANGE_DROP[1] + GRAB_RIGHT, tol=1.0))
     jaw(-0.8)
     finish_jobs()
-    report(name + " released", go_to(PARK[0], PARK[1]))
+    head_to(PARK_HEAD)
+    report(name + " released", go_to(PARK[0] - 100.0, PARK[1]))
+    finish_jobs()                          # head up before it reaches over the strategy area
+    report(name + " parked", go_to(PARK[0], PARK[1], tol=1.0))
 
 
 TASKS = {"bonus_low_b": "bonus", "upper_a": "upper", "upper_b": "upper", "lower_a": "lower", "lower_b": "lower",
