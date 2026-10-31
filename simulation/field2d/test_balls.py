@@ -126,5 +126,33 @@ class BallCollectionProgramTest(unittest.TestCase):
         self.assertFalse(any(b.collected for b in sim.balls))
 
 
+class ShelfProgramTest(unittest.TestCase):
+    def test_shelf_demo_takes_the_upper_level_without_the_body_entering_the_table(self):
+        from mechanisms import load_mechanisms
+        cfg = load_config()
+        intake = load_intake()
+        sim = Simulation(cfg, start_pose(cfg, fl.build_field()), load_drive_train(), 100, load_gyro_sign(),
+                         ball_scenario="initial", intake=intake, mechanisms=load_mechanisms())
+        sim.program = CONTROL / "test_intake_shelf.py"
+        table = fl.get(fl.build_field(), "central_resource")
+        max_body_x = 0.0
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            sim.run()
+            for _ in range(60 * 45):
+                sim.step(1 / 60)
+                max_body_x = max(max_body_x, sim.pose.x + intake.body_front_mm)   # heading stays 0
+                if not sim.running or sim._runner.finished:
+                    break
+        self.assertIn("done", out.getvalue(), sim.state.message)
+        self.assertNotIn("MISSED", out.getvalue())
+        upper = [b for b in sim.balls if b.name.startswith("central") and b.z > 200]
+        lower = [b for b in sim.balls if b.name.startswith("central") and b.z < 200]
+        self.assertEqual(sum(b.collected for b in upper), 15)
+        self.assertEqual(sum(b.collected for b in lower), 0)
+        self.assertLessEqual(max_body_x, table.x - table.w / 2)                  # body stays out of the table
+        self.assertAlmostEqual(sim.mechanisms.position("intake_lift"), 0.0, delta=1.0)   # head back down
+
+
 if __name__ == "__main__":
     unittest.main()

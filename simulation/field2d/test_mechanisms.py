@@ -88,24 +88,24 @@ class MechanismSimulationTest(unittest.TestCase):
         sim.reset()
         self.assertEqual(sim.mechanisms.angle("shooter"), 0.0)
 
-    def test_intake_collects_only_with_the_head_down(self):
+    def test_intake_reach_follows_the_head(self):
         sim = self.make(ball_scenario="none", intake=load_intake())
         pose = RobotPose(1000.0, 1000.0, 0.0)
         sim.pose = pose
-        ball = Ball("b", pose.x + 240, pose.y, BALL_D / 2)
-        sim.balls = [ball]
+        floor = Ball("floor", pose.x + 240, pose.y - 50, BALL_D / 2)
+        shelf = Ball("shelf", pose.x + 240, pose.y + 50, 285.0)       # central upper level centre
+        sim.balls = [floor, shelf]
         sim.dc.set("DC1", 80)                                   # rollers on
-        sim.mechanisms.linear["intake_lift"].position = 100.0   # head up
         sim.state.status = "running"                            # step without a program
         sim.state.trail = [(pose.x, pose.y)]
         sim._runner = None
         sim.time_limit = 0
+        sim.mechanisms.linear["intake_lift"].position = 255.0   # head up: shelf only
         sim.step(0.05)
-        self.assertFalse(ball.collected)
-        sim.mechanisms.linear["intake_lift"].position = 0.0
+        self.assertEqual((floor.collected, shelf.collected), (False, True))
+        sim.mechanisms.linear["intake_lift"].position = 0.0     # head down: floor
         sim.step(0.05)
-        self.assertTrue(ball.collected)
-
+        self.assertTrue(floor.collected)
 
 if __name__ == "__main__":
     unittest.main()

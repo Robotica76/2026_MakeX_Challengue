@@ -12,11 +12,13 @@ Scenarios:
                 the manual stage (p.32). Where they come to rest is an estimate.
 
 Intake model (robot_config.json "intake"): while the power on the intake port is at
-least min_power (times direction) and the intake head is down (lift <= max_lift_mm,
-see mechanisms.py), every ball on the field whose centre is inside
-the intake zone (robot frame box at the front) and not higher than
-max_ball_center_z_mm is collected, up to capacity. No ball physics: balls do not
-roll, bounce or get pushed.
+least min_power (times direction), every ball whose centre is inside the intake zone
+(robot frame box at the front) and whose centre height is within the head's reach is
+collected, up to capacity. The reach is ball_center_z_mm (min..max) above the intake
+head lift (mechanisms.py "intake_lift"): floor balls with the head down, the central
+resource levels with the head raised. No ball physics: balls do not roll, bounce or
+get pushed, and structures do not block the robot (programs must keep the robot body,
+body_front_mm ahead of its centre, out of the structures).
 """
 
 import json
@@ -100,9 +102,10 @@ class Intake:
     x_max: float = 285.0
     y_min: float = -190.0
     y_max: float = 208.0
-    max_ball_center_z: float = 60.0    # floor balls (centre 35 mm) only
+    z_min: float = 0.0                 # ball centre height reach above the head lift, mm
+    z_max: float = 60.0                # (head down: floor balls, centre 35 mm)
     capacity: int = 18
-    max_lift_mm: float = 20.0          # intake head must be down (mechanisms "intake_lift")
+    body_front_mm: float = 115.0       # robot front without the intake head (v22 CAD)
     collected: List[str] = field(default_factory=list)
 
     def running(self, power: float) -> bool:
@@ -114,15 +117,19 @@ class Intake:
         fx, ly = dx * c + dy * s, -dx * s + dy * c
         return self.x_min <= fx <= self.x_max and self.y_min <= ly <= self.y_max
 
-    def update(self, pose: RobotPose, balls: List[Ball], power: float) -> int:
-        """Collect what is in reach; returns how many balls were collected this call."""
+    def reaches(self, ball: Ball, lift: float) -> bool:
+        return lift + self.z_min <= ball.z <= lift + self.z_max
+
+    def update(self, pose: RobotPose, balls: List[Ball], power: float, lift: float = 0.0) -> int:
+        """Collect what is in reach; returns how many balls were collected this call.
+        lift: intake head height above its lowest position (mm)."""
         if not self.running(power):
             return 0
         got = 0
         for ball in balls:
             if len(self.collected) >= self.capacity:
                 break
-            if not ball.collected and ball.z <= self.max_ball_center_z and self.contains(pose, ball):
+            if not ball.collected and self.reaches(ball, lift) and self.contains(pose, ball):
                 ball.collected = True
                 self.collected.append(ball.name)
                 got += 1
@@ -138,10 +145,11 @@ def load_intake(path: Path = DEFAULT_CONFIG) -> Optional[Intake]:
     if not data:
         return None
     zone: Dict[str, float] = data.get("zone_mm", {})
+    reach: Dict[str, float] = data.get("ball_center_z_mm", {})
     return Intake(port=str(data.get("port", "DC1")), direction=int(data.get("direction", 1)),
                   min_power=float(data.get("min_power", 30.0)),
                   x_min=float(zone.get("x_min", 200.0)), x_max=float(zone.get("x_max", 285.0)),
                   y_min=float(zone.get("y_min", -190.0)), y_max=float(zone.get("y_max", 208.0)),
-                  max_ball_center_z=float(data.get("max_ball_center_z_mm", 60.0)),
+                  z_min=float(reach.get("min", 0.0)), z_max=float(reach.get("max", 60.0)),
                   capacity=int(data.get("capacity", 18)),
-                  max_lift_mm=float(data.get("max_lift_mm", 20.0)))
+                  body_front_mm=float(data.get("body_front_mm", 115.0)))

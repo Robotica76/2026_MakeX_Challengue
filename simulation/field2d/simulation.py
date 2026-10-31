@@ -165,8 +165,9 @@ class Simulation:
             vx, vy, omega = vx * var.slip_forward, vy * var.slip_strafe, omega * var.slip_turn
             self.pose = integrate(self.pose, vx, vy, omega, dt)
             self.mechanisms.step(self.dc, dt)
-            if self.intake and self.mechanisms.position("intake_lift") <= self.intake.max_lift_mm:
-                self.intake.update(self.pose, self.balls, self.dc.power(self.intake.port))
+            if self.intake:
+                self.intake.update(self.pose, self.balls, self.dc.power(self.intake.port),
+                                   self.mechanisms.position("intake_lift"))
             self._update_sensors(vx, vy, omega, dt)
             self.clock.advance(dt)
             self._check()

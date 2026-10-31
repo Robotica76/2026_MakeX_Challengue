@@ -62,10 +62,13 @@
       "y_min": -190.0,
       "y_max": 208.0
     },
-    "max_ball_center_z_mm": 60.0,
+    "ball_center_z_mm": {
+      "min": 0.0,
+      "max": 60.0
+    },
     "capacity": 18,
-    "source": "v22 CAD: INT_ parts span y_left -190..208 mm and reach the front edge (x 249 mm); capacity = 6 basket + 12 tower REF balls. Port DC1 is an assumption (TBD).",
-    "max_lift_mm": 20.0
+    "body_front_mm": 115.0,
+    "source": "v22 CAD: INT_ parts span y_left -190..208 mm and reach the front edge (x 249 mm); reach 0-60 mm ball centre height above the head lift (head roller at 95 mm, head down); body front without the head 115 mm (INT_centrador); capacity = 6 basket + 12 tower REF balls. Port DC1 is an assumption (TBD)."
   },
   "mechanisms": {
     "source": "v22 CAD parts and motors. Ports are assumptions (TBD with the electrical team); speeds marked estimate.",

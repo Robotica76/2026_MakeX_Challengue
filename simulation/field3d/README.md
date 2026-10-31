@@ -67,7 +67,8 @@ model of [`simulation/field2d/mechanisms.py`](../field2d/mechanisms.py) and the 
 and travels in `robot_config.json` "mechanisms". The CAD only has the intake in one position,
 so the intake-head parts, its travel (≈ 380 mm from the 428 mm rails) and the roller axes are
 inferred from the part geometry (`robot_model.json`); ports and some speeds are assumptions
-until the wiring is fixed. The intake only collects balls with its head down (≤ 20 mm).
+until the wiring is fixed. The intake reaches ball centres 0–60 mm above its head lift: floor
+balls with the head down, the central resource levels with the head raised.
 
 Menu option 5, or `viewer3d.py --program ../control/test_mechanisms.py --camera follow`, runs
 [`test_mechanisms.py`](../control/test_mechanisms.py): rollers on, intake head up, tower,
@@ -76,6 +77,23 @@ feeder and shooter on, carriage to the top and back down.
 | Intake head down (0.5 s) | Intake head 212 mm up, carriage at the top (7.5 s) |
 | --- | --- |
 | ![head down](docs/mechanisms_0.5s.png) | ![head up](docs/mechanisms_7.5s.png) |
+
+## Intake on the central resource shelf
+
+Menu option 6, or `viewer3d.py --program ../control/test_intake_shelf.py --camera follow --time-limit 60`,
+runs [`test_intake_shelf.py`](../control/test_intake_shelf.py): the robot raises the intake head
+~254 mm (above the upper level's plate) and drives the head into the table, which works because
+the head sticks out 134 mm ahead of the rest of the robot; the body stops at the table edge
+(robot centre x ≤ 2105 mm). Two passes keep the 398 mm head between the table legs.
+
+| Simulated result | Value |
+| --- | --- |
+| Upper level (ball centres 285 mm) | 15 / 15 collected, 10 + 5 per pass, by t = 26 s |
+| Lower level | untouched (0 / 15); the same route with the head at ~53 mm takes 15 / 15 |
+| Closest approach | robot centre x = 2100 mm (limit 2105) |
+| Whole program | 34 s including 1 s calibration and lowering the head, longer than the 30 s automatic stage |
+
+![intake on the shelf](docs/intake_shelf.png)
 
 ## Ball collection demo
 

@@ -127,8 +127,12 @@ are an estimate). The default `none` keeps earlier studies unchanged.
 The intake (`robot_config.json` "intake") collects every floor ball whose centre enters a box
 at the robot front (v22 CAD: 200–285 mm ahead, 190 mm right to 208 mm left) while its port
 (`DC1`, an assumption) has at least 30 % power, up to 18 balls (the v22 basket and tower hold
-6 + 12). Balls do not roll or get pushed, and balls on the shelves or the central levels are
-out of reach. `sim.balls_collected` and the [3D viewer](../field3d/README.md) show the count.
+6 + 12). The reach in height follows the intake head lift ([mechanisms](#mechanisms-mechanismspy)):
+ball centres 0–60 mm above the lift, so floor balls with the head down and the central
+resource levels (centres 85 / 285 mm) with the head raised ~50 / ~255 mm; the own resource
+boxes (793 mm) stay out of reach. Balls do not roll or get pushed, and structures do not stop
+the robot: a program must keep the robot body (115 mm ahead of its centre, without the head)
+out of them. `sim.balls_collected` and the [3D viewer](../field3d/README.md) show the count.
 
 ### Mechanisms ([`mechanisms.py`](mechanisms.py))
 
