@@ -118,12 +118,13 @@ class CollisionMonitorTest(unittest.TestCase):
 
 
 class AutomaticRoutineTest(unittest.TestCase):
-    def test_pull_route_denies_central_balls_without_collisions(self):
+    def run_pull(self, strategy):
         cfg = load_config()
         sim = Simulation(cfg, start_pose(cfg, fl.build_field()), load_drive_train(), 30, load_gyro_sign(),
                          ball_scenario="initial", intake=load_intake(), mechanisms=load_mechanisms(),
                          gripper=load_gripper())
         sim.program = AUTO_PULL
+        sim.trace_options = {"strategy": strategy}
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
             sim.run()
@@ -137,8 +138,23 @@ class AutomaticRoutineTest(unittest.TestCase):
         self.assertTrue(sim.monitor.auto_end["stationary"])                      # R19
         self.assertEqual(sim.monitor.r06_penalties, 0)
         denial = denial_count(sim.props, sim.balls, "red")
-        self.assertGreaterEqual(denial["balls"], 20, text)
         self.assertEqual(denial["balls_opponent_side"], 0)
+        self.assertEqual(denial["props_on_line"], 0)                             # no prop left across the line
+        return denial, text
+
+    def test_pull_balls_only(self):
+        denial, text = self.run_pull("balls")
+        self.assertGreaterEqual(denial["balls"], 20, text)
+
+    def test_pull_props_first_then_balls(self):
+        denial, text = self.run_pull("mixed")
+        self.assertGreaterEqual(denial["balls"], 15, text)
+        self.assertEqual((denial["cones"], denial["bonus"]), (1, 1), text)       # lane b: cone + X12
+
+    def test_pull_all_lower_props(self):
+        denial, text = self.run_pull("props")
+        self.assertGreaterEqual(denial["balls"], 10, text)
+        self.assertEqual((denial["cones"], denial["bonus"]), (2, 2), text)
 
     def test_central_balls_then_x12_bonus_cube_stops_in_time(self):
         cfg = load_config()

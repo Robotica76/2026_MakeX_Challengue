@@ -5,6 +5,7 @@ automatic stage. The score rewards central elements left completely on our side 
 what the rules and the field punish:
 
   score = balls + 1.5 * cones + 1.5 * bonus cubes (at most 2 count, p.30 d)
+  (weights: change them to match the team's priorities; props first, then floor passes)
           - 3 * balls pushed to the opponent side       (R23 spirit: never feed the opponent)
           - 3 * props dropped across the centre line    (partly on the opponent side)
           - 20 * collisions with field structures       (fortress pushes excluded)
@@ -74,8 +75,9 @@ def evaluate(plan: dict) -> dict:
 
 def candidates(quick: bool):
     ua, ub, la, lb = "upper_a", "upper_b", "lower_a", "lower_b"
-    orders = [[ua, ub, lb, la, "props_low_b"], [ub, ua, la, lb, "props_low_b"],
-              [ua, ub, lb, "props_low_b", la], [la, lb, ua, ub, "props_low_b"]]
+    pa, pb, fa, fb = "props_low_a", "props_low_b", "floor_low_a", "floor_low_b"
+    orders = [[ub, ua, la, lb], [ua, ub, lb, la], [pb, ub, lb, fb], [pb, ub, fb, lb],
+              [pb, pa, fa, fb, lb], [pb, pa, fa, fb, la]]
     speeds = [(150, 90, 60), (200, 90, 60), (200, 130, 60), (200, 130, 80)]
     lanes_x = [1720.0, 1800.0]
     tols = [1.0, 3.0]

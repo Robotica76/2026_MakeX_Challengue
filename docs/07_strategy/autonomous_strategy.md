@@ -47,11 +47,24 @@ Result: the 30 central balls are off the table; **22 completely on our side**, 8
 against the table base (x ≈ 2200, 15 mm over the line), none on the opponent side. No contact
 with any field structure, the body never crosses x 2220 (R06), stationary at 30 s.
 
-**Props do not fit in 30 s.** A cone or bonus cube pulled off the strategy area falls when its
-centre leaves the top, at the centre line (x ≈ 2219, half on the opponent side). Bringing it to
-our side needs the head down at the floor, about 4 s more with the head lift at 53 mm/s, and the
-head spans three props per lane (two cones and a cube, or a cone and two cubes). Leave the props
-for the manual stage; with a faster head lift, add `props_low_b` to the tasks.
+**Props: first with the head high, then a floor pass with the head low.** A cone or bonus cube
+pulled off the strategy area falls when its centre leaves the top, at the centre line (x ≈ 2219,
+half on the opponent side). A floor pass (head at 50 mm, stopping at x 1925 so the head stays clear
+of the strategy-area dividers) pulls it from the line onto our floor. The head lift is slow
+(53 mm/s), so the props passes go first, while the head is high on the way, and the floor passes
+go once it is low (after the lower-level balls). Each lane takes the props under the head width:
+lane b (y 951) the X12 and a cone, lane a (y 570) the X9 and a cone.
+
+Strategies in the routine (`STRATEGY`), simulated, all without collisions, R06 or R19 penalties:
+
+| `STRATEGY` | Order | On our side | Done |
+| --- | --- | --- | --- |
+| `balls` | upper b, upper a, lower a, lower b | 21–22 balls | 27.0 s |
+| `mixed` (default) | props b, upper b, lower b, floor b | 16–17 balls, 1 cone, X12 | 25.1 s |
+| `props` | props b, props a, floor a, floor b, lower b | 11 balls, 2 cones, X9, X12 | 28.0 s |
+
+Two bonus cubes on our side is the limit (p.30 d); outside the exchange area they only deny the
+opponent. The upper strategy area (X3, X6, two cones) does not fit in this stage.
 
 Collision check of the previous routines (`CollisionMonitor`, robot height bands from the CAD):
 `auto_central_then_cubes.py` touches the red fortress on its diagonal (30 mm, a push), a table leg
@@ -105,7 +118,7 @@ alone. The opponent also reaches the table from the blue side; our first balls c
 
 | Candidate | Setup revision | Repetitions / success / uncertainty | Timing evidence | Failure / corrective action | Decision |
 | --- | --- | --- | --- | --- | --- |
-| Pull the central balls to our side (4 passes) | v22 CAD, simulator 2026-10-31 | Simulation, deterministic: 22 balls on our side, 8 at the line, 0 collisions, stationary | Timeline above; `test_match.py` | Head lift speed limits the props; real pull behaviour (ball under the head roller) untested | Team plan |
+| Pull the central elements to our side (`balls` / `mixed` / `props`) | v22 CAD, simulator 2026-10-31 | Simulation: table above, 0 collisions, stationary | `test_match.py` | Real pull behaviour (balls and props under the head roller) untested; head lift speed limits the props | Team plan |
 | Central balls + X12 to the exchange area | v22 CAD, simulator 2026-10-31 | Simulation, deterministic: 14 balls, X12 valid, stationary at 29.0 s | `simulation/field2d/test_match.py` | Edge ball pushed on pass B; 1 s timing margin; touches the fortress and a table leg | Previous plan |
 | Central balls only (`LOWER_PASS`) | Same | Simulation: 18 balls by 23.8 s | — | No bonus cube | Fallback |
 

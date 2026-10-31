@@ -5,7 +5,7 @@
 # onto our side, where the opponent cannot reach them (R06), and use them in the manual stage.
 #   1. upper level of the central resource area: pull the balls off toward our side
 #   2. lower level: the same
-#   3. cones and bonus cubes on the strategy areas: pull them off (only if there is time)
+#   3. cones and bonus cubes on the strategy areas: pull them onto our floor
 # Moving balls and props onto our own side is allowed (R23 only forbids the opponent's side or
 # out of the arena).
 #
@@ -14,27 +14,42 @@
 # with the head above the balls (no contact, nothing pushed to the opponent), lowers it onto the
 # level, and backs out pulling.
 #
-# Route (simulation/analysis/optimize_auto_route.py, 2D simulator, 2026-10-31): 4 table passes,
-# upper b, upper a, lower a, lower b; 23 of the 30 central balls end on our side, done at 27 s,
-# no contact with the field structures, no R06, stationary at 30 s (R19).
+# Props: the head on a cone or cube on the strategy area pulls it off, but it drops at the centre
+# line (x ~2220, half on the opponent side). A floor pass later, with the head low (50 mm, after
+# the lower-level balls or right away), pulls it from the line onto our floor. Each lane takes the
+# props under the head width: lane b (y 951) X12 + cone, lane a (y 570) X9 + cone.
+#
+# Route (simulation/analysis/optimize_auto_route.py, 2D simulator), all strategies: no contact
+# with the field structures, no R06, stationary at 30 s (R19).
 #   - one diagonal from the start to (1240, 950): clear of the cone post (200, 888) and the
 #     resource-area legs (y <= 318); the body passes the fortress corner (982, 1208)
-#   - lanes at y 1437 / 1600 (the head fits between the table legs, y 1238-1817), x 1800 -> 2100
-#     (body front 2215 <= 2220)
+#   - table lanes at y 1437 / 1600 (the head fits between the table legs, y 1238-1817),
+#     x 1800 -> 2100 (body front 2215 <= 2220); floor passes stop at x 1925 (head clear of the
+#     strategy area dividers)
 #   - the head starts toward the next pass height once it is clear of the table (x < 1920)
-#   - a pass is only started if it can end before END_BY (a cut pass leaves the balls behind)
-# Props do not fit in 30 s with the head lift at 53 mm/s: a prop pulled off the strategy area
-# drops at the centre line (x ~2200, half on the opponent side); bringing it to our side needs
-# the head down at the floor (~4 s more). Leave them for the manual stage, or add "props_low_b"
-# to the tasks if the head gets faster.
+#   - a pass is only started if it can end before END_BY (a cut pass leaves the elements behind)
+# Two bonus cubes on our side at most (p.30 d); they are not in the exchange area, so they only
+# deny the opponent.
 #
 import math
 import time
 from mbuild import power_expand_board as pb
 import chassis as ch
 
+# Task orders (simulation/analysis/optimize_auto_route.py, 2026-10-31; central elements left on our side):
+#   "balls"  21-22 balls                                    done 27.0 s
+#   "mixed"  16-17 balls + 1 cone + X12 (lower strategy area) done 25.1 s
+#   "props"  11 balls + 2 cones + X9 + X12                  done 28.0 s (1 s margin)
+# The props passes go first with the head high; the floor passes come once the head is low.
+STRATEGY = "mixed"
+STRATEGIES = {
+    "balls": ["upper_b", "upper_a", "lower_a", "lower_b"],
+    "mixed": ["props_low_b", "upper_b", "lower_b", "floor_low_b"],
+    "props": ["props_low_b", "props_low_a", "floor_low_a", "floor_low_b", "lower_b"],
+}
+
 PLAN = {
-    "tasks": ["upper_b", "upper_a", "lower_a", "lower_b"],
+    "tasks": STRATEGIES[STRATEGY],
     "travel_speed": 200,       # RPM
     "approach_speed": 90,      # RPM, entering the table / strategy area
     "pull_out_speed": 60,      # RPM, backing out while pulling
@@ -46,20 +61,24 @@ PLAN = {
     "upper_heights": (290.0, 250.0),   # head approach / pull height, upper level (ball centres 285)
     "lower_heights": (85.0, 50.0),     # lower level (ball centres 85)
     "prop_height": 250.0,      # head on the props (cones and cubes from 259 mm)
+    "floor_prop_height": 50.0,  # head on props lying on the floor (cube top 120 mm)
+    "x_in_floor": 1925.0,      # floor props at the line (centre ~2220): head front 2210, clear of the dividers
 }
 try:                           # simulator only: route optimizer overrides
     import simtrace
     PLAN.update(simtrace.options())
+    PLAN["tasks"] = STRATEGIES.get(PLAN.get("strategy"), PLAN["tasks"])
 except ImportError:
     pass
 
 LANES = {"upper_a": 1437.0, "upper_b": 1600.0, "lower_a": 1437.0, "lower_b": 1600.0,
          "props_low_a": 570.0, "props_low_b": 951.0, "props_up_a": 2103.0, "props_up_b": 2487.0}
+LANES.update({"floor" + k[5:]: v for k, v in LANES.items() if k.startswith("props")})
 HEAD_MM_S = 53.0
 START_X, START_Y = 325.0, 325.0
 END_BY = 29.0
 HARD_STOP = 29.5
-PASS_S = {"upper": 7.0, "lower": 7.0, "props": 5.5}   # first estimate of a pass (s); then the longest measured
+PASS_S = {"upper": 7.0, "lower": 7.0, "props": 5.5, "floor": 5.0}   # first estimate of a pass (s); then the longest measured
 CLEAR_X = 1920.0           # robot centre x with the head (front 285 mm) clear of the central strip
 
 ch.MAX_SPEED = max(ch.MAX_SPEED, PLAN["travel_speed"])
@@ -173,17 +192,21 @@ def table_pass(name, next_height):
 
 
 def props_pass(name, next_height):
-    head_to(PLAN["prop_height"])
+    """Props on the strategy area top: the head on them pulls them off; they drop at the centre
+    line (x ~2220, half on the opponent side), so a floor pass must follow."""
+    head_to(approach_height(name))
     report(name + " lane", go_to(PLAN["x_far"], LANES[name]))
     finish_jobs()
     pb.set_power("DC7", 100)
-    report(name + " in", go_to(PLAN["x_in_props"], LANES[name], speed=PLAN["approach_speed"], tol=1.0))
+    depth = PLAN["x_in_props"] if TASKS[name] == "props" else PLAN["x_in_floor"]
+    report(name + " in", go_to(depth, LANES[name], speed=PLAN["approach_speed"], tol=1.0))
     time.sleep(0.2)
     pull_out(name, next_height)
 
 
 TASKS = {"upper_a": "upper", "upper_b": "upper", "lower_a": "lower", "lower_b": "lower",
-         "props_low_a": "props", "props_low_b": "props", "props_up_a": "props", "props_up_b": "props"}
+         "props_low_a": "props", "props_low_b": "props", "props_up_a": "props", "props_up_b": "props",
+         "floor_low_a": "floor", "floor_low_b": "floor", "floor_up_a": "floor", "floor_up_b": "floor"}
 
 
 def estimate(name):
@@ -192,7 +215,11 @@ def estimate(name):
 
 def approach_height(name):
     level = TASKS[name]
-    return PLAN["prop_height"] if level == "props" else PLAN[level + "_heights"][0]
+    if level == "props":
+        return PLAN["prop_height"]
+    if level == "floor":
+        return PLAN["floor_prop_height"]
+    return PLAN[level + "_heights"][0]
 
 
 def main():
@@ -209,7 +236,7 @@ def main():
         if i + 1 < len(tasks) and now() + estimate(name) + estimate(tasks[i + 1]) <= END_BY:
             nxt = approach_height(tasks[i + 1])
         t = now()
-        (props_pass if TASKS[name] == "props" else table_pass)(name, nxt)
+        (props_pass if TASKS[name] in ("props", "floor") else table_pass)(name, nxt)
         pass_time[name[:5]] = max(pass_time.get(name[:5], 0.0), now() - t)
     finish_jobs()
 
