@@ -56,7 +56,10 @@ def program_text(constants: dict) -> str:
 
 
 def trial(job):
-    constants, seed = job
+    """job = (constants, seed) or (constants, seed, True) to also return the path (every 0.1 s)."""
+    constants, seed = job[0], job[1]
+    traced = len(job) > 2 and job[2]
+    path = []
     os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
     if str(FIELD2D) not in sys.path:
         sys.path.insert(0, str(FIELD2D))
@@ -71,14 +74,15 @@ def trial(job):
 
     ranges = json.loads(CONFIG.read_text())["ranges"]
     drive = load_drive_train()
-    var = sample_variation(ranges, seed, tuple(drive.motors))
+    from uncertainty import Variation
+    var = sample_variation(ranges, seed, tuple(drive.motors)) if seed >= 0 else Variation()   # seed < 0: ideal
     cfg = load_config()
     s0 = start_pose(cfg, fl.build_field())
     start = RobotPose(s0.x + var.start_dx_mm, s0.y + var.start_dy_mm, s0.theta + math.radians(var.start_dtheta_deg))
     sim = Simulation(cfg, start, drive, SECONDS, load_gyro_sign(), variation=var, ball_scenario="initial",
                      intake=load_intake(), mechanisms=load_mechanisms(), gripper=load_gripper())
     rng = random.Random(seed + 7)
-    for p in sim.props:                                    # rules: props within +-5 mm
+    for p in sim.props if seed >= 0 else []:               # rules: props within +-5 mm
         if p.kind != "letter":
             p.x += rng.uniform(-5, 5)
             p.y += rng.uniform(-5, 5)
@@ -98,6 +102,10 @@ def trial(job):
             k += 1
             if k == 15:
                 sim.gamepad.apply_event({"event": "release", "control": "button_1"})
+            if traced and k % 6 == 0:
+                vx, vy, w = sim._velocity
+                path.append((round(sim.time, 2), round(sim.pose.x), round(sim.pose.y),
+                             round(math.degrees(sim.pose.theta), 1), round(math.hypot(vx, vy))))
             if x12_time is None:
                 x12 = next(p for p in sim.props if p.label == "X12")
                 if not x12.held and x12.z < 1 and x12.x + 60 > ex0 and x12.x - 60 < ex1 and x12.y - 60 < ey1:
@@ -117,7 +125,8 @@ def trial(job):
         folder.rmdir()
     except OSError:
         pass
-    return {"seed": seed, "valid_x12": valid12, "x9_ours": x9_ours, "cones": denial["cones"],
+    x12_end = next(((round(p.x), round(p.y)) for p in sim.props if p.label == "X12"), None)
+    return {"seed": seed, "valid_x12": valid12, "x12_end": x12_end, "path": path, "x9_ours": x9_ours, "cones": denial["cones"],
             "problems": problems, "resources": resources, "points": 20 * judged["bonus_balls"],
             "x12_time": x12_time, "collisions": [e["element"] for e in sim.collisions.collisions],
             "error": str(error) if error and "Time limit" not in str(error) else None}
@@ -134,7 +143,8 @@ def summarize(constants, rows):
             "problems": sum(r["problems"] for r in rows) / n,
             "x12_time": sum(times) / len(times) if times else None,
             "x12_time_max": max(times) if times else None,
-            "failures": [r for r in rows if not r["valid_x12"] or r["problems"]][:5]}
+            "failures": [{k: v for k, v in r.items() if k != "path"}
+                         for r in rows if not r["valid_x12"] or r["problems"]][:5]}
 
 
 def evaluate(candidates, trials, workers, seed0=1000):

@@ -31,7 +31,8 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "simulation" / "field2d"))
-from mblock_project import ENCODER_GET, SENSORS, TIMER_RESET, identifier  # noqa: E402
+from mblock_project import (BL_POWER, BL_STOP, ENCODER_GET, ROTATION_RESET, SENSORS, TIMER_RESET,  # noqa: E402
+                            identifier)
 
 TEMPLATE = REPO / "software" / "legacy" / "challenge_2025" / "Challenge_2025.n2.mblock"
 ID_CHARS = "!#%()*+,-./:;=?@[]^_`{|}~ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
@@ -39,7 +40,8 @@ BIN = {ast.Add: "operator_add", ast.Sub: "operator_subtract", ast.Mult: "operato
        ast.Div: "operator_divide", ast.Mod: "operator_mod"}
 CMP = {ast.Lt: "operator_lt", ast.Gt: "operator_gt", ast.Eq: "operator_equals"}
 MATH_DIRECT = {"sqrt": "sqrt", "floor": "floor", "ceil": "ceiling", "log": "ln", "log10": "log", "exp": "e ^"}
-SENSOR_BY_CALL = {t.split("(")[0]: (op, f) for op, (t, f, _) in SENSORS.items()}
+SENSOR_BY_CALL = {t.split("(")[0]: (op, f) for op, (t, f) in SENSORS.items()}
+ENCODER_BY_VALUE = {v: op for op, v in ENCODER_GET.items()}
 
 
 class BlockError(Exception):
@@ -170,7 +172,7 @@ class Writer:
             return self.block(op, parent, fields={fname: [a[0].value, None]} if fname else {})
         if name.startswith("encoder_motor_") and name.endswith(".get_value"):
             port = name.split(".")[0][len("encoder_motor_"):]
-            return self.block(ENCODER_GET, parent, fields={"PORT": [port, None], "TYPE": [a[0].value, None]})
+            return self.block(ENCODER_BY_VALUE[a[0].value], parent, fields={"PORT": [port, None]})
         raise BlockError(f"line {node.lineno}: {name}() has no reporter block")
 
     # -- statements --------------------------------------------------------------------------
@@ -273,6 +275,8 @@ class Writer:
             return bid
         if name == "novapi.reset_timer":
             return self.block(TIMER_RESET, parent)
+        if name == "novapi.reset_rotation":
+            return self.block(ROTATION_RESET, parent, fields={"AXIS": [a[0].value, None]})
         if name in self.procs:
             code, ids, _ = self.procs[name]
             bid = self.block("procedures_call", parent, mutation={
@@ -281,11 +285,14 @@ class Writer:
             return bid
         if name.startswith("power_expand_board."):
             port = a[0].value
+            brushless = port.startswith("BL")                # BL1 / BL2 have their own blocks
             if name.endswith(".set_power"):
-                bid = self.block("novapi.POWER_EXPAND_DCmotor_power", parent, fields={"CHANNEL": [port, None]})
+                op = BL_POWER if brushless else "novapi.POWER_EXPAND_DCmotor_power"
+                bid = self.block(op, parent, fields={"CHANNEL": [port, None]})
                 self.blocks[bid]["inputs"] = {"POWER": self.number(a[1], bid)}
                 return bid
-            return self.block("novapi.POWER_EXPAND_DCmotor_stop", parent, fields={"CHANNEL": [port, None]})
+            op = BL_STOP if brushless else "novapi.POWER_EXPAND_DCmotor_stop"
+            return self.block(op, parent, fields={"CHANNEL": [port, None]})
         if name.startswith("encoder_motor_"):
             port, method = name[len("encoder_motor_"):].split(".")
             if method == "set_speed":

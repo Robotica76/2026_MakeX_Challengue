@@ -1,0 +1,56 @@
+{
+ "trials": 24,
+ "candidates": {
+  "Winner: X12 + X9 denied": {
+   "constants": {},
+   "trials": 24,
+   "resources": 21.583333333333332,
+   "p_x12": 0.9583333333333334,
+   "p_x9": 1.0,
+   "points": 230.0,
+   "problems": 0.08333333333333333,
+   "x12_time": 15.376811594202437,
+   "x12_time_max": 15.566666666666197
+  },
+  "X12 only": {
+   "constants": {},
+   "trials": 24,
+   "resources": 12.291666666666666,
+   "p_x12": 0.9583333333333334,
+   "p_x9": 0.0,
+   "points": 230.0,
+   "problems": 0.041666666666666664,
+   "x12_time": 15.376811594202435,
+   "x12_time_max": 15.566666666666197
+  },
+  "Grab 7 mm short": {
+   "constants": {},
+   "trials": 24,
+   "resources": 20.5,
+   "p_x12": 0.9166666666666666,
+   "p_x9": 1.0,
+   "points": 220.0,
+   "problems": 0.125,
+   "x12_time": 15.371969696969233,
+   "x12_time_max": 15.549999999999532
+  },
+  "Faster profile": {
+   "constants": {},
+   "trials": 24,
+   "resources": 20.541666666666668,
+   "p_x12": 0.9583333333333334,
+   "p_x9": 1.0,
+   "points": 230.0,
+   "problems": 0.2916666666666667,
+   "x12_time": 15.23333333333287,
+   "x12_time_max": 15.416666666666208
+  }
+ },
+ "match_points": {
+  "bonus": 310,
+  "props": 120,
+  "balls": 130,
+  "mixed": 120
+ },
+ "ideal_x12_time": 15.199999999999488
+}
