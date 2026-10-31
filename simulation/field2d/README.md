@@ -130,9 +130,16 @@ at the robot front (v22 CAD: 200–285 mm ahead, 190 mm right to 208 mm left) wh
 6 + 12). The reach in height follows the intake head lift ([mechanisms](#mechanisms-mechanismspy)):
 ball centres 0–60 mm above the lift, so floor balls with the head down and the central
 resource levels (centres 85 / 285 mm) with the head raised ~50 / ~255 mm; the own resource
-boxes (793 mm) stay out of reach. Balls do not roll or get pushed, and structures do not stop
-the robot: a program must keep the robot body (115 mm ahead of its centre, without the head)
-out of them. `sim.balls_collected` and the [3D viewer](../field3d/README.md) show the count.
+boxes (793 mm) stay out of reach. Structures do not stop the robot: a program must keep the robot body (115 mm
+ahead of its centre, without the head) out of them.
+
+With balls, the simulation runs [`ball_physics.py`](ball_physics.py): gravity, bounces on the floor,
+the frame and the structures (boxes from the rules dimensions: shelves, central levels, strategy
+channels, fortress walls and its ball level at 407 mm), ball-ball collisions, rolling resistance and
+pushes from the robot body and intake head; resting balls sleep, so 70 balls run faster than real
+time. Captured balls follow the ball path through the robot ("ball_path": 18 slots from the CAD
+reference balls) and the shooter launches them as free balls; `sim.world` counts captures, shots and
+balls landing in each fortress. `sim.balls_collected` and the [3D viewer](../field3d/README.md) show the count.
 
 ### Mechanisms ([`mechanisms.py`](mechanisms.py))
 

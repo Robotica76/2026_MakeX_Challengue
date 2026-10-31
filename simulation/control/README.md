@@ -19,6 +19,10 @@ unchanged:
 - `test_mechanisms.py`: moves every simulated mechanism (intake rollers and head,
   tower, feeder, shooter, elevator carriage) through the `power_expand_board` ports
   (menu option 5 of the 3D launcher).
+- `test_full_intake.py`: the whole ball system: collects 10 released balls with the
+  intake and tower, drives to a shooting spot, aims the launcher at the blue fortress,
+  computes the shooter power and fires until empty (menu option 7). In simulation the
+  10 shots land in the fortress.
 - `test_intake_shelf.py`: raises the intake head ~254 mm and takes the 15 balls of
   the central resource upper level in two passes while the body stays out of the table
   (menu option 6). It takes 34 s in simulation, more than the 30 s automatic stage.

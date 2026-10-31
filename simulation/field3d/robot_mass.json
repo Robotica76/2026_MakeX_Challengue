@@ -1,0 +1,69 @@
+{
+  "note": "ESTIMATE from mesh volumes, keyword densities and catalogue masses (tools/scripts/mass_properties.py); robot as it enters the field (carriage down, no flag mast). Weigh the robot to replace it.",
+  "frame": "CAD frame, metres: +y forward (intake), +x right (gripper), +z up, origin on the floor under the footprint centre",
+  "mass_kg": 8.941,
+  "center_of_mass_m": [
+    -0.004,
+    -0.0215,
+    0.1821
+  ],
+  "inertia_kg_m2": [
+    [
+      0.32895,
+      0.01561,
+      0.01726
+    ],
+    [
+      0.01561,
+      0.38143,
+      -0.0005
+    ],
+    [
+      0.01726,
+      -0.0005,
+      0.3219
+    ]
+  ],
+  "mass_by_prefix_kg": {
+    "INT": 2.964,
+    "CH": 1.473,
+    "TW": 1.454,
+    "ELEC": 0.6,
+    "SH": 0.544,
+    "ELV": 0.479,
+    "GR": 0.392,
+    "MAS": 0.331,
+    "CN": 0.275,
+    "ELB": 0.127,
+    "RIG": 0.123,
+    "CAR": 0.108,
+    "HW": 0.07,
+    "FLAG": 0.002
+  },
+  "catalogue_parts": [
+    "CH_motor_180_encoder_del_der",
+    "CH_motor_180_encoder_del_izq",
+    "CH_motor_180_encoder_tras_der",
+    "CH_motor_180_encoder_tras_izq",
+    "CN_motor_DC25",
+    "ELEC_NovaPi",
+    "ELEC_bateria",
+    "ELEC_drivers",
+    "ELEC_power_expansion",
+    "ELV_AI_camera",
+    "ELV_motor_DC37",
+    "GR_motor_DC25",
+    "GR_sensor_distancia",
+    "INT_LR_motor_DC25",
+    "INT_UR_motor_DC25_elevacion",
+    "INT_UR_motor_DC25_giro",
+    "INT_motor_DC37",
+    "SH_brushless_ESC",
+    "SH_brushless_kit_antihorario",
+    "SH_brushless_kit_horario",
+    "SH_servo_MS12A",
+    "TW_S2_sensor",
+    "TW_motor_DC25",
+    "TW_motor_DC37"
+  ]
+}

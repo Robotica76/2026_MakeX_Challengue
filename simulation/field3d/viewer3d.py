@@ -12,12 +12,13 @@ can follow the same run.
 
 Keys: O open program, Space run/stop, R reset, J gamepad window, 1-4 cameras
 (orbit, follow, top, driver), mouse drag rotate, right drag pan, wheel zoom,
-E/Q carriage up/down, T/G intake head up/down, M flag mast, L labels,
+E/Q carriage up/down, T/G intake head up/down, M flag mast, V vectors, X x-ray, L labels,
 S screenshot, H help, Esc quit. The carriage, intake head and rollers also
 follow the program's power_expand_board ports (robot_config.json "mechanisms").
 """
 
 import argparse
+import json
 import math
 import os
 import sys
@@ -31,11 +32,11 @@ for p in (str(HERE), str(FIELD2D)):
 os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 
 import field_layout as fl  # noqa: E402
-from balls import SCENARIOS as BALL_SCENARIOS, load_intake  # noqa: E402
+from balls import SCENARIOS as BALL_SCENARIOS, Ball, load_intake  # noqa: E402
 from kinematics import load_drive_train  # noqa: E402
 from mechanisms import load_mechanisms  # noqa: E402
 from mblock_runtime import GamepadInput  # noqa: E402
-from robot import DEFAULT_CONFIG, load_config, start_pose  # noqa: E402
+from robot import DEFAULT_CONFIG, load_config, mecanum_wheels, start_pose  # noqa: E402
 from simulation import AUTO_STAGE_S, Simulation, load_gyro_sign  # noqa: E402
 from state_stream import DEFAULT_RATE_HZ, DEFAULT_TARGET, StatePublisher, parse_target, state_message  # noqa: E402
 
@@ -43,10 +44,14 @@ CAMERAS = ("orbit", "follow", "top", "driver")
 CARRIAGE_SPEED_MM_S = 200.0
 INTAKE_LIFT_KEY_MM_S = 120.0
 SPIN_DISPLAY_CAP_DPS = 900.0   # faster rollers (e.g. the brushless shooter) would strobe on screen
+VEL_ARROW_S = 0.4              # m of arrow per m/s
+FORCE_ARROW_S = 0.03           # m of arrow per N
+TORQUE_ARROW_S = 0.3           # m of arrow per N m
+ACCEL_TAU_S = 0.08             # low-pass on the differentiated velocity (display)
 MM = 1 / 1000.0
 HELP = ("O open program   Space run/stop   R reset   J gamepad   1-4 cameras (orbit, follow, top, driver)\n"
-        "drag rotate   right-drag pan   wheel zoom   E/Q carriage   T/G intake head   M flag mast   L labels   "
-        "S screenshot   H help")
+        "drag rotate   right-drag pan   wheel zoom   E/Q carriage   T/G intake head   M flag mast   V vectors   "
+        "X x-ray   L labels   S screenshot   H help")
 
 
 def wheel_state(sim):
@@ -118,6 +123,9 @@ class Viewer3D:
         self.robot = RobotModel(load_model_spec(self.args.model))
         self.robot.root.reparent_to(render)
         self.robot.show_mast(self.args.mast)
+        self.xray = False
+        if self.args.xray:
+            self._toggle_xray()
         ambient = AmbientLight("ambient")
         ambient.set_color((0.45, 0.45, 0.48, 1))
         sun = DirectionalLight("sun")
@@ -146,6 +154,7 @@ class Viewer3D:
             np_.set_billboard_point_eye()
             np_.set_light_off()
         self.labels.hide()
+        self._setup_vectors()
         self._place_robot()
 
     def _sync_balls(self):
@@ -158,15 +167,109 @@ class Viewer3D:
             self.ball_root.get_children().detach()
             self.ball_nodes = []
             for b in balls:
-                part = ball_part(b)
+                part = ball_part(Ball(b.name, 0.0, 0.0, 0.0))     # geometry at the origin, moved each frame
                 node = self.ball_root.attach_new_node(_geom_node(part))
                 node.set_color(*part.rgba)
                 node.set_python_tag("ball", b)
                 self.ball_nodes.append(node)
         for node in self.ball_nodes:
-            hidden = node.get_python_tag("ball").collected
-            if hidden != node.is_hidden():
-                node.hide() if hidden else node.show()
+            b = node.get_python_tag("ball")
+            node.set_pos(b.x * MM, b.y * MM, b.z * MM)
+
+    # --- vectors: wheel speeds and inertia at the centre of mass -------------------------
+    def _setup_vectors(self):
+        self.vectors = self.base.render.attach_new_node("vectors")
+        self.vectors.set_light_off()
+        self.vectors.set_depth_test(False)
+        self.vectors.set_bin("fixed", 50)
+        self.show_vectors = not self.args.no_vectors
+        mass_file = HERE / "robot_mass.json"
+        self.mass = json.loads(mass_file.read_text()) if mass_file.exists() else None
+        self._wheels = mecanum_wheels(self.sim.cfg)
+        self._com_v = None
+        self._accel = (0.0, 0.0)
+        self._alpha = 0.0
+        self._omega_prev = 0.0
+        self.inertia_text = ""
+
+    def _com_robot(self):
+        """Centre of mass in the simulator robot frame (x fwd, y left, z), mm, with the
+        carriage height (CAR_/GR_ mass moves with it)."""
+        m = self.mass
+        cx, cy, cz = (c * 1000 for c in m["center_of_mass_m"])
+        moving = sum(v for k, v in m["mass_by_prefix_kg"].items() if k in ("CAR", "GR"))
+        cz += moving * self.robot.carriage_mm / m["mass_kg"]
+        return cy, -cx, cz
+
+    @staticmethod
+    def _arrow(segs, p, v, scale, color):
+        """3D arrow from p (m) along v (any unit) * scale."""
+        x, y, z = (p[i] + v[i] * scale for i in range(3))
+        length = math.sqrt(sum((v[i] * scale) ** 2 for i in range(3)))
+        if length < 0.01:
+            return
+        segs.set_color(*color)
+        segs.move_to(*p)
+        segs.draw_to(x, y, z)
+        ux, uy, uz = ((v[i] * scale) / length for i in range(3))
+        head = min(0.05, length * 0.35)
+        px, py = (-uy, ux) if abs(uz) < 0.9 else (1.0, 0.0)   # perpendicular in the floor plane
+        for side in (-1, 1):
+            segs.move_to(x, y, z)
+            segs.draw_to(x - ux * head + side * px * head * 0.5, y - uy * head + side * py * head * 0.5,
+                         z - uz * head + (side * head * 0.5 if abs(uz) >= 0.9 else 0))
+
+    def _update_vectors(self, dt):
+        from panda3d.core import LineSegs
+        self.vectors.get_children().detach()
+        sim, pose = self.sim, self.sim.pose
+        vx, vy, omega = sim._velocity                    # robot frame, mm/s, rad/s (CCW)
+        c, s = math.cos(pose.theta), math.sin(pose.theta)
+        to_field = lambda ax, ay: (ax * c - ay * s, ax * s + ay * c)  # noqa: E731
+        segs = LineSegs("vectors")
+        segs.set_thickness(3)
+        # wheels: rim (drive) speed along the wheel and the hub's real velocity
+        rpms = {w: rpm for w, (rpm, _) in wheel_state(sim).items()}
+        circ = math.pi * sim.cfg.wheel_diameter_mm
+        for wheel in self._wheels:
+            wx, wy = wheel.center
+            fx, fy = pose.to_field(wx, wy)
+            p = (fx * MM, fy * MM, 0.09)
+            rim = rpms.get(wheel.name, 0.0) / 60.0 * circ * MM
+            self._arrow(segs, p, (*to_field(rim, 0.0), 0.0), VEL_ARROW_S, (1.0, 0.55, 0.1, 1))
+            hx, hy = (vx - omega * wy) * MM, (vy + omega * wx) * MM
+            self._arrow(segs, (p[0], p[1], 0.11), (*to_field(hx, hy), 0.0), VEL_ARROW_S, (0.2, 0.9, 1.0, 1))
+        if self.mass:
+            m = self.mass["mass_kg"]
+            izz = self.mass["inertia_kg_m2"][2][2]
+            rx, ry, rz = self._com_robot()
+            fx, fy = pose.to_field(rx, ry)
+            com = (fx * MM, fy * MM, rz * MM)
+            v_com = to_field((vx - omega * ry) * MM, (vy + omega * rx) * MM)   # m/s, field
+            if self._com_v is not None and dt > 0:
+                k = dt / (ACCEL_TAU_S + dt)
+                ax = (v_com[0] - self._com_v[0]) / dt
+                ay = (v_com[1] - self._com_v[1]) / dt
+                self._accel = (self._accel[0] + k * (ax - self._accel[0]), self._accel[1] + k * (ay - self._accel[1]))
+                alpha = (omega - self._omega_prev) / dt
+                self._alpha += k * (alpha - self._alpha)
+            self._com_v, self._omega_prev = v_com, omega
+            force = (-m * self._accel[0], -m * self._accel[1], 0.0)           # N, inertial (d'Alembert)
+            torque = -izz * self._alpha                                     # N m about z
+            self._arrow(segs, com, (*v_com, 0.0), VEL_ARROW_S, (1, 1, 1, 1))
+            self._arrow(segs, com, force, FORCE_ARROW_S, (1.0, 0.25, 0.25, 1))
+            self._arrow(segs, com, (0.0, 0.0, torque), TORQUE_ARROW_S, (0.9, 0.3, 1.0, 1))
+            # centre-of-mass marker
+            segs.set_color(1, 1, 0.3, 1)
+            for d in ((0.04, 0, 0), (0, 0.04, 0), (0, 0, 0.04)):
+                segs.move_to(com[0] - d[0], com[1] - d[1], com[2] - d[2])
+                segs.draw_to(com[0] + d[0], com[1] + d[1], com[2] + d[2])
+            self.inertia_text = ("centre of mass (estimate): m %.2f kg  Izz %.3f kg m2   |v| %.2f m/s   |a| %.2f m/s2   "
+                                 "F inertial %.1f N   torque inertial %+.2f N m"
+                                 % (m, izz, math.hypot(*v_com), math.hypot(*self._accel),
+                                    math.hypot(force[0], force[1]), torque))
+        self.vectors.attach_new_node(segs.create())
+        self.vectors.show() if self.show_vectors else self.vectors.hide()
 
     def _place_robot(self, dt=0.0):
         pose = self.sim.pose
@@ -302,6 +405,14 @@ class Viewer3D:
     def say(self, text, error=False):
         self.message, self.message_error = text, error
 
+    def _ball_text(self):
+        w = self.sim.world
+        if not w:
+            return f"\nballs collected {self.sim.balls_collected} / {self.sim.intake.capacity}"
+        cap = w.path.capacity if w.path else self.sim.intake.capacity
+        return (f"\nballs captured {w.captured}   in robot {w.stored} / {cap}   shots {w.shots}   "
+                f"in fortress: blue {len(w.in_fortress.get('blue', []))}  red {len(w.in_fortress.get('red', []))}")
+
     def _refresh_hud(self):
         sim, pose = self.sim, self.sim.pose
         name = sim.program.name if sim.program else "no program"
@@ -311,7 +422,8 @@ class Viewer3D:
                          f"x {pose.x:6.0f}  y {pose.y:6.0f} mm   heading {math.degrees(pose.theta) % 360:5.1f} deg   "
                          f"carriage {self.robot.carriage_mm:3.0f} mm   intake head {self.robot.intake_lift_mm:3.0f} mm   mast {'on' if self.robot.mast_visible else 'off'}   "
                          f"camera {self.cam_mode}{stream}"
-                         + (f"\nballs collected {sim.balls_collected} / {sim.intake.capacity}" if sim.intake and sim.balls else ""))
+                         + (self._ball_text() if sim.intake and sim.balls else "")
+                         + (f"\n{self.inertia_text}" if self.show_vectors and self.inertia_text else ""))
         message = sim.state.message if sim.state.status in ("error", "out_of_bounds", "done", "stopped") else self.message
         error = sim.state.status in ("error", "out_of_bounds") or self.message_error
         self.status_text.setText(message or "")
@@ -340,10 +452,34 @@ class Viewer3D:
             base.accept(key, self._keys.__setitem__, [key, True])
             base.accept(f"{key}-up", self._keys.__setitem__, [key, False])
         base.accept("m", self._toggle_mast)
+        base.accept("v", self._toggle_vectors)
+        base.accept("x", self._toggle_xray)
         base.accept("l", lambda: self.labels.hide() if not self.labels.is_hidden() else self.labels.show())
         base.accept("h", lambda: self.help.hide() if not self.help.is_hidden() else self.help.show())
         base.accept("s", self.screenshot)
         base.userExit = self.quit
+
+    def _toggle_xray(self):
+        """Semi-transparent robot, to watch the balls inside the intake, tower and basket."""
+        from panda3d.core import TransparencyAttrib
+        self.xray = not self.xray
+        root = self.robot.root
+        if self.xray:
+            root.set_transparency(TransparencyAttrib.M_alpha, 1)
+            root.set_alpha_scale(0.28)
+            root.set_depth_write(False, 1)
+            root.set_bin("transparent", 20, 1)
+        else:
+            root.clear_transparency()
+            root.clear_color_scale()
+            root.clear_depth_write()
+            root.clear_bin()
+        self.say("X-ray " + ("on" if self.xray else "off"))
+
+    def _toggle_vectors(self):
+        self.show_vectors = not self.show_vectors
+        self.say("Vectors " + ("on: wheel rim (orange) / hub (cyan) speed, centre of mass velocity (white), "
+                               "inertial force (red), inertial torque (magenta)" if self.show_vectors else "off"))
 
     def _toggle_mast(self):
         self.robot.show_mast(not self.robot.mast_visible)
@@ -383,6 +519,7 @@ class Viewer3D:
             mech.linear["intake_lift"].nudge((1 if self._keys["t"] else -1) * INTAKE_LIFT_KEY_MM_S * dt)
         self._place_robot(dt)
         self._sync_balls()
+        self._update_vectors(dt)
         self._update_trail()
         self._drag_camera()
         self._apply_camera()
@@ -398,8 +535,11 @@ class Viewer3D:
             while t < seconds and self.sim.running:
                 self.sim.step(frame_s)
                 t += frame_s
+                if seconds - t < 0.3:          # settle the displayed acceleration
+                    self._update_vectors(frame_s)
         self._place_robot()
         self._sync_balls()
+        self._update_vectors(frame_s)
         self._update_trail()
         self._apply_camera()
         self._refresh_hud()
@@ -428,6 +568,8 @@ def parse_args(argv=None):
     parser.add_argument("--balls", choices=BALL_SCENARIOS, default="initial",
                         help="balls on the field: initial (rules), released (own resource balls on the floor, "
                              "manual stage) or none")
+    parser.add_argument("--no-vectors", action="store_true", help="start with the wheel / inertia vectors hidden")
+    parser.add_argument("--xray", action="store_true", help="start with the robot semi-transparent")
     parser.add_argument("--stream", help="UDP target HOST:PORT for the state stream (default 127.0.0.1:5005)")
     parser.add_argument("--stream-rate", type=float, default=DEFAULT_RATE_HZ, help="state messages per second")
     parser.add_argument("--no-stream", action="store_true", help="do not send the state stream")

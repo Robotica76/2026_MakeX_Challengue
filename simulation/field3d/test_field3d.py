@@ -157,6 +157,41 @@ class MechanismViewerTest(unittest.TestCase):
         viewer.base.destroy()
 
 
+class BallSystemViewerTest(unittest.TestCase):
+    def test_full_intake_balls_vectors_and_xray(self):
+        import viewer3d
+        args = viewer3d.parse_args(["--screenshot", "unused.png", "--no-stream", "--size", "320x200",
+                                    "--balls", "released", "--time-limit", "100",
+                                    "--program", str(HERE.parent / "control" / "test_full_intake.py")])
+        try:
+            viewer = viewer3d.Viewer3D(args)
+        except Exception as exc:  # no OpenGL context (e.g. headless CI)
+            self.skipTest(f"no offscreen graphics: {exc}")
+        viewer.run_headless(6.5)                        # collecting: balls inside the robot
+        w = viewer.sim.world
+        self.assertGreater(w.stored, 0)
+        inside = [n for n in viewer.ball_nodes if n.get_python_tag("ball").state == "carried"]
+        self.assertEqual(len(inside), w.stored)
+        b = inside[0].get_python_tag("ball")
+        self.assertAlmostEqual(inside[0].get_x(), b.x / 1000, places=4)            # node follows the ball
+        self.assertLess(math.hypot(b.x - viewer.sim.pose.x, b.y - viewer.sim.pose.y), 350)
+        self.assertGreater(viewer.vectors.get_num_children(), 0)
+        self.assertIn("centre of mass", viewer.inertia_text)
+        viewer._toggle_xray()
+        self.assertLess(viewer.robot.root.get_color_scale()[3], 0.5)
+        viewer.sim.stop()
+        viewer.base.destroy()
+
+    def test_mass_estimate_file(self):
+        import json
+        data = json.loads((HERE / "robot_mass.json").read_text())
+        self.assertLess(data["mass_kg"], 10.0)                     # T01-R3 limit (estimate)
+        self.assertGreater(data["mass_kg"], 5.0)
+        izz = data["inertia_kg_m2"][2][2]
+        self.assertGreater(izz, 0.0)
+        self.assertLess(abs(data["center_of_mass_m"][0]), 0.05)    # roughly centred left-right
+
+
 class FieldTest(unittest.TestCase):
     def test_every_element_is_built_with_its_height(self):
         elements = fl.build_field()

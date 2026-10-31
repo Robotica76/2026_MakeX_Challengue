@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 import field_layout as fl
+from ball_physics import BallWorld, load_ball_path
 from balls import Ball, Intake, field_balls
 from kinematics import DriveTrain, body_velocity, integrate
 from mechanisms import Mechanisms
@@ -68,6 +69,8 @@ class Simulation:
         self.balls: List[Ball] = field_balls(fl.build_field(), ball_scenario)
         self.dc = DCBus()                          # power expansion board ports (intake, ...)
         self.mechanisms = mechanisms or Mechanisms()  # elevator, intake lift, rollers (mechanisms.py)
+        self._path_data = json.loads(DEFAULT_CONFIG.read_text()).get("ball_path")
+        self.world = self._new_world()
         self.variation = variation or Variation()  # ideal robot unless a study passes one
         self.marks: List[dict] = []                # simtrace.mark() records, see Monte Carlo
         self.trace_options: dict = {}              # simtrace.options() for the program
@@ -95,7 +98,20 @@ class Simulation:
 
     @property
     def balls_collected(self) -> int:
+        if self.world:
+            return self.world.captured
         return len(self.intake.collected) if self.intake else 0
+
+    def _new_world(self) -> Optional[BallWorld]:
+        """Ball dynamics and the ball path through the robot (ball_physics.py), when
+        there are balls."""
+        if not self.balls:
+            return None
+        data = self._path_data or {}
+        body = tuple(data.get("body_box_mm", (-self.cfg.length_mm / 2, -self.cfg.width_mm / 2, 0.0,
+                                              self.cfg.length_mm / 2, self.cfg.width_mm / 2, 642.0)))
+        head = tuple(data.get("head_box_mm", (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)))
+        return BallWorld(fl.build_field(), self.balls, self.intake, load_ball_path(data), body, head)
 
     def reset(self, cfg: Optional[RobotConfig] = None, start: Optional[RobotPose] = None) -> None:
         """Stop any run and put the robot back on its start pose."""
@@ -113,6 +129,7 @@ class Simulation:
         self.balls = field_balls(fl.build_field(), self.ball_scenario)
         if self.intake:
             self.intake.reset()
+        self.world = self._new_world()
         self._velocity, self._accel = (0.0, 0.0, 0.0), (0.0, 0.0)
         self._gyro_drift = 0.0
         self.marks = []
@@ -165,7 +182,9 @@ class Simulation:
             vx, vy, omega = vx * var.slip_forward, vy * var.slip_strafe, omega * var.slip_turn
             self.pose = integrate(self.pose, vx, vy, omega, dt)
             self.mechanisms.step(self.dc, dt)
-            if self.intake:
+            if self.world:
+                self.world.step(dt, self.pose, (vx, vy, omega), self.mechanisms.position("intake_lift"), self.dc)
+            elif self.intake:
                 self.intake.update(self.pose, self.balls, self.dc.power(self.intake.port),
                                    self.mechanisms.position("intake_lift"))
             self._update_sensors(vx, vy, omega, dt)

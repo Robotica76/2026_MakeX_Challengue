@@ -6,4 +6,5 @@ TBD before adding any utility: purpose, owner, inputs/outputs, execution require
 
 | Script | Purpose | Inputs / outputs | Requirements | Verification |
 | --- | --- | --- | --- | --- |
+| [`mass_properties.py`](mass_properties.py) | Estimate mass, centre of mass and inertia from the GLB (keyword densities, catalogue motor / electronics masses) | `.glb` → `robot_mass.json` | `trimesh` | Rerun after CAD changes; replace with weighed values |
 | [`step_to_glb.py`](step_to_glb.py) | Convert a robot STEP assembly into the GLB mesh used by the [3D simulator](../../simulation/field3d/README.md) | `.step` or `.step.zip` → `.glb` (metres, CAD axes, one node per part); prints part count, size, parts per prefix | [`requirements-cad.txt`](requirements-cad.txt) (`cascadio`, `trimesh`) | `simulation/field3d/test_field3d.py` checks the generated asset against the v22 CAD |

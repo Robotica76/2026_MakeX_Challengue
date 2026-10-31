@@ -43,7 +43,13 @@ class Ball:
     x: float          # field mm, centre
     y: float
     z: float          # centre height, mm
-    collected: bool = False
+    collected: bool = False      # taken by the intake at some point (stays True after a shot)
+    vx: float = 0.0              # mm/s (ball_physics.py)
+    vy: float = 0.0
+    vz: float = 0.0
+    state: str = "field"         # field | carried (inside the robot) | stored (no path model)
+    asleep: bool = True
+    rest: float = 0.0
 
 
 def _resource_box_balls(el: fl.Element) -> List[Ball]:

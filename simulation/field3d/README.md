@@ -41,6 +41,8 @@ cd simulation/field3d
 | `T` / `G` | Intake head up / down (0–380 mm); a program moves it through `DC2` |
 | `M` | Flag mast on/off (installed in the Modification Stage) |
 | `L` | Field labels |
+| `V` | Vectors on/off: wheel rim speed (orange) and hub velocity (cyan); at the centre of mass (yellow cross) velocity (white), inertial force −m·a (red), inertial torque −Izz·α (magenta, vertical) |
+| `X` | X-ray: semi-transparent robot to watch the balls inside (`--xray` at start) |
 | `S` | Screenshot (`field3d_screenshot.png`) |
 | `--balls initial / released / none` | Balls of the rules' initial state (default), the own resource balls released on the floor (manual stage), or none |
 | `H` / `Esc` | Help on/off / quit |
@@ -58,7 +60,7 @@ stops when a footprint corner leaves the field, on a program error, or on Stop.
 | Intake head | 16 `INT_UR_` parts on the `INT_UR` rails: arms, slides, nut, fingered roller, belts, pulleys, roller motor | `DC2` power (53 mm/s at 100 %, estimate), `T`/`G` keys |
 | Rollers and gears | Intake head roller, lower roller, star roller, helical centring roller and their gears; tower elbow roller and gears; basket feed roller; shooter friction wheels (16 sets) | `DC1` intake, `DC4` tower, `DC5` feeder, `BL1` shooter (displayed speed capped at 900 °/s) |
 | Flag mast | `FLAG_mastil`, `FLAG_cabeza`, `FLAG_pasador`, `FLAG_ligas`, reference flag | `M` key or `--mast` |
-| Balls | The 70 balls of the simulation (`simulation/field2d/balls.py`); collected balls disappear and the HUD counts them | Intake model on `DC1` (`power_expand_board`) |
+| Balls | The 70 balls with dynamics ([`ball_physics.py`](../field2d/ball_physics.py)): they roll, bounce, collide, get pushed by the robot, travel through the intake, tower and basket, and fly when shot | Intake `DC1`, tower `DC4`, feeder `DC5`, shooter `BL1` |
 
 ## Mechanisms
 
@@ -77,6 +79,29 @@ feeder and shooter on, carriage to the top and back down.
 | Intake head down (0.5 s) | Intake head 212 mm up, carriage at the top (7.5 s) |
 | --- | --- |
 | ![head down](docs/mechanisms_0.5s.png) | ![head up](docs/mechanisms_7.5s.png) |
+
+## Whole ball system and vectors
+
+Menu option 7, or `viewer3d.py --balls released --program ../control/test_full_intake.py --time-limit 100 --xray`,
+runs [`test_full_intake.py`](../control/test_full_intake.py): the robot collects the 10 balls of
+red resource area 1 with the intake and tower running (they climb the tower and fill the basket),
+drives to a shooting spot, turns its launcher (left side) toward the blue fortress, computes the
+shooter power for a ballistic shot (2251 mm → 60 %) and fires until it is empty. In simulation the
+10 shots land on the blue fortress ball level (≥ 8 required by the test).
+
+| Balls climbing through the robot (x-ray, 6 s) | A shot on its way to the blue fortress (14 s) |
+| --- | --- |
+| ![intake flow](docs/intake_flow.png) | ![shooting](docs/shooting.png) |
+
+Ball path inside the robot (`robot_config.json` "ball_path"): 18 storage slots from the v22 CAD
+reference balls (6 basket, 12 tower); waypoints through the head, the high-shelf chute, the tower,
+the elbow and the basket; the feeder takes the first basket ball to the friction wheels, which launch
+it at 8 m/s × power (40° hood, estimates). Each stretch moves only while its motor port has power.
+
+Mass properties for the vectors come from [`robot_mass.json`](robot_mass.json), an **estimate** made by
+[`tools/scripts/mass_properties.py`](../../tools/scripts/mass_properties.py) from mesh volumes,
+material densities by part name and catalogue motor / electronics masses: **8.94 kg**, centre of mass
+182 mm above the floor, Izz 0.322 kg·m². The centre of mass moves up with the carriage.
 
 ## Intake on the central resource shelf
 
@@ -179,7 +204,7 @@ The stream is one-way (simulator → tools); nothing outside can drive the simul
 
 ## Checks
 
-`python -m unittest` in this directory (20 tests): wheel, carriage and mast groups match
+`python -m unittest` in this directory (22 tests): wheel, carriage and mast groups match
 the CAD; the model stands on the floor with the 499.5 × 499.0 mm footprint; wheel pivots at
 the measured axles; the CAD forward axis follows the simulated heading; every field element
 is built at its height and the rules details are present (16 pins, 20 + 30 balls, 16 letter cubes, shelf at 758.5 mm, 290 mm pins); stream messages round-trip and respect the rate; and an offscreen
@@ -187,8 +212,10 @@ render of the automatic demo (skipped when no graphics context is available).
 
 ## Limits
 
-- Visual only: the 3D field has no collisions; the simulation still checks only the field
-  boundary, as in 2D. Physics (contacts, tipping, the fortress) is not modelled.
+- The robot does not collide with the field structures (only the balls do); the simulation checks
+  the field boundary, as in 2D. Robot tipping and the fortress moving are not modelled.
+- Ball physics: point-mass spheres without spin, boxes for the structures, estimated coefficients;
+  balls inside the robot follow waypoints and do not collide with each other.
 - Mechanisms are kinematic (no load, no inertia); the gripper jaw, the shooter hood servo and
   ball flow through the tower and shooter are not simulated.
 - Field element placements carry the estimates noted in `field_layout.py`.

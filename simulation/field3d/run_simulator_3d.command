@@ -46,14 +46,16 @@ echo "  3. Chassis demo - manual     (J opens the gamepad, then Space)"
 echo "  4. Ball collection demo      (Space starts it, about 19 s)"
 echo "  5. Mechanisms demo           (Space starts it: intake head, rollers, carriage)"
 echo "  6. Intake shelf demo         (Space starts it: central resource upper level)"
+echo "  7. Full ball system demo     (Space: collect, tower, basket, shoot into the blue fortress)"
 echo
-read -r -p "Choose 1-6: " choice
+read -r -p "Choose 1-7: " choice
 case "$choice" in
     2) "$PY" viewer3d.py --program ../control/test_chassis_control_automatico.py --time-limit 60 ;;
     3) "$PY" viewer3d.py --program ../control/test_chassis_control_manual.py --time-limit 100 --camera follow ;;
     4) "$PY" viewer3d.py --program ../control/test_ball_collection.py --balls released --time-limit 100 ;;
     5) "$PY" viewer3d.py --program ../control/test_mechanisms.py --camera follow ;;
     6) "$PY" viewer3d.py --program ../control/test_intake_shelf.py --camera follow --time-limit 60 ;;
+    7) "$PY" viewer3d.py --program ../control/test_full_intake.py --balls released --time-limit 100 --xray ;;
     *) "$PY" viewer3d.py ;;
 esac
 status=$?

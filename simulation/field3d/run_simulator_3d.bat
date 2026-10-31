@@ -47,9 +47,12 @@ echo   3. Chassis demo - manual     (J opens the gamepad, then Space)
 echo   4. Ball collection demo      (Space starts it, about 19 s)
 echo   5. Mechanisms demo           (Space starts it: intake head, rollers, carriage)
 echo   6. Intake shelf demo         (Space starts it: central resource upper level)
+echo   7. Full ball system demo     (Space: collect, tower, basket, shoot into the blue fortress)
 echo.
-choice /c 123456 /n /m "Choose 1-6: "
-if errorlevel 6 (
+choice /c 1234567 /n /m "Choose 1-7: "
+if errorlevel 7 (
+    "%PY%" viewer3d.py --program ..\control\test_full_intake.py --balls released --time-limit 100 --xray
+) else if errorlevel 6 (
     "%PY%" viewer3d.py --program ..\control\test_intake_shelf.py --camera follow --time-limit 60
 ) else if errorlevel 5 (
     "%PY%" viewer3d.py --program ..\control\test_mechanisms.py --camera follow
