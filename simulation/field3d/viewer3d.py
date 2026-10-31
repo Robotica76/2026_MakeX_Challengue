@@ -8,7 +8,12 @@ can follow the same run.
 
     python viewer3d.py
     python viewer3d.py --program ../control/test_chassis_control_automatico.py
+    python viewer3d.py --program ../../software/legacy/challenge_2025/Challenge_2025.n2.mblock
     python viewer3d.py --screenshot shot.png --run-for 5 --program ...   # headless
+
+Buttons (bottom right): Load program (.py from mBlock's Python view or an editor, or a .mblock
+block project, translated by field2d/mblock_project.py), Run / Stop, Reset, Reload, Gamepad.
+The loaded file is watched: save it again in mBlock or the editor and it reloads.
 
 Keys: O open program, Space run/stop, R reset, J gamepad window, 1-4 cameras
 (orbit, follow, top, driver), mouse drag rotate, right drag pan, wheel zoom,
@@ -51,7 +56,7 @@ FORCE_ARROW_S = 0.03           # m of arrow per N
 TORQUE_ARROW_S = 0.3           # m of arrow per N m
 ACCEL_TAU_S = 0.08             # low-pass on the differentiated velocity (display)
 MM = 1 / 1000.0
-HELP = ("O open program   Space run/stop   R reset   J gamepad   1-4 cameras (orbit, follow, top, driver)\n"
+HELP = ("Buttons: Load program (.py / .mblock, reloads when saved)   O open program   Space run/stop   R reset   J gamepad   1-4 cameras (orbit, follow, top, driver)\n"
         "drag rotate   right-drag pan   wheel zoom   E/Q carriage   T/G intake head   M flag mast   V vectors   "
         "X x-ray   L labels   S screenshot   H help")
 
@@ -78,8 +83,6 @@ def build_simulation(args, gamepad):
     if "elevator" in sim.mechanisms.linear:
         sim.mechanisms.linear["elevator"].start_mm = args.carriage
         sim.mechanisms.reset()
-    if args.program:
-        sim.program = args.program.resolve()
     return sim, elements
 
 
@@ -96,6 +99,10 @@ class Viewer3D:
         self.gamepad = GamepadInput()
         self.sim, self.elements = build_simulation(args, self.gamepad)
         self.message, self.message_error = "", False
+        from viewer import ProgramController   # 2D viewer helper: .py / .mblock, reload on save
+        self.programs = ProgramController(self.sim, self.say)
+        if args.program and not self.programs.open(args.program.resolve()):
+            raise SystemExit(self.message)
         self.publisher = None
         if not args.no_stream:
             self.publisher = StatePublisher(parse_target(args.stream) if args.stream else DEFAULT_TARGET,
@@ -105,9 +112,10 @@ class Viewer3D:
         self._setup_hud()
         if not args.screenshot:
             self._setup_controls()
+            self._setup_buttons()
             self.base.task_mgr.add(self._update, "update")
-            self.say(f"Loaded {self.sim.program.name}, press Space" if self.sim.program else
-                     "Press O to open an mBlock program")
+            if not self.sim.program:
+                self.say("Load program: an mBlock .py or .mblock file")
 
     # --- scene -------------------------------------------------------------------
     def _setup_scene(self):
@@ -468,13 +476,16 @@ class Viewer3D:
     def _refresh_hud(self):
         self._refresh_clock()
         sim, pose = self.sim, self.sim.pose
-        name = sim.program.name if sim.program else "no program"
+        source = getattr(self, "programs", None) and self.programs.source
+        name = source.name if source else "no program"
+        servos = sim.servos.snapshot()
+        servo_text = ("   servos " + "  ".join(f"{p} {a:.0f}°" for p, a in sorted(servos.items()))) if servos else ""
         limit = f" / {sim.time_limit:g}" if sim.time_limit else ""
         stream = f"   stream {self.publisher.target[0]}:{self.publisher.target[1]}" if self.publisher else ""
         self.hud.setText(f"{name}   t = {sim.time:5.1f}{limit} s   {sim.state.status}\n"
                          f"x {pose.x:6.0f}  y {pose.y:6.0f} mm   heading {math.degrees(pose.theta) % 360:5.1f} deg   "
                          f"carriage {self.robot.carriage_mm:3.0f} mm   intake head {self.robot.intake_lift_mm:3.0f} mm   mast {'on' if self.robot.mast_visible else 'off'}   "
-                         f"camera {self.cam_mode}{stream}"
+                         f"camera {self.cam_mode}{stream}{servo_text}"
                          + (self._ball_text() if sim.intake and sim.balls else "")
                          + (self._prop_text() if sim.props else "")
                          + (f"\n{self.inertia_text}" if self.show_vectors and self.inertia_text else ""))
@@ -483,10 +494,38 @@ class Viewer3D:
         self.status_text.setText(message or "")
         self.status_text.setFg((1.0, 0.45, 0.45, 1) if error else (0.55, 1.0, 0.65, 1))
 
+    def _setup_buttons(self):
+        """Program buttons, bottom right: Load program, Run / Stop, Reset, Reload, Gamepad."""
+        from direct.gui.DirectGui import DirectButton, DGG
+        style = dict(parent=self.base.a2dBottomRight, scale=0.045, text_fg=(1, 1, 1, 1),
+                     frameColor=((0.16, 0.2, 0.28, 0.92), (0.25, 0.32, 0.45, 1), (0.3, 0.4, 0.55, 1),
+                                 (0.1, 0.1, 0.1, 0.5)), relief=DGG.FLAT, pad=(0.6, 0.35), text_align=0)
+        items = [("Load program", self.programs.load), ("Run", self.programs.toggle),
+                 ("Reset", self._reset_button), ("Reload", self.programs.reload),
+                 ("Gamepad", self.gamepad_window.open)]
+        self.buttons = {}
+        x = -0.04
+        for label, command in reversed(items):
+            width = 0.045 * (len(label) * 0.55 + 1.4)
+            x -= width
+            self.buttons[label] = DirectButton(text=label, command=command, pos=(x + width / 2, 0, 0.05), **style)
+            x -= 0.015
+
+    def _reset_button(self):
+        if self.sim.running:
+            self.sim.stop()
+        self.sim.reset()
+
+    def _refresh_buttons(self):
+        run = getattr(self, "buttons", {}).get("Run")
+        if run is not None:
+            label = "Stop" if self.sim.running else "Run"
+            if run["text"] != label:
+                run["text"] = label
+
     def _setup_controls(self):
-        from viewer import GamepadLauncher, ProgramController   # 2D viewer helpers
+        from viewer import GamepadLauncher   # 2D viewer helper
         base = self.base
-        self.programs = ProgramController(self.sim, self.say)
         self.gamepad_window = GamepadLauncher(self.gamepad, self.say)
         self._keys = {"e": False, "q": False, "t": False, "g": False}
         base.accept("escape", self.quit)
@@ -561,7 +600,9 @@ class Viewer3D:
         from panda3d.core import ClockObject
         clock = ClockObject.get_global_clock()
         dt = clock.get_dt()
+        self.programs.watch(clock.get_frame_time())   # reload when the file is saved again
         self.sim.step(dt)
+        self._refresh_buttons()
         mech = self.sim.mechanisms
         if self._keys["e"] != self._keys["q"]:
             sign = 1 if self._keys["e"] else -1
@@ -614,7 +655,7 @@ def parse_args(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG, help="robot config JSON (2D simulator)")
     parser.add_argument("--model", type=Path, default=HERE / "robot_model.json", help="3D model description")
-    parser.add_argument("--program", type=Path, help="mBlock Python program to preload")
+    parser.add_argument("--program", type=Path, help="mBlock program to preload (.py or .mblock)")
     parser.add_argument("--time-limit", type=float, default=AUTO_STAGE_S,
                         help="stop the run after this many simulated seconds (0 = no limit)")
     parser.add_argument("--size", default="1440x900", help="window size WxH in px")

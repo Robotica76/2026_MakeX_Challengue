@@ -24,7 +24,7 @@ from ball_physics import named_colliders
 from match import CollisionMonitor, MatchMonitor
 from mechanisms import Mechanisms
 from props import Gripper, Prop, field_props, rake_props
-from mblock_runtime import DCBus, GamepadInput, MotorBus, ProgramRunner, Sensors, SimClock
+from mblock_runtime import DCBus, GamepadInput, MotorBus, ProgramRunner, Sensors, ServoBus, SimClock
 from robot import DEFAULT_CONFIG, RobotConfig, RobotPose
 from uncertainty import Variation
 
@@ -91,6 +91,9 @@ class Simulation:
         self.clock = SimClock()
         self.motors = self._new_motors()
         self.sensors = Sensors()
+        self.servos = ServoBus()                   # smart servos (angles), mbuild.smartservo
+        self._ranging = json.loads(DEFAULT_CONFIG.read_text()).get("ranging_sensors", {})
+        self._colliders = [box for _, box in named_colliders(self.elements)]
         self._gyro_drift = 0.0
         self._velocity = (0.0, 0.0, 0.0)   # robot frame vx, vy (mm/s), omega (rad/s)
         self._accel = (0.0, 0.0)           # low-passed, m/s^2
@@ -148,6 +151,7 @@ class Simulation:
         self.clock = SimClock()
         self.motors = self._new_motors()
         self.sensors = Sensors()
+        self.servos = ServoBus()
         self.dc = DCBus()
         self.mechanisms.reset()
         self.balls = field_balls(fl.build_field(), self.ball_scenario)
@@ -171,7 +175,7 @@ class Simulation:
         self.reset()
         self._runner = ProgramRunner(self.program, self.clock, self.motors, self.sensors, self.gamepad,
                                      MODULE_ROOTS, self.variation, self._record_mark, self.trace_options,
-                                     self.dc)
+                                     self.dc, self.servos)
         try:
             self._runner.start()
         except SyntaxError as exc:
@@ -211,6 +215,7 @@ class Simulation:
             vx, vy, omega = vx * var.slip_forward, vy * var.slip_strafe, omega * var.slip_turn
             self.pose = integrate(self.pose, vx, vy, omega, dt)
             self.mechanisms.step(self.dc, dt)
+            self.servos.integrate(dt)
             if self.world:
                 self.world.step(dt, self.pose, (vx, vy, omega), self.mechanisms.position("intake_lift"), self.dc)
             elif self.intake:
@@ -232,6 +237,35 @@ class Simulation:
         if self.running and self.state.trail[-1] != (self.pose.x, self.pose.y):
             self.state.trail.append((self.pose.x, self.pose.y))
 
+    def ranging_cm(self, spec: dict) -> float:
+        """Distance (cm) a ranging sensor reads: robot_config.json "ranging_sensors" gives each
+        port {"position_mm": [x fwd, y left, z], "direction_deg": yaw in the robot frame (0 =
+        forward)} or "direction": "down". Horizontal rays hit the field structures at the
+        sensor height and the field frame; 200 cm when nothing is in range (estimate)."""
+        x, y, z = spec.get("position_mm", (0.0, 0.0, 100.0))
+        if spec.get("direction") == "down":
+            return min(Sensors.RANGE_NONE_CM, z / 10.0)
+        ox, oy = self.pose.to_field(x, y)
+        a = self.pose.theta + math.radians(spec.get("direction_deg", 0.0))
+        dx, dy = math.cos(a), math.sin(a)
+        best = 2000.0
+        boxes = self._colliders + [(-1e4, -1e4, -1, 0.0, 1e4, 1e4), (fl.FIELD_W, -1e4, -1, 1e4, 1e4, 1e4),
+                                   (-1e4, -1e4, -1, 1e4, 0.0, 1e4), (-1e4, fl.FIELD_H, -1, 1e4, 1e4, 1e4)]
+        for bx0, by0, bz0, bx1, by1, bz1 in boxes:
+            if not bz0 <= z <= bz1:
+                continue
+            t0, t1 = 0.0, best
+            for o, d, lo, hi in ((ox, dx, bx0, bx1), (oy, dy, by0, by1)):
+                if abs(d) < 1e-12:
+                    if not lo <= o <= hi:
+                        t0, t1 = 1.0, 0.0
+                    continue
+                ta, tb = sorted(((lo - o) / d, (hi - o) / d))
+                t0, t1 = max(t0, ta), min(t1, tb)
+            if t0 <= t1:
+                best = t0
+        return Sensors.RANGE_NONE_CM if best >= 2000.0 else best / 10.0
+
     def _update_sensors(self, vx: float, vy: float, omega: float, dt: float) -> None:
         """Gyro z = yaw rate; accelerometer = d(v)/dt in the rotating robot frame
         plus the centripetal term, low-passed so ideal speed steps stay finite."""
@@ -243,6 +277,8 @@ class Simulation:
         self._accel = (fx + k * (ax - fx), fy + k * (ay - fy))
         self._velocity = (vx, vy, omega)
         self.sensors.set(self._gyro_reading(omega, dt), *self._accel)
+        if self._ranging:
+            self.sensors.set_ranging({port: self.ranging_cm(spec) for port, spec in self._ranging.items()})
 
     def _gyro_reading(self, omega: float, dt: float) -> float:
         """True yaw rate in the configured sign, plus the Variation's gyro errors."""

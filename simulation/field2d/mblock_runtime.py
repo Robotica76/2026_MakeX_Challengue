@@ -10,6 +10,10 @@ The program runs unchanged in a worker thread. Its imports of `novapi`,
   clock, so sleeps take simulated time.
 - mbuild.gamepad: get_joystick("Lx" | "Ly" | "Rx" | "Ry") in -100..100 and
   is_key_pressed(name), fed by the emulated gamepad window (GamepadInput).
+- mbuild.smartservo.smartservo_class(port, index): move_to(angle, speed), move(angle, speed)
+  (relative; move(0, 0) holds), get_value("angle"). Speed is taken as rpm (estimate).
+- mbuild.ranging_sensor.ranging_sensor_class(port, index): get_distance() in cm, from the
+  simulation (robot_config.json "ranging_sensors"; 200 = nothing in range / not mounted).
 - `import x` of a project file loads it with the same stand-ins: x.py next to the
   program first, then the module roots (the repository's software/ folder, searched
   recursively), so a simulation program in simulation/control can use
@@ -17,6 +21,10 @@ The program runs unchanged in a worker thread. Its imports of `novapi`,
 
 Anything else the program calls raises UnsupportedAPI, reported in the viewer,
 so missing stand-ins are obvious instead of silently ignored.
+
+A loop that polls the API without sleeping (mBlock's "wait until" is `while not ...: pass`)
+pays 1 ms of simulated time every 200 calls, as the NovaPi's bus calls would take, so it stays
+in step with the simulation and sees short gamepad presses.
 
 Stop works even for loops that never call a simulated API (`while True: pass`)
 or that catch everything (`except BaseException`): ProgramRunner.stop() injects
@@ -35,6 +43,10 @@ import traceback
 import types
 from pathlib import Path
 from typing import Dict, Optional, Sequence
+
+
+BUSY_CALLS = 200            # simulated API calls without a sleep before the program pays time
+BUSY_CALL_COST_S = 0.001    # simulated time per batch: keeps busy loops in step with the simulation
 
 
 class UnsupportedAPI(Exception):
@@ -204,6 +216,45 @@ class DCBus:
             return dict(self._power)
 
 
+class ServoBus:
+    """Smart servo angle (degrees) per port, written by the program through
+    mbuild.smartservo and advanced by the simulation every step at the commanded
+    speed (rpm, so 6 deg/s per rpm; an estimate, check on the robot)."""
+
+    def __init__(self):
+        self._angle: Dict[str, float] = {}
+        self._target: Dict[str, float] = {}
+        self._speed: Dict[str, float] = {}
+        self._lock = threading.Lock()
+
+    def move_to(self, port: str, angle: float, speed: float) -> None:
+        with self._lock:
+            self._angle.setdefault(port, 0.0)
+            self._target[port], self._speed[port] = float(angle), abs(float(speed))
+
+    def move(self, port: str, degrees: float, speed: float) -> None:
+        with self._lock:
+            current = self._angle.setdefault(port, 0.0)
+            hold = float(degrees) == 0 or float(speed) == 0
+            self._target[port] = current if hold else current + float(degrees)
+            self._speed[port] = abs(float(speed))
+
+    def integrate(self, dt: float) -> None:
+        with self._lock:
+            for port, target in self._target.items():
+                angle = self._angle.get(port, 0.0)
+                step = self._speed.get(port, 0.0) * 6.0 * dt
+                self._angle[port] = target if abs(target - angle) <= step else angle + math.copysign(step, target - angle)
+
+    def angle(self, port: str) -> float:
+        with self._lock:
+            return self._angle.get(port, 0.0)
+
+    def snapshot(self) -> Dict[str, float]:
+        with self._lock:
+            return dict(self._angle)
+
+
 class Sensors:
     """Gyroscope and accelerometer readings, written by the simulation each step.
 
@@ -216,11 +267,22 @@ class Sensors:
         self._lock = threading.Lock()
         self.gyro = {"x": 0.0, "y": 0.0, "z": 0.0}
         self.accel = {"x": 0.0, "y": 0.0, "z": 9.81}
+        self.ranging: Dict[str, float] = {}    # cm per sensor port, written by the simulation
 
     def set(self, gyro_z: float, ax: float, ay: float) -> None:
         with self._lock:
             self.gyro["z"] = gyro_z
             self.accel["x"], self.accel["y"] = ax, ay
+
+    RANGE_NONE_CM = 200.0
+
+    def set_ranging(self, values: Dict[str, float]) -> None:
+        with self._lock:
+            self.ranging = dict(values)
+
+    def distance(self, port: str) -> float:
+        with self._lock:
+            return self.ranging.get(port, self.RANGE_NONE_CM)
 
     def read(self, kind: str, axis: str) -> float:
         table = self.gyro if kind == "gyro" else self.accel
@@ -294,10 +356,16 @@ class GamepadInput:
 
 def _build_modules(clock: SimClock, motors: MotorBus, stop: threading.Event,
                    sensors: Sensors, gamepad: GamepadInput, variation=None, trace=None,
-                   trace_options=None, dc: Optional[DCBus] = None):
+                   trace_options=None, dc: Optional[DCBus] = None, servos: Optional[ServoBus] = None):
+    calls = {"n": 0}
+
     def check():
         if stop.is_set():
             raise ProgramStopped()
+        calls["n"] += 1
+        if calls["n"] > BUSY_CALLS:   # a loop that never sleeps (mBlock "wait until"): 1 ms per batch
+            calls["n"] = 0
+            clock.wait_until(clock.now + BUSY_CALL_COST_S, stop)
 
     class encoder_motor_class:  # noqa: N801 - mirrors the mbuild class name
         def __init__(self, port, index="INDEX1"):
@@ -338,6 +406,7 @@ def _build_modules(clock: SimClock, motors: MotorBus, stop: threading.Event,
 
     def sleep(seconds):
         check()
+        calls["n"] = 0
         extra = rng.uniform(0.0, jitter) if jitter > 0 else 0.0
         clock.wait_until(clock.now + max(0.0, float(seconds)) + extra, stop)
 
@@ -385,7 +454,46 @@ def _build_modules(clock: SimClock, motors: MotorBus, stop: threading.Event,
         def __getattr__(self, name):
             raise UnsupportedAPI(f"power_expand_board.{name}() is not simulated yet")
 
+    servos = servos if servos is not None else ServoBus()
+
+    class smartservo_class:  # noqa: N801 - mirrors the mbuild class name
+        def __init__(self, port, index="INDEX1"):
+            self.port, self.index = str(port), index
+
+        def move_to(self, angle, speed):
+            check()
+            servos.move_to(self.port, angle, speed)
+
+        def move(self, angle, speed):
+            check()
+            servos.move(self.port, angle, speed)
+
+        def get_value(self, name):
+            check()
+            if name == "angle":
+                return servos.angle(self.port)
+            raise UnsupportedAPI(f"smartservo.get_value({name!r}) is not simulated yet")
+
+        def __getattr__(self, name):
+            raise UnsupportedAPI(f"smartservo.{name}() is not simulated yet")
+
+    class ranging_sensor_class:  # noqa: N801 - mirrors the mbuild class name
+        def __init__(self, port, index="INDEX1"):
+            self.port, self.index = str(port), index
+
+        def get_distance(self):
+            check()
+            return sensors.distance(self.port)
+
+        def __getattr__(self, name):
+            raise UnsupportedAPI(f"ranging_sensor.{name}() is not simulated yet")
+
     mbuild = types.ModuleType("mbuild")
+    smartservo = types.ModuleType("mbuild.smartservo")
+    smartservo.smartservo_class = smartservo_class
+    ranging_sensor = types.ModuleType("mbuild.ranging_sensor")
+    ranging_sensor.ranging_sensor_class = ranging_sensor_class
+    mbuild.smartservo, mbuild.ranging_sensor = smartservo, ranging_sensor
     encoder_motor = types.ModuleType("mbuild.encoder_motor")
     encoder_motor.encoder_motor_class = encoder_motor_class
     mbuild.encoder_motor = encoder_motor
@@ -399,7 +507,7 @@ def _build_modules(clock: SimClock, motors: MotorBus, stop: threading.Event,
     simtrace.options = lambda: dict(trace_options or {})  # study settings, e.g. constant overrides
 
     return {"time": time_mod, "novapi": novapi, "mbuild": mbuild, "mbuild.encoder_motor": encoder_motor,
-            "simtrace": simtrace}
+            "mbuild.smartservo": smartservo, "mbuild.ranging_sensor": ranging_sensor, "simtrace": simtrace}
 
 
 class ProgramRunner:
@@ -408,9 +516,10 @@ class ProgramRunner:
     def __init__(self, path: Path, clock: SimClock, motors: MotorBus,
                  sensors: Optional[Sensors] = None, gamepad: Optional[GamepadInput] = None,
                  module_roots: Sequence[Path] = (), variation=None, trace=None, trace_options=None,
-                 dc: Optional[DCBus] = None):
+                 dc: Optional[DCBus] = None, servos: Optional[ServoBus] = None):
         self.path = Path(path)
         self.dc = dc if dc is not None else DCBus()
+        self.servos = servos if servos is not None else ServoBus()
         self.variation, self.trace, self.trace_options = variation, trace, trace_options
         self.module_roots = [Path(r) for r in module_roots]
         self.clock, self.motors = clock, motors
@@ -425,7 +534,7 @@ class ProgramRunner:
         # OSError / UnicodeDecodeError (unreadable file) and SyntaxError surface here.
         code = compile(self.path.read_text(encoding="utf-8"), str(self.path), "exec")
         fakes = _build_modules(self.clock, self.motors, self.stop_event, self.sensors, self.gamepad,
-                               self.variation, self.trace, self.trace_options, self.dc)
+                               self.variation, self.trace, self.trace_options, self.dc, self.servos)
         real_import = builtins.__import__
         local_modules: Dict[str, types.ModuleType] = {}  # project files, fresh for each run
         self._project_files = {str(self.path)}

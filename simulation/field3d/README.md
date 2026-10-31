@@ -13,6 +13,16 @@ so 2D and 3D give identical motion, and the Monte Carlo results apply to both.
 
 **Windows:** double-click `run_simulator_3d.bat`. **macOS:** double-click
 `run_simulator_3d.command` (right-click > Open the first time if macOS blocks it).
+
+**Loading your program.** The buttons at the bottom right (Load program, Run / Stop, Reset,
+Reload, Gamepad) take an mBlock program as `.py` (mBlock's Python view, or a file from an editor)
+or as a `.mblock` block project, translated to the same Python mBlock generates
+(`field2d/mblock_project.py`; the translation is written to `field2d/generated/`). The loaded file
+is watched: save it again in mBlock or the editor and the simulator reloads it, ready to Run.
+Simulated mBlock APIs: encoder motors, power expansion board (DC1–DC8, BL1–BL2), gamepad, gyro and
+accelerometer, smart servos (`smartservo_class`, angle shown in the HUD) and ranging sensors
+(`ranging_sensor_class`; mount them in `robot_config.json` `"ranging_sensors"`, e.g.
+`{"PORT5": {"position_mm": [200, 0, 100], "direction_deg": 0}}`, else they read 200 cm).
 The first run uses the same `.venv` as the 2D simulator and installs panda3d and
 trimesh (and pygame if it is missing), then shows a menu: empty simulator,
 automatic chassis demo or manual chassis demo.

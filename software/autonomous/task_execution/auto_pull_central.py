@@ -31,6 +31,9 @@
 # Two bonus cubes on our side at most (p.30 d); they are not in the exchange area, so they only
 # deny the opponent.
 #
+# Runs on its own, or imported by the competition program (software/robot/main/robot_2026.py),
+# which calls run(strategy). Ports (robot_config.json, assumptions): DC2 intake head lift,
+# DC7 intake head roller, DC1 intake throat.
 import math
 import time
 from mbuild import power_expand_board as pb
@@ -81,7 +84,6 @@ HARD_STOP = 29.5
 PASS_S = {"upper": 7.0, "lower": 7.0, "props": 5.5, "floor": 5.0}   # first estimate of a pass (s); then the longest measured
 CLEAR_X = 1920.0           # robot centre x with the head (front 285 mm) clear of the central strip
 
-ch.MAX_SPEED = max(ch.MAX_SPEED, PLAN["travel_speed"])
 T0 = time.time()
 jobs = []
 pass_time = {}
@@ -222,8 +224,9 @@ def approach_height(name):
     return PLAN[level + "_heights"][0]
 
 
-def main():
-    ch.odo.calibrate(0.5)
+def main(calibrate=True):
+    if calibrate:
+        ch.odo.calibrate(0.5)
     ch.odo.reset()
     tasks = PLAN["tasks"]
     head_to(approach_height(tasks[0]))                # head up while travelling
@@ -241,9 +244,27 @@ def main():
     finish_jobs()
 
 
-try:
-    main()
-except Abort:
-    report("safety stop")
-stop_all()
-report("stopped")
+def run(strategy=None, calibrate=True):
+    """The automatic stage from now: `strategy` is a STRATEGIES key (default STRATEGY). Use it
+    from the competition program (software/robot/main/robot_2026.py) with calibrate=False when
+    the gyro was calibrated before the match."""
+    global T0
+    T0 = time.time()
+    del jobs[:]
+    pass_time.clear()
+    head[:] = [0.0, 0.0, 0.0, 0.0]
+    if strategy is not None:
+        PLAN["tasks"] = STRATEGIES[strategy]
+    manual_speed = ch.MAX_SPEED
+    ch.MAX_SPEED = max(ch.MAX_SPEED, PLAN["travel_speed"])    # faster moves in this stage only
+    try:
+        main(calibrate)
+    except Abort:
+        report("safety stop")
+    stop_all()
+    ch.MAX_SPEED = manual_speed
+    report("stopped")
+
+
+if __name__ == "__main__":     # run on its own (simulator, or uploaded alone)
+    run()
