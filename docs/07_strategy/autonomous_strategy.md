@@ -17,7 +17,48 @@ the v22 model; nothing has been run on the robot.
 | Bonus cube in own exchange area at the end of the stage | p.29–30 | X3–X12 extra balls placed in the own resource area, each scoring 20 instead of 10 |
 | X mark must not be touched | R24, p.72–73 | The routine stays below the table top (654 mm) and away from the X |
 
-## Plan (team): central balls, then props from the central strip to our side
+## Plan (team, current): pull the central elements to our side
+
+Team decision (2026-10-31): in the automatic stage, do not store or shoot; drag as many central
+elements as possible onto our side, where the opponent cannot reach them (R06), and use or place
+them in the manual stage: (1) upper-level balls, (2) lower-level balls, (3) cones and bonus cubes
+from the strategy areas. Moving them to our own side is allowed (R23 only forbids the opponent's
+side or out of the arena).
+
+Pull mode: the intake head roller (DC7) runs with the throat (DC1) off; what the head touches
+slides toward the robot and drops in front of the body. Each pass enters the table with the head
+**above** the balls (nothing is pushed to the opponent), lowers it onto the level and backs out
+pulling.
+
+Routine: [`auto_pull_central.py`](../../software/autonomous/task_execution/auto_pull_central.py).
+Route chosen by [`optimize_auto_route.py`](../../simulation/analysis/optimize_auto_route.py)
+(task orders, speeds, lane depth, arrival tolerance and head heights; the score counts elements on
+our side and penalises collisions, R06, R19 and elements fed to the opponent). Simulated result:
+
+| Time | Event |
+| --- | --- |
+| 0.0–2.7 s | Gyro calibration; one diagonal to (1240, 950): clear of the cone post and the resource-area legs, the body passes the fortress corner; the head rises |
+| 2.7–10.2 s | Pass upper b (lane y 1600): in to x 2100 at 290 mm, head to 250 mm, back out pulling |
+| 10.2–15.5 s | Pass upper a (y 1437); the head starts down once it is clear of the table |
+| 15.5–21.8 s | Pass lower a (head 85 → 50 mm) |
+| 21.8–27.0 s | Pass lower b; everything stopped at 27.0 s (R19) |
+
+Result: the 30 central balls are off the table; **22 completely on our side**, 8 on the floor
+against the table base (x ≈ 2200, 15 mm over the line), none on the opponent side. No contact
+with any field structure, the body never crosses x 2220 (R06), stationary at 30 s.
+
+**Props do not fit in 30 s.** A cone or bonus cube pulled off the strategy area falls when its
+centre leaves the top, at the centre line (x ≈ 2219, half on the opponent side). Bringing it to
+our side needs the head down at the floor, about 4 s more with the head lift at 53 mm/s, and the
+head spans three props per lane (two cones and a cube, or a cone and two cubes). Leave the props
+for the manual stage; with a faster head lift, add `props_low_b` to the tasks.
+
+Collision check of the previous routines (`CollisionMonitor`, robot height bands from the CAD):
+`auto_central_then_cubes.py` touches the red fortress on its diagonal (30 mm, a push), a table leg
+with the head (6 mm) and enters `strategy_lower` with the body during the X12 grab;
+`test_ball_collection.py` pushes the fortress (7 mm). The new route avoids all of them.
+
+## Previous plan: central balls, then props from the central strip to our side
 
 Team decisions (2026-10-31): take the central balls first (denial, no shooting in this stage);
 then bring props from the strategy areas, right next to the table, to our side, where the
@@ -64,7 +105,8 @@ alone. The opponent also reaches the table from the blue side; our first balls c
 
 | Candidate | Setup revision | Repetitions / success / uncertainty | Timing evidence | Failure / corrective action | Decision |
 | --- | --- | --- | --- | --- | --- |
-| Central balls + X12 to the exchange area | v22 CAD, simulator 2026-10-31 | Simulation, deterministic: 14 balls, X12 valid, stationary at 29.0 s | Timeline above; `simulation/field2d/test_match.py` | Edge ball pushed on pass B; 1 s timing margin | Team plan |
+| Pull the central balls to our side (4 passes) | v22 CAD, simulator 2026-10-31 | Simulation, deterministic: 22 balls on our side, 8 at the line, 0 collisions, stationary | Timeline above; `test_match.py` | Head lift speed limits the props; real pull behaviour (ball under the head roller) untested | Team plan |
+| Central balls + X12 to the exchange area | v22 CAD, simulator 2026-10-31 | Simulation, deterministic: 14 balls, X12 valid, stationary at 29.0 s | `simulation/field2d/test_match.py` | Edge ball pushed on pass B; 1 s timing margin; touches the fortress and a table leg | Previous plan |
 | Central balls only (`LOWER_PASS`) | Same | Simulation: 18 balls by 23.8 s | — | No bonus cube | Fallback |
 
 Coordinate [autonomous controls](../04_controls/autonomous/README.md), [mode contracts](../04_controls/stateflow/README.md), and [competition tests](../06_verification/competition_tests/README.md). Record strategy changes and actual outcomes in [notebook results](../08_engineering_notebook/test_results/README.md).

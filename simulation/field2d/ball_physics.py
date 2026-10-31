@@ -46,61 +46,65 @@ def _rect_box(el, z0, z1, inset=0.0) -> Box:
 
 def field_colliders(elements: List[fl.Element]) -> List[Box]:
     """Structures as boxes, following simulation/field3d/field_model.py (rules p.13-22)."""
-    boxes: List[Box] = []
+    return [box for _, box in named_colliders(elements)]
+
+
+def named_colliders(elements: List[fl.Element]) -> List[Tuple[str, Box]]:
+    """(element name, box) for every structure box. Props are left out: they move (props.py)."""
     slots = [e for e in elements if e.kind == "slot"]
-    for el in elements:
-        if el.kind in ("zone", "slot") or el.z <= 0:
-            continue
-        x0, y0, x1, y1 = el.bounds()
-        if el.kind == "overhead" and "_resource_" in el.name:
-            sign = 1 if el.y < fl.CY else -1
-            wall = el.y - sign * el.h / 2
-            boxes.append((x0, y0, 738.5, x1, y1, 758.5))                       # shelves + box floor
-            half = 373.0 / 2
-            for side in (-1, 1):                                               # ball box walls
-                bx = el.x + side * (half - 20)
-                boxes.append((bx - 20, y0, 758.5, bx + 20, y1, el.z))
-            front = wall + sign * el.h
-            boxes.append((el.x - half, min(front, front - sign * 10), 758.5,
-                          el.x + half, max(front, front - sign * 10), el.z - 60))
-        elif el.kind == "overhead":                                            # flag poles
-            boxes.append((x0, y0, el.z - 15, x1, y1, el.z))
-        elif el.name.endswith("_back") and "_resource_" in el.name:
-            boxes.append((x0, y0, 0.0, x1, y1, 700.0))
-        elif el.name.startswith("strategy_"):
-            boxes.append((x0, y0, el.z - 52.5, x1, y1, el.z))                  # top rail
-            boxes.append((x0, y0, 0.0, x1, y1, 25.0))                          # bottom rail
-            windows = sorted((s.y - s.h / 2, s.y + s.h / 2) for s in slots if y0 <= s.y <= y1)
-            edges = [y0] + [v for w in windows for v in w] + [y1]
-            for k in range(0, len(edges), 2):
-                if edges[k + 1] - edges[k] > 1:
-                    boxes.append((x0, edges[k], 25.0, x1, edges[k + 1], el.z - 52.5))
-        elif el.name == "central_resource":
-            boxes.append((x0, y0, el.z - 25, x1, y1, el.z))                    # table top
-            for level in (50.0, 250.0):                                        # ball levels
-                boxes.append((x0 + 15, y0 + 15, level - 10, x1 - 15, y1 - 15, level))
-            for lx in (x0, x1 - 30):
-                for ly in (y0, y1 - 30):
-                    boxes.append((lx, ly, 0.0, lx + 30, ly + 30, el.z - 25))
-        elif el.name == "x_mark":
-            boxes.append((x0, y0, 654.0, x1, y1, el.z))
-        elif el.kind == "movable":                                             # fortress
-            boxes.append((x0 + 15, y0 + 15, 161.0, x1 - 15, y1 - 15, 171.0))     # cube level
-            boxes.append((x0 + 15, y0 + 15, 403.0, x1 - 15, y1 - 15, 407.0))     # ball level (mesh)
-            t = 8.0
-            boxes += [(x0, y0, 407.0, x1, y0 + t, 495.0), (x0, y1 - t, 407.0, x1, y1, 495.0),
-                      (x0, y0, 407.0, x0 + t, y1, 495.0), (x1 - t, y0, 407.0, x1, y1, 495.0)]
-            for px in (x0, x1 - 30):
-                for py in (y0, y1 - 30):
-                    boxes.append((px, py, 0.0, px + 30, py + 30, el.z))
-        elif el.kind == "prop":
-            base = next((o.z for o in elements if o.name.startswith("strategy_") and o.kind == "obstacle"
-                         and o.contains(el.x, el.y)), 0.0)
-            boxes.append((x0, y0, base, x1, y1, base + el.z))
-        elif el.shape == "circle":
-            boxes.append((el.x - el.r, el.y - el.r, 0.0, el.x + el.r, el.y + el.r, el.z))
-        else:
-            boxes.append((x0, y0, 0.0, x1, y1, el.z))
+    return [(el.name, box) for el in elements for box in _element_boxes(el, slots)]
+
+
+def _element_boxes(el, slots) -> List[Box]:
+    boxes: List[Box] = []
+    if el.kind in ("zone", "slot", "prop") or el.z <= 0:
+        return boxes
+    x0, y0, x1, y1 = el.bounds()
+    if el.kind == "overhead" and "_resource_" in el.name:
+        sign = 1 if el.y < fl.CY else -1
+        wall = el.y - sign * el.h / 2
+        boxes.append((x0, y0, 738.5, x1, y1, 758.5))                       # shelves + box floor
+        half = 373.0 / 2
+        for side in (-1, 1):                                               # ball box walls
+            bx = el.x + side * (half - 20)
+            boxes.append((bx - 20, y0, 758.5, bx + 20, y1, el.z))
+        front = wall + sign * el.h
+        boxes.append((el.x - half, min(front, front - sign * 10), 758.5,
+                      el.x + half, max(front, front - sign * 10), el.z - 60))
+    elif el.kind == "overhead":                                            # flag poles
+        boxes.append((x0, y0, el.z - 15, x1, y1, el.z))
+    elif el.name.endswith("_back") and "_resource_" in el.name:
+        boxes.append((x0, y0, 0.0, x1, y1, 700.0))
+    elif el.name.startswith("strategy_"):
+        boxes.append((x0, y0, el.z - 52.5, x1, y1, el.z))                  # top rail
+        boxes.append((x0, y0, 0.0, x1, y1, 25.0))                          # bottom rail
+        windows = sorted((s.y - s.h / 2, s.y + s.h / 2) for s in slots if y0 <= s.y <= y1)
+        edges = [y0] + [v for w in windows for v in w] + [y1]
+        for k in range(0, len(edges), 2):
+            if edges[k + 1] - edges[k] > 1:
+                boxes.append((x0, edges[k], 25.0, x1, edges[k + 1], el.z - 52.5))
+    elif el.name == "central_resource":
+        boxes.append((x0, y0, el.z - 25, x1, y1, el.z))                    # table top
+        for level in (50.0, 250.0):                                        # ball levels
+            boxes.append((x0 + 15, y0 + 15, level - 10, x1 - 15, y1 - 15, level))
+        for lx in (x0, x1 - 30):
+            for ly in (y0, y1 - 30):
+                boxes.append((lx, ly, 0.0, lx + 30, ly + 30, el.z - 25))
+    elif el.name == "x_mark":
+        boxes.append((x0, y0, 654.0, x1, y1, el.z))
+    elif el.kind == "movable":                                             # fortress
+        boxes.append((x0 + 15, y0 + 15, 161.0, x1 - 15, y1 - 15, 171.0))     # cube level
+        boxes.append((x0 + 15, y0 + 15, 403.0, x1 - 15, y1 - 15, 407.0))     # ball level (mesh)
+        t = 8.0
+        boxes += [(x0, y0, 407.0, x1, y0 + t, 495.0), (x0, y1 - t, 407.0, x1, y1, 495.0),
+                  (x0, y0, 407.0, x0 + t, y1, 495.0), (x1 - t, y0, 407.0, x1, y1, 495.0)]
+        for px in (x0, x1 - 30):
+            for py in (y0, y1 - 30):
+                boxes.append((px, py, 0.0, px + 30, py + 30, el.z))
+    elif el.shape == "circle":
+        boxes.append((el.x - el.r, el.y - el.r, 0.0, el.x + el.r, el.y + el.r, el.z))
+    else:
+        boxes.append((x0, y0, 0.0, x1, y1, el.z))
     return boxes
 
 
@@ -181,6 +185,7 @@ class BallWorld:
                 self.grid.setdefault(key, []).append(i)
         self.carried: List[Carry] = []
         self.captured = 0
+        self.dropped = 0
         self.shots = 0
         self.in_fortress: Dict[str, List[str]] = {k: [] for k in self.fortress}
         for b in balls:
@@ -199,6 +204,7 @@ class BallWorld:
 
     # -- main step ---------------------------------------------------------------------
     def step(self, dt: float, pose, velocity: Tuple[float, float, float], lift: float, dc) -> None:
+        self._drag(dt, pose, velocity, lift, dc)
         self._capture(pose, lift, dc)
         self._move_carried(dt, pose, velocity, dc)
         awake = [b for b in self.balls if b.state == "field" and not b.asleep]
@@ -208,9 +214,44 @@ class BallWorld:
             if b.state == "field":
                 self._robot_contact(b, pose, velocity, lift)
         self._ball_contacts()
+        for b in self.balls:                               # contacts may push balls into structures
+            if b.state == "field" and not b.asleep:
+                self._settle(b)
         for b in self.balls:
             if b.state == "field" and not b.asleep:
                 self._score(b)
+
+    # -- dragging with the head roller (pull mode) ---------------------------------------------
+    def _drag(self, dt, pose, velocity, lift, dc) -> None:
+        """Pull mode: balls the head roller touches slide under the head toward the robot and
+        are dropped just in front of the body, with the robot's velocity plus a backward push."""
+        intake = self.intake
+        if intake is None:
+            return
+        pulling = intake.pulling(dc)
+        release_x = intake.body_front_mm + R + 2.0
+        for b in self.balls:
+            if b.head_free_t > 0:
+                b.head_free_t = max(0.0, b.head_free_t - dt)
+            if b.state == "field" and pulling and intake.reaches(b, lift) and intake.contains(pose, b):
+                b.state, b.asleep = "dragged", True
+                b.local = self._to_robot(pose, b)
+            if b.state != "dragged":
+                continue
+            lx, ly, lz = b.local
+            lx -= intake.pull_speed * dt if pulling else 0.0
+            if lx <= release_x or not pulling:
+                lx = max(lx, release_x)
+                self._place(b, pose, (lx, ly, lz))
+                vx_r, vy_r, omega = velocity
+                px, py = vx_r - omega * ly - 0.3 * intake.pull_speed, vy_r + omega * lx
+                c, s = math.cos(pose.theta), math.sin(pose.theta)
+                b.vx, b.vy, b.vz = px * c - py * s, px * s + py * c, 0.0
+                b.state, b.asleep, b.rest, b.head_free_t = "field", False, 0.0, 0.4
+                self.dropped += 1
+            else:
+                b.local = (lx, ly, lz)
+                self._place(b, pose, b.local)
 
     # -- capture and transport -----------------------------------------------------------
     def _capture(self, pose, lift, dc) -> None:
@@ -325,14 +366,7 @@ class BallWorld:
         b.x += b.vx * dt
         b.y += b.vy * dt
         b.z += b.vz * dt
-        supported = False
-        if b.z < R:                                        # floor
-            b.z = R
-            if b.vz < 0:
-                b.vz = -b.vz * E_FLOOR if -b.vz > 150 else 0.0
-            supported = True
-        for i in self._near(b):
-            supported |= self._box_contact(b, self.colliders[i], E_WALL)
+        supported = self._settle(b)
         for axis, hi in (("x", fl.FIELD_W), ("y", fl.FIELD_H)):  # frame
             v = getattr(b, axis)
             if v < R:
@@ -354,6 +388,32 @@ class BallWorld:
                 b.asleep = True
         else:
             b.rest = 0.0
+
+    def _settle(self, b) -> bool:
+        """Floor, then the field structures. A ball a structure pushes into the floor (pressed
+        under a shelf plate by the head or another ball) leaves sideways instead of sinking.
+        True if something supports it."""
+        supported = self._floor(b)
+        for i in self._near(b):
+            box = self.colliders[i]
+            supported |= self._box_contact(b, box, E_WALL)
+            if b.z < R - 0.5:
+                x0, y0, z0, x1, y1, z1 = box
+                if x0 - R < b.x < x1 + R and y0 - R < b.y < y1 + R:
+                    d, (nx, ny) = min((b.x - x0 + R, (-1, 0)), (x1 - b.x + R, (1, 0)),
+                                      (b.y - y0 + R, (0, -1)), (y1 - b.y + R, (0, 1)))
+                    b.x, b.y = b.x + nx * d, b.y + ny * d
+                supported |= self._floor(b)
+        return supported
+
+    @staticmethod
+    def _floor(b) -> bool:
+        if b.z < R:
+            b.z = R
+            if b.vz < 0:
+                b.vz = -b.vz * E_FLOOR if -b.vz > 150 else 0.0
+            return True
+        return False
 
     def _near(self, b):
         seen = set()
@@ -407,7 +467,8 @@ class BallWorld:
         c, s = math.cos(pose.theta), math.sin(pose.theta)
         lx, ly = dx * c + dy * s, -dx * s + dy * c
         hx0, hy0, hz0, hx1, hy1, hz1 = self.head_box
-        for box in (self.body_box, (hx0, hy0, hz0 + lift, hx1, hy1, hz1 + lift)):
+        boxes = [self.body_box] if b.head_free_t > 0 else [self.body_box, (hx0, hy0, hz0 + lift, hx1, hy1, hz1 + lift)]
+        for box in boxes:
             x0, y0, z0, x1, y1, z1 = box
             qx, qy, qz = min(max(lx, x0), x1), min(max(ly, y0), y1), min(max(b.z, z0), z1)
             ex, ey, ez = lx - qx, ly - qy, b.z - qz

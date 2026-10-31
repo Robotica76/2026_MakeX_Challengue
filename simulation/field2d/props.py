@@ -44,6 +44,7 @@ class Prop:
     y: float
     z: float               # bottom, mm
     held: bool = False
+    dragged: bool = False  # being pulled under the intake head (pull mode)
 
     @property
     def height(self) -> float:
@@ -126,6 +127,69 @@ class Gripper:
                 self.held = p
                 p.x, p.y, p.z = gx, gy, gz - p.height / 2
                 return
+
+
+def rake_props(pose, lift: float, pulling: bool, props: List[Prop], elements, dt: float, intake,
+               head_z: Tuple[float, float]) -> None:
+    """Pull mode for props: a prop the intake head touches (front band, width, height overlap) is
+    pulled against the head and rides with the robot (no closer than the body front). When the
+    robot backs away the prop is dragged off the strategy area and drops onto the floor; if the
+    pull stops, it drops onto whatever is below."""
+    pinned = intake.body_front_mm + CUBE / 2 + 2.0
+    c, s = math.cos(pose.theta), math.sin(pose.theta)
+    hz0, hz1 = head_z[0] + lift, head_z[1] + lift
+    for p in props:
+        if p.held:
+            continue
+        dx, dy = p.x - pose.x, p.y - pose.y
+        fwd, lat = dx * c + dy * s, -dx * s + dy * c
+        if not p.dragged:
+            touching = (pinned - 1.0 <= fwd <= intake.x_max + CUBE / 2
+                        and intake.y_min - 40 <= lat <= intake.y_max + 40
+                        and min(hz1, p.z + p.height) - max(hz0, p.z) >= 20.0)
+            if not (pulling and touching):
+                continue
+            p.dragged = True
+            p.local = (fwd, lat)
+        fwd, lat = p.local
+        if not pulling:
+            p.dragged = False
+            p.z = _sliding_support(p, elements)
+            continue
+        fwd = max(pinned, fwd - intake.pull_speed * dt)
+        p.local = (fwd, lat)
+        p.x, p.y = pose.to_field(fwd, lat)
+        below = _sliding_support(p, elements)
+        if below < p.z - 1.0:                       # off the strategy area: falls to the floor
+            p.z = below
+            p.dragged = False
+
+
+def _sliding_support(p: Prop, elements) -> float:
+    """Support of a prop sliding on a surface: it stays on the strategy area top while it is over
+    it (the channels are below the top plate), else it drops like a released prop."""
+    top = _strategy_top(elements, p.x, p.y)
+    if top is not None and p.z >= top - 1.0:
+        return top
+    return support_under(p, elements)
+
+
+def denial_count(props: List[Prop], balls, alliance: str) -> Dict[str, int]:
+    """Central props and balls now completely on the alliance's side of the field (the opponent
+    cannot reach them there), central balls on the opponent side, and props dropped on the floor
+    across the centre line (partly on the opponent side, R23 risk)."""
+    lo, hi = fl.alliance_x_limits(alliance)
+    r = 35.0
+    central_balls = [b for b in balls if b.name.startswith("central")]
+    return {
+        "balls": sum(1 for b in central_balls if b.state == "field" and lo + r <= b.x <= hi - r),
+        "balls_opponent_side": sum(1 for b in central_balls if b.state == "field"
+                                   and not (lo - r <= b.x <= hi + r) and not (hi - r < b.x < hi + 250)),
+        "cones": sum(1 for p in props if p.kind == "cone" and lo + CUBE / 2 <= p.x <= hi - CUBE / 2),
+        "bonus": sum(1 for p in props if p.kind == "bonus" and lo + CUBE / 2 <= p.x <= hi - CUBE / 2),
+        "props_on_line": sum(1 for p in props if p.kind in ("bonus", "cone") and p.z < 1.0
+                             and hi - CUBE / 2 < p.x < hi + CUBE / 2),   # on the floor across the line
+    }
 
 
 def support_under(p: Prop, elements) -> float:

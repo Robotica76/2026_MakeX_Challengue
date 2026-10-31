@@ -10,14 +10,16 @@ from tempfile import TemporaryDirectory
 import field_layout as fl
 from balls import load_intake
 from kinematics import load_drive_train
-from match import STAGES, MatchMonitor, format_clock, stage_at
+from ball_physics import named_colliders
+from match import STAGES, CollisionMonitor, MatchMonitor, format_clock, obb_aabb_depth, stage_at
 from mechanisms import load_mechanisms
-from props import load_gripper, score_preview
+from props import denial_count, load_gripper, score_preview
 from robot import RobotPose, load_config, start_pose
 from simulation import Simulation, load_gyro_sign
 
 REPO = Path(__file__).resolve().parents[2]
 AUTO = REPO / "software" / "autonomous" / "task_execution" / "auto_central_then_cubes.py"
+AUTO_PULL = REPO / "software" / "autonomous" / "task_execution" / "auto_pull_central.py"
 
 
 class ClockTest(unittest.TestCase):
@@ -92,7 +94,52 @@ class OnCycleTest(unittest.TestCase):
         self.assertGreater(int(out.getvalue().split("cycles")[-1]), 50)
 
 
+class CollisionMonitorTest(unittest.TestCase):
+    def setUp(self):
+        cfg = load_config()
+        self.monitor = CollisionMonitor(named_colliders(fl.build_field()), [(-250.0, -250.0, 0.0, 115.0, 250.0, 645.0)],
+                                        (115.0, -190.0, 46.0, 249.0, 202.0, 145.0))
+
+    def test_depth_of_a_turned_rectangle(self):
+        pose = RobotPose(1000.0, 1000.0, 0.0)
+        self.assertAlmostEqual(obb_aabb_depth(pose, (-100, -100, 100, 100), (1090, 900, 1200, 1100)), 10.0)
+        self.assertEqual(obb_aabb_depth(RobotPose(1000.0, 1000.0, math.pi / 4), (-100, -100, 100, 100),
+                                        (1150, 900, 1200, 1100)), 0.0)            # the corner reaches x 1141
+
+    def test_table_leg_and_fortress_push(self):
+        self.monitor.update(0.0, RobotPose(1800.0, 1100.0, 0.0), 0.0)
+        self.assertEqual(self.monitor.events, [])                                # open floor
+        self.monitor.update(1.0, RobotPose(2000.0, 1300.0, 0.0), 300.0)          # head (front 2285) over the leg
+        self.assertEqual([(e["element"], e["part"]) for e in self.monitor.collisions], [("central_resource", "head")])
+        self.monitor.update(2.0, RobotPose(1200.0, 1500.0, 0.0), 0.0)            # rear against the red fortress
+        pushes = [e for e in self.monitor.events if e["fortress"]]
+        self.assertEqual([e["part"] for e in pushes], ["body"])
+        self.assertEqual(len(self.monitor.collisions), 1)                        # a push is not a collision
+
+
 class AutomaticRoutineTest(unittest.TestCase):
+    def test_pull_route_denies_central_balls_without_collisions(self):
+        cfg = load_config()
+        sim = Simulation(cfg, start_pose(cfg, fl.build_field()), load_drive_train(), 30, load_gyro_sign(),
+                         ball_scenario="initial", intake=load_intake(), mechanisms=load_mechanisms(),
+                         gripper=load_gripper())
+        sim.program = AUTO_PULL
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            sim.run()
+            while sim.running:
+                sim.step(1 / 60)
+        text = out.getvalue()
+        self.assertIsNone(sim._runner.error if sim._runner else None, text)
+        self.assertNotIn("MISSED", text)
+        self.assertNotIn("safety stop", text)
+        self.assertEqual(sim.collisions.collisions, [], text)                    # no field structure touched
+        self.assertTrue(sim.monitor.auto_end["stationary"])                      # R19
+        self.assertEqual(sim.monitor.r06_penalties, 0)
+        denial = denial_count(sim.props, sim.balls, "red")
+        self.assertGreaterEqual(denial["balls"], 20, text)
+        self.assertEqual(denial["balls_opponent_side"], 0)
+
     def test_central_balls_then_x12_bonus_cube_stops_in_time(self):
         cfg = load_config()
         sim = Simulation(cfg, start_pose(cfg, fl.build_field()), load_drive_train(), 30, load_gyro_sign(),

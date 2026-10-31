@@ -93,3 +93,79 @@ class MatchMonitor:
         elif self.r06_penalties:
             lines.append(f"R06 penalties: {self.r06_penalties}")
         return lines
+
+
+# --- robot vs field structures ------------------------------------------------------------
+COLLISION_MIN_MM = 2.0       # overlaps smaller than this count as touching, not colliding
+
+
+def obb_aabb_depth(pose, rect, box) -> float:
+    """Penetration depth (mm, > 0 if they overlap in plan) between the robot-frame rectangle
+    rect = (x0, y0, x1, y1) placed at pose and the field axis-aligned box (x0, y0, x1, y1)."""
+    rx0, ry0, rx1, ry1 = rect
+    corners = [pose.to_field(x, y) for x in (rx0, rx1) for y in (ry0, ry1)]
+    bx0, by0, bx1, by1 = box
+    bcorners = [(bx0, by0), (bx0, by1), (bx1, by0), (bx1, by1)]
+    c, s = math.cos(pose.theta), math.sin(pose.theta)
+    depth = float("inf")
+    for ax, ay in ((1.0, 0.0), (0.0, 1.0), (c, s), (-s, c)):
+        a = [px * ax + py * ay for px, py in corners]
+        b = [px * ax + py * ay for px, py in bcorners]
+        overlap = min(max(a), max(b)) - max(min(a), min(b))
+        if overlap <= 0:
+            return 0.0
+        depth = min(depth, overlap)
+    return depth
+
+
+@dataclass
+class CollisionMonitor:
+    """Robot body and intake head (at its lift) against the field structures (ball_physics
+    colliders, props excluded). Contact with the own fortress is reported as a push (allowed,
+    R02: it must not tilt)."""
+    colliders: list
+    body_boxes: list                       # robot outline per height band (robot frame)
+    head_box: Tuple[float, float, float, float, float, float]
+    events: List[dict] = field(default_factory=list)
+    _active: dict = field(default_factory=dict)
+
+    def update(self, t: float, pose, lift: float) -> None:
+        hx0, hy0, hz0, hx1, hy1, hz1 = self.head_box
+        parts = [("body", b) for b in self.body_boxes] + [("head", (hx0, hy0, hz0 + lift, hx1, hy1, hz1 + lift))]
+        now_hit = {}
+        for name, (bx0, by0, bz0, bx1, by1, bz1) in self.colliders:
+            cx, cy = (bx0 + bx1) / 2, (by0 + by1) / 2
+            if math.hypot(cx - pose.x, cy - pose.y) > 450 + max(bx1 - bx0, by1 - by0) / 2:
+                continue
+            for part, (x0, y0, z0, x1, y1, z1) in parts:
+                if min(z1, bz1) - max(z0, bz0) <= COLLISION_MIN_MM:
+                    continue
+                d = obb_aabb_depth(pose, (x0, y0, x1, y1), (bx0, by0, bx1, by1))
+                if d > COLLISION_MIN_MM:
+                    key = (name, part)
+                    now_hit[key] = max(now_hit.get(key, 0.0), d)
+        for key, depth in now_hit.items():
+            ev = self._active.get(key)
+            if ev is None:
+                ev = {"element": key[0], "part": key[1], "start": t, "seconds": 0.0, "depth_mm": depth,
+                      "fortress": "fortress" in key[0]}
+                self.events.append(ev)
+                self._active[key] = ev
+            ev["seconds"] = t - ev["start"]
+            ev["depth_mm"] = max(ev["depth_mm"], depth)
+        for key in list(self._active):
+            if key not in now_hit:
+                del self._active[key]
+
+    @property
+    def collisions(self) -> List[dict]:
+        return [e for e in self.events if not e["fortress"]]
+
+    def report(self) -> List[str]:
+        out = []
+        for e in self._active.values():
+            out.append(("fortress push" if e["fortress"] else "COLLISION") +
+                       f": {e['part']} vs {e['element']} {e['depth_mm']:.0f} mm")
+        if not out and self.collisions:
+            out.append(f"collisions so far: {len(self.collisions)}")
+        return out

@@ -108,7 +108,7 @@
         "INT_UR_anillos_banda_D60_PETG"
       ],
       "axis": "x",
-      "mechanism": "intake_rollers",
+      "mechanism": "intake_head",
       "ratio": -1.0,
       "parent": "intake_lift"
     },

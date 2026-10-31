@@ -47,9 +47,10 @@ class Ball:
     vx: float = 0.0              # mm/s (ball_physics.py)
     vy: float = 0.0
     vz: float = 0.0
-    state: str = "field"         # field | carried (inside the robot) | stored (no path model)
+    state: str = "field"         # field | carried (inside the robot) | stored (no path model) | dragged
     asleep: bool = True
     rest: float = 0.0
+    head_free_t: float = 0.0     # s left during which the intake head does not push it (just dropped)
 
 
 def _resource_box_balls(el: fl.Element) -> List[Ball]:
@@ -112,7 +113,14 @@ class Intake:
     z_max: float = 60.0                # (head down: floor balls, centre 35 mm)
     capacity: int = 18
     body_front_mm: float = 115.0       # robot front without the intake head (v22 CAD)
+    pull_port: str = "DC7"             # head roller alone (throat off): drags balls / props out
+    pull_speed: float = 500.0          # mm/s at which the head drags, estimate
     collected: List[str] = field(default_factory=list)
+
+    def pulling(self, dc) -> bool:
+        """Head roller on and the throat off: balls and props are dragged under the head and
+        dropped in front of the robot instead of being taken in."""
+        return self.running(dc.power(self.pull_port)) and not self.running(dc.power(self.port))
 
     def running(self, power: float) -> bool:
         return power * self.direction >= self.min_power
@@ -158,4 +166,6 @@ def load_intake(path: Path = DEFAULT_CONFIG) -> Optional[Intake]:
                   y_min=float(zone.get("y_min", -190.0)), y_max=float(zone.get("y_max", 208.0)),
                   z_min=float(reach.get("min", 0.0)), z_max=float(reach.get("max", 60.0)),
                   capacity=int(data.get("capacity", 18)),
-                  body_front_mm=float(data.get("body_front_mm", 115.0)))
+                  body_front_mm=float(data.get("body_front_mm", 115.0)),
+                  pull_port=str(data.get("pull_port", "DC7")),
+                  pull_speed=float(data.get("pull_speed_mm_s", 500.0)))

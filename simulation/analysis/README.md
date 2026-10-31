@@ -83,3 +83,17 @@ gyro reading over 10 full turns, gyro drift at rest) and replace the ranges.
 | `test_montecarlo.py` | Statistics, error model, move measurement, ideal and override trials |
 | `../field2d/uncertainty.py` | The error model (`Variation`); ideal by default |
 
+
+## Automatic-stage route search
+
+[`optimize_auto_route.py`](optimize_auto_route.py) runs
+[`auto_pull_central.py`](../../software/autonomous/task_execution/auto_pull_central.py) headless in
+the 2D simulator for each candidate plan (task order, speeds, lane depth, arrival tolerance, head
+heights; passed to the program through `simtrace.options()`), and ranks them: central elements
+left on our side, minus collisions with field structures, R06 and R19 penalties and elements fed
+to the opponent. About 2.5 min for 128 candidates on 5 cores; results in `results/`.
+
+```bash
+.venv/bin/python simulation/analysis/optimize_auto_route.py           # full search
+.venv/bin/python simulation/analysis/optimize_auto_route.py --quick   # two candidates
+```

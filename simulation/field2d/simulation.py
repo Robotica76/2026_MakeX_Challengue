@@ -20,9 +20,10 @@ import field_layout as fl
 from ball_physics import BallWorld, load_ball_path
 from balls import Ball, Intake, field_balls
 from kinematics import DriveTrain, body_velocity, integrate
-from match import MatchMonitor
+from ball_physics import named_colliders
+from match import CollisionMonitor, MatchMonitor
 from mechanisms import Mechanisms
-from props import Gripper, Prop, field_props
+from props import Gripper, Prop, field_props, rake_props
 from mblock_runtime import DCBus, GamepadInput, MotorBus, ProgramRunner, Sensors, SimClock
 from robot import DEFAULT_CONFIG, RobotConfig, RobotPose
 from uncertainty import Variation
@@ -77,6 +78,7 @@ class Simulation:
         self._path_data = json.loads(DEFAULT_CONFIG.read_text()).get("ball_path")
         self.world = self._new_world()
         self.monitor = self._new_monitor()
+        self.collisions = self._new_collisions()
         self.variation = variation or Variation()  # ideal robot unless a study passes one
         self.marks: List[dict] = []                # simtrace.mark() records, see Monte Carlo
         self.trace_options: dict = {}              # simtrace.options() for the program
@@ -115,6 +117,15 @@ class Simulation:
                                                            self.cfg.length_mm / 2, self.cfg.width_mm / 2, 642.0))
         return MatchMonitor(self.cfg.alliance, (bx0, by0, bx1, by1))
 
+    def _new_collisions(self) -> CollisionMonitor:
+        """Robot body and intake head against the field structures (match.py)."""
+        data = self._path_data or {}
+        body = [tuple(b) for b in data.get("body_bands_mm", [data.get(
+            "body_box_mm", (-self.cfg.length_mm / 2, -self.cfg.width_mm / 2, 0.0,
+                            self.cfg.length_mm / 2, self.cfg.width_mm / 2, 642.0))])]
+        head = tuple(data.get("head_box_mm", (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)))
+        return CollisionMonitor(named_colliders(self.elements), body, head)
+
     def _new_world(self) -> Optional[BallWorld]:
         """Ball dynamics and the ball path through the robot (ball_physics.py), when
         there are balls."""
@@ -147,6 +158,7 @@ class Simulation:
             self.intake.reset()
         self.world = self._new_world()
         self.monitor = self._new_monitor()
+        self.collisions = self._new_collisions()
         self._velocity, self._accel = (0.0, 0.0, 0.0), (0.0, 0.0)
         self._gyro_drift = 0.0
         self.marks = []
@@ -205,11 +217,16 @@ class Simulation:
                 self.intake.update(self.pose, self.balls, self.dc.power(self.intake.port),
                                    self.mechanisms.position("intake_lift"))
             self._update_sensors(vx, vy, omega, dt)
+            if self.props and self.intake:
+                head = (self._path_data or {}).get("head_box_mm", (0, 0, 46.0, 0, 0, 145.0))
+                rake_props(self.pose, self.mechanisms.position("intake_lift"), self.intake.pulling(self.dc),
+                           self.props, self.elements, dt, self.intake, (head[2], head[5]))
             if self.gripper and self.props:
                 self.gripper.update(self.pose, self.mechanisms.position("elevator"),
                                     self.mechanisms.position("gripper_jaw"), self.props, self.elements)
             mech_moving = any(abs(self.dc.power(m.port)) >= 5 for m in self.mechanisms.linear.values())
             self.monitor.update(self.clock.now, dt, self.pose, (vx, vy, omega), mech_moving)
+            self.collisions.update(self.clock.now, self.pose, self.mechanisms.position("intake_lift"))
             self.clock.advance(dt)
             self._check()
         if self.running and self.state.trail[-1] != (self.pose.x, self.pose.y):

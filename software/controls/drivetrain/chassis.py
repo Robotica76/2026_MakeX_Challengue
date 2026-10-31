@@ -365,11 +365,13 @@ def _ramp(current, target):
     return current + clamp(target - current, -RAMP, RAMP)
 
 
-def drive(forward_cm=0, right_cm=0, front=F_INTAKE, speed=AUTO_SPEED, timeout=5.0, on_cycle=None):
+def drive(forward_cm=0, right_cm=0, front=F_INTAKE, speed=AUTO_SPEED, timeout=5.0, on_cycle=None, tol_cm=None):
     # Straight move (diagonals included) holding heading with the gyroscope.
     # Ends on arrival, on collision or on timeout. Returns True if it arrived.
     # on_cycle: optional function called every control cycle (e.g. to run a mechanism
     # while driving); it must return quickly.
+    # tol_cm: arrival tolerance (default TOL_CM). A looser one for waypoints skips most of the
+    # slow final approach (the speed falls with the distance, KP_DIST).
     if not USE_SENSORS:
         return move_open_loop(forward_cm, right_cm, 0, front, speed)
     odo.update()
@@ -388,7 +390,7 @@ def drive(forward_cm=0, right_cm=0, front=F_INTAKE, speed=AUTO_SPEED, timeout=5.
         ex = target_x - odo.x
         ey = target_y - odo.y
         dist = math.sqrt(ex * ex + ey * ey)
-        if dist < TOL_CM:
+        if dist < (TOL_CM if tol_cm is None else tol_cm):
             arrived = True
             break
         # error in the robot frame

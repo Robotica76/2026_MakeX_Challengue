@@ -83,6 +83,35 @@ class FreeBallTest(unittest.TestCase):
         self.assertAlmostEqual(b.z, 407.0 + R, delta=1.0)                  # resting on the mesh
 
 
+class SqueezeTest(unittest.TestCase):
+    def test_ball_pressed_under_the_lower_plate_leaves_sideways(self):
+        b = Ball("b", 2245.0, 1500.0, R)                                   # under the plate edge (z 40-50)
+        w = world([b])
+        b.asleep = False
+        run(w, 0.5)
+        self.assertAlmostEqual(b.z, R, places=3)                           # not sunk into the floor
+        self.assertLessEqual(b.x, 2235.0 - R + 0.5)                        # out from under the plate
+
+
+class PullModeTest(unittest.TestCase):
+    def test_pulled_ball_leaves_the_upper_level_onto_our_floor(self):
+        intake = load_intake()
+        b = Ball("central_ball_20", 2286.0, 1437.0, 285.0)                 # upper level, first row
+        w = world([b], intake)
+        dc = DCBus()
+        dc.set("DC7", 100)                                                 # head roller on, throat off
+        x = 2100.0
+        for _ in range(int(1.5 * 240)):                                    # back out at 250 mm/s
+            x -= 250.0 / 240
+            w.step(1 / 240, RobotPose(x, 1437.0, 0.0), (-250.0, 0.0, 0.0), 250.0, dc)
+        dc.set("DC7", 0)
+        run(w, 2.0, pose=RobotPose(x, 1437.0, 0.0), lift=250.0, dc=dc)
+        self.assertEqual(b.state, "field")
+        self.assertEqual(w.dropped, 1)
+        self.assertAlmostEqual(b.z, R, places=3)                           # on the floor
+        self.assertLess(b.x, 2220.0 - R)                                   # completely on our side
+
+
 class RobotContactTest(unittest.TestCase):
     def test_robot_body_pushes_a_ball(self):
         pose = RobotPose(1500.0, 1500.0, 0.0)

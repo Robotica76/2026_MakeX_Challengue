@@ -4,7 +4,9 @@ import math
 import unittest
 
 import field_layout as fl
-from props import CHANNEL_RAIL_Z, CUBE, Gripper, Prop, bonus_state, field_props, load_gripper, score_preview, support_under
+from balls import load_intake
+from props import (CHANNEL_RAIL_Z, CUBE, Gripper, Prop, bonus_state, denial_count, field_props, load_gripper,
+                   rake_props, score_preview, support_under)
 from robot import RobotPose
 
 ELEMENTS = fl.build_field()
@@ -65,6 +67,31 @@ class SupportTest(unittest.TestCase):
         fort = fl.get(ELEMENTS, "red_fortress")
         self.assertEqual(support_under(Prop("p", "letter", "M", "red", fort.x, fort.y, 0), ELEMENTS), 171.0)
         self.assertEqual(support_under(Prop("p", "bonus", "X3", "neutral", 1500.0, 1500.0, 0), ELEMENTS), 0.0)
+
+
+class RakeTest(unittest.TestCase):
+    def test_pulled_cube_rides_the_top_then_drops_at_the_centre_line(self):
+        intake = load_intake()
+        props = field_props(ELEMENTS)
+        x12 = prop_named(props, next(p.name for p in props if p.label == "X12"))
+        x, y = 2000.0, x12.y
+        rake_props(RobotPose(x, y, 0.0), 250.0, True, props, ELEMENTS, 1 / 60, intake, (46.0, 145.0))
+        self.assertTrue(x12.dragged)
+        for _ in range(60):                                                # back out pulling
+            rake_props(RobotPose(x, y, 0.0), 250.0, True, props, ELEMENTS, 1 / 60, intake, (46.0, 145.0))
+            if x12.z == 259.0:
+                self.assertTrue(x12.dragged)                               # on the top, not in a channel
+            x -= 5.0
+        self.assertFalse(x12.dragged)
+        self.assertEqual(x12.z, 0.0)
+        self.assertGreater(x12.x, 2220.0 - CUBE / 2)                       # fell at the line
+        self.assertEqual(denial_count(props, [], "red")["props_on_line"], 3)   # the head spans X9, X12 and a cone
+
+    def test_not_pulling_leaves_props_alone(self):
+        props = field_props(ELEMENTS)
+        before = [(p.x, p.y, p.z) for p in props]
+        rake_props(RobotPose(2000.0, 839.5, 0.0), 250.0, False, props, ELEMENTS, 1 / 60, load_intake(), (46.0, 145.0))
+        self.assertEqual(before, [(p.x, p.y, p.z) for p in props])
 
 
 class BonusRuleTest(unittest.TestCase):

@@ -43,7 +43,7 @@ class MechanismModelTest(unittest.TestCase):
         self.assertEqual(set(mech.linear), {"elevator", "intake_lift", "gripper_jaw"})
         self.assertEqual(mech.linear["elevator"].travel_mm, 358.0)      # v22 CAD
         self.assertEqual(mech.linear["elevator"].port, "DC3")
-        self.assertEqual(set(mech.spinners), {"intake_rollers", "tower", "feeder", "shooter"})
+        self.assertEqual(set(mech.spinners), {"intake_rollers", "intake_head", "tower", "feeder", "shooter"})
         self.assertEqual(mech.spinners["intake_rollers"].port, load_intake().port)
 
     def test_step_reads_the_dc_bus(self):

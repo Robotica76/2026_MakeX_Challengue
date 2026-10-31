@@ -68,7 +68,9 @@
     },
     "capacity": 18,
     "body_front_mm": 115.0,
-    "source": "v22 CAD: INT_ parts span y_left -190..208 mm and reach the front edge (x 249 mm); reach 0-60 mm ball centre height above the head lift (head roller at 95 mm, head down); body front without the head 115 mm (INT_centrador); capacity = 6 basket + 12 tower REF balls. Port DC1 is an assumption (TBD)."
+    "source": "v22 CAD: INT_ parts span y_left -190..208 mm and reach the front edge (x 249 mm); reach 0-60 mm ball centre height above the head lift (head roller at 95 mm, head down); body front without the head 115 mm (INT_centrador); capacity = 6 basket + 12 tower REF balls. Port DC1 is an assumption (TBD).",
+    "pull_port": "DC7",
+    "pull_speed_mm_s": 500.0
   },
   "mechanisms": {
     "source": "v22 CAD parts and motors. Ports are assumptions (TBD with the electrical team); speeds marked estimate.",
@@ -119,6 +121,12 @@
         "rpm": 3000.0,
         "direction": 1,
         "note": "brushless friction wheels, estimate; the 3D view caps the displayed speed"
+      },
+      "intake_head": {
+        "port": "DC7",
+        "rpm": 200.0,
+        "direction": 1,
+        "note": "INT_UR_motor_DC25_giro_interno: head fingered roller on its own motor (port assumed). With DC1 off it drags balls / props out (pull mode)"
       }
     }
   },
@@ -312,7 +320,42 @@
       249.0,
       202.0,
       145.0
-    ]
+    ],
+    "body_bands_mm": [
+      [
+        -250.0,
+        -250.0,
+        0.0,
+        97.4,
+        249.5,
+        110.0
+      ],
+      [
+        -249.0,
+        -250.0,
+        110.0,
+        114.8,
+        221.0,
+        260.0
+      ],
+      [
+        -175.2,
+        -168.0,
+        260.0,
+        111.0,
+        248.0,
+        420.0
+      ],
+      [
+        -171.0,
+        -206.0,
+        420.0,
+        93.9,
+        208.0,
+        645.0
+      ]
+    ],
+    "body_bands_note": "robot outline (without the intake head) per height band from the v22 CAD, carriage down; used for collisions with field structures"
   },
   "gripper": {
     "source": "v22 CAD: jaws GR_mordaza_fija / _movil at CAD x 207-250 mm, y -158..-20 mm (138 mm gap), z 14-157 mm with the carriage down",
