@@ -86,6 +86,13 @@
         "speed_mm_s": 53.0,
         "direction": 1,
         "note": "INT_UR head on 428 mm rails (z 102-530 mm, 40 mm slides): ~380 mm travel; DC25 ~200 rpm x 16 mm lead (T8x16) = 53 mm/s, estimate"
+      },
+      "gripper_jaw": {
+        "port": "DC6",
+        "travel_mm": 60.0,
+        "speed_mm_s": 40.0,
+        "direction": 1,
+        "note": "GR_ lead-screw jaw: closure from the 138 mm open gap (v22 CAD); positive power closes. Port and speed are assumptions"
       }
     },
     "spinners": {
@@ -306,5 +313,19 @@
       202.0,
       145.0
     ]
+  },
+  "gripper": {
+    "source": "v22 CAD: jaws GR_mordaza_fija / _movil at CAD x 207-250 mm, y -158..-20 mm (138 mm gap), z 14-157 mm with the carriage down",
+    "grab_point_cad_mm": [
+      228.5,
+      -89.0,
+      85.5
+    ],
+    "open_gap_mm": 138.0,
+    "tolerance_mm": {
+      "forward": 25.0,
+      "lateral": 40.0,
+      "z": 45.0
+    }
   }
 }

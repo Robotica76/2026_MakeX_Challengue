@@ -36,6 +36,7 @@ from balls import SCENARIOS as BALL_SCENARIOS, Ball, load_intake  # noqa: E402
 from kinematics import load_drive_train  # noqa: E402
 from match import format_clock, stage_at  # noqa: E402
 from mechanisms import load_mechanisms  # noqa: E402
+from props import load_gripper, score_preview  # noqa: E402
 from mblock_runtime import GamepadInput  # noqa: E402
 from robot import DEFAULT_CONFIG, load_config, mecanum_wheels, start_pose  # noqa: E402
 from simulation import AUTO_STAGE_S, Simulation, load_gyro_sign  # noqa: E402
@@ -72,7 +73,8 @@ def build_simulation(args, gamepad):
     elements = fl.build_field()
     sim = Simulation(cfg, start_pose(cfg, elements), load_drive_train(args.config), args.time_limit,
                      load_gyro_sign(args.config), gamepad, ball_scenario=args.balls,
-                     intake=load_intake(args.config), mechanisms=load_mechanisms(args.config))
+                     intake=load_intake(args.config), mechanisms=load_mechanisms(args.config),
+                     gripper=load_gripper(args.config))
     if "elevator" in sim.mechanisms.linear:
         sim.mechanisms.linear["elevator"].start_mm = args.carriage
         sim.mechanisms.reset()
@@ -116,8 +118,10 @@ class Viewer3D:
         base.set_background_color(0.86, 0.88, 0.91, 1)
         base.disable_mouse()
         render = base.render
-        self.field = build_field_node(self.elements)
+        self.field = build_field_node(self.elements, include_props=not self.sim.props)
         self.field.reparent_to(render)
+        self.prop_root = render.attach_new_node("props")
+        self.prop_nodes = []
         self.ball_root = render.attach_new_node("balls")
         self.ball_nodes = []
         self._sync_balls()
@@ -157,6 +161,26 @@ class Viewer3D:
         self.labels.hide()
         self._setup_vectors()
         self._place_robot()
+
+    def _sync_props(self):
+        """One node per simulated prop (cones, bonus cubes, letter cubes); rebuilt on reset."""
+        from field_model import prop_parts
+        from panda3d.core import TransparencyAttrib  # noqa: F401
+        from robot_model import _geom_node
+        props = self.sim.props
+        if [id(n.get_python_tag("prop")) for n in self.prop_nodes] != [id(p) for p in props]:
+            self.prop_root.get_children().detach()
+            self.prop_nodes = []
+            for p in props:
+                node = self.prop_root.attach_new_node(p.name)
+                for part in prop_parts(p):
+                    child = node.attach_new_node(_geom_node(part))
+                    child.set_color(*part.rgba)
+                node.set_python_tag("prop", p)
+                self.prop_nodes.append(node)
+        for node in self.prop_nodes:
+            p = node.get_python_tag("prop")
+            node.set_pos(p.x * MM, p.y * MM, p.z * MM)
 
     def _sync_balls(self):
         """One node per simulated ball; collected balls are hidden. Rebuilt when the
@@ -280,6 +304,7 @@ class Viewer3D:
         if "elevator" in mech.linear:
             self.robot.set_carriage(mech.position("elevator"))
         self.robot.set_intake_lift(mech.position("intake_lift"))
+        self.robot.set_gripper_jaw(mech.position("gripper_jaw"))
         self.robot.set_spinner_angles(self._spin_display(dt))
 
     def _spin_display(self, dt):
@@ -401,7 +426,7 @@ class Viewer3D:
                                         align=TextNode.A_left, fg=(1, 1, 1, 1), shadow=(0, 0, 0, 0.85), mayChange=True)
         self.clock = OnscreenText(text="", parent=base.a2dTopRight, pos=(-0.04, -0.27), scale=0.075,
                                   align=TextNode.A_right, fg=(1, 0.85, 0.2, 1), shadow=(0, 0, 0, 0.9), mayChange=True)
-        self.rules_text = OnscreenText(text="", parent=base.a2dTopRight, pos=(-0.04, -0.33), scale=0.04,
+        self.rules_text = OnscreenText(text="", parent=base.a2dTopRight, pos=(-0.04, -0.42), scale=0.04,
                                        align=TextNode.A_right, fg=(1, 1, 1, 1), shadow=(0, 0, 0, 0.9), mayChange=True)
         self.help = OnscreenText(text=HELP, parent=base.a2dBottomLeft, pos=(0.04, 0.08), scale=0.034,
                                  align=TextNode.A_left, fg=(0.9, 0.92, 0.95, 1), shadow=(0, 0, 0, 0.85), mayChange=False)
@@ -409,6 +434,13 @@ class Viewer3D:
 
     def say(self, text, error=False):
         self.message, self.message_error = text, error
+
+    def _prop_text(self):
+        prev = score_preview(self.sim.props, self.sim.elements, self.sim.cfg.alliance)
+        bonus = prev["bonus"]
+        held = self.sim.gripper.held.label if self.sim.gripper and self.sim.gripper.held else "-"
+        return (f"\ngripper holds {held}   bonus cubes valid {', '.join(bonus['valid']) or 'none'} "
+                f"(+{bonus['bonus_balls']} balls)   cones hung {prev['cones']}   letter cubes in channels {prev['letter_cubes']}")
 
     def _ball_text(self):
         w = self.sim.world
@@ -444,6 +476,7 @@ class Viewer3D:
                          f"carriage {self.robot.carriage_mm:3.0f} mm   intake head {self.robot.intake_lift_mm:3.0f} mm   mast {'on' if self.robot.mast_visible else 'off'}   "
                          f"camera {self.cam_mode}{stream}"
                          + (self._ball_text() if sim.intake and sim.balls else "")
+                         + (self._prop_text() if sim.props else "")
                          + (f"\n{self.inertia_text}" if self.show_vectors and self.inertia_text else ""))
         message = sim.state.message if sim.state.status in ("error", "out_of_bounds", "done", "stopped") else self.message
         error = sim.state.status in ("error", "out_of_bounds") or self.message_error
@@ -540,6 +573,7 @@ class Viewer3D:
             mech.linear["intake_lift"].nudge((1 if self._keys["t"] else -1) * INTAKE_LIFT_KEY_MM_S * dt)
         self._place_robot(dt)
         self._sync_balls()
+        self._sync_props()
         self._update_vectors(dt)
         self._update_trail()
         self._drag_camera()
@@ -560,6 +594,7 @@ class Viewer3D:
                     self._update_vectors(frame_s)
         self._place_robot()
         self._sync_balls()
+        self._sync_props()
         self._update_vectors(frame_s)
         self._update_trail()
         self._apply_camera()

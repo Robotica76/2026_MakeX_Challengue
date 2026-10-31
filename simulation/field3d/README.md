@@ -90,6 +90,16 @@ overhang is allowed by team decision). Menu option 8 runs the automatic routine
 [`auto_central_then_cubes.py`](../../software/autonomous/task_execution/auto_central_then_cubes.py),
 analysed in [autonomous strategy](../../docs/07_strategy/autonomous_strategy.md).
 
+Props are simulation objects ([`props.py`](../field2d/props.py)): bonus cubes, cones and letter cubes.
+The gripper (`DC6` jaw, the moving jaw slides in 3D) takes a prop when the jaws close on it at the
+grab point, which rides on the carriage, and drops it onto the support below when they open. The HUD
+previews the automatic-stage result: valid bonus cubes (p.30 rules a–e) and the balls they add, cones
+hung, letter cubes in channels.
+
+| X12 in the gripper (24 s) | End of the automatic stage: X12 valid, robot stationary |
+| --- | --- |
+| ![grab](docs/auto_grab_x12.png) | ![end](docs/auto_end.png) |
+
 ![match clock](docs/auto_clock.png)
 
 ## Whole ball system and vectors

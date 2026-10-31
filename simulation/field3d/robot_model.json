@@ -254,5 +254,16 @@
       "ratio": 1.0
     }
   ],
-  "spinners_note": "Axes and centres come from the part meshes (centre = bounding-box centre of the listed parts). Gear ratios from the tooth counts in the part names (48T / 16T = 3); directions are illustrative."
+  "spinners_note": "Axes and centres come from the part meshes (centre = bounding-box centre of the listed parts). Gear ratios from the tooth counts in the part names (48T / 16T = 3); directions are illustrative.",
+  "gripper_jaw": {
+    "mechanism": "gripper_jaw",
+    "parent": "carriage",
+    "axis": "y",
+    "parts": [
+      "GR_mordaza_movil_Al3",
+      "GR_almohadilla_V_movil_TPU",
+      "GR_carro_tuerca_PETG"
+    ],
+    "note": "moving jaw on the T8x8 lead screw: slides +y (CAD) toward the fixed jaw as it closes"
+  }
 }

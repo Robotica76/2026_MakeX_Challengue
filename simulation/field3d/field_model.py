@@ -400,24 +400,39 @@ def ball_part(b) -> Part:
     return sphere(f"detail_{b.name}", b.x, b.y, b.z, BALL_D / 2, BALL_RGBA)
 
 
-def field_parts(elements: List[fl.Element], ball_scenario: str = "initial") -> List[Part]:
+def field_parts(elements: List[fl.Element], ball_scenario: str = "initial", include_props: bool = True) -> List[Part]:
     """Static field. ball_scenario (balls.py) adds balls as static parts; the viewer
-    passes "none" and draws the simulation's balls itself so they can be collected."""
+    passes "none" and draws the simulation's balls itself so they can be collected.
+    include_props=False leaves out the cones, bonus cubes and letter cubes (the viewer
+    draws the simulation's props, which the gripper moves)."""
     parts = [box("floor", fl.CX, fl.CY, fl.FIELD_W, fl.FIELD_H, -10, 0, FLOOR_RGBA)]
     parts += frame_parts()
     for el in elements:
         parts += element_parts(el, elements)
     parts += [ball_part(b) for b in field_balls(elements, ball_scenario)]
+    if not include_props:
+        props = tuple(el.name for el in elements if el.kind == "prop")
+        parts = [p for p in parts if not (p.name.split(":")[0] in props or
+                                          (p.name.startswith("detail_") and "_fortress_cube_" in p.name))]
     return parts
 
 
-def build_field_node(elements: List[fl.Element], ball_scenario: str = "none"):
+def prop_parts(prop) -> List[Part]:
+    """Parts of a simulated prop (props.py) at the origin, bottom at z = 0."""
+    if prop.kind == "cone":
+        return cone(prop.name, 0.0, 0.0)
+    if prop.kind == "bonus":
+        return bonus_cube(prop.name, 0.0, 0.0)
+    return letter_cube(prop.name, 0.0, 0.0, 0.0, prop.alliance)
+
+
+def build_field_node(elements: List[fl.Element], ball_scenario: str = "none", include_props: bool = True):
     """Panda3D NodePath with the whole field. Opaque parts are merged into a few
     batches so the field renders fast; transparent parts stay separate."""
     from panda3d.core import NodePath, TransparencyAttrib
     root = NodePath("field")
     opaque = root.attach_new_node("opaque")
-    for part in field_parts(elements, ball_scenario):
+    for part in field_parts(elements, ball_scenario, include_props):
         transparent = part.rgba[3] < 0.99
         node = (root if transparent else opaque).attach_new_node(_geom_node(part))
         node.set_color(*part.rgba)

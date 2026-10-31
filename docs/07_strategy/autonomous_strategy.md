@@ -17,56 +17,54 @@ the v22 model; nothing has been run on the robot.
 | Bonus cube in own exchange area at the end of the stage | p.29–30 | X3–X12 extra balls placed in the own resource area, each scoring 20 instead of 10 |
 | X mark must not be touched | R24, p.72–73 | The routine stays below the table top (654 mm) and away from the X |
 
-## Candidate plans (team proposal: central balls first, letter cubes with the time left)
+## Plan (team): central balls, then props from the central strip to our side
 
-| Candidate | Order | Simulated result | Robot stationary | Value / risk |
-| --- | --- | --- | --- | --- |
-| **A** (default, `LOWER_PASS = False`) | Head up while driving → 2 passes on the central upper level → cube route | 14 balls by 15.7 s; one cube cycle (take 21.9 s, release 27.3 s, gripper not simulated) | 27.3 s | Balls + possible 30-point cube; cube handling unproven |
-| **B** (`LOWER_PASS = True`) | As A + a third pass at the lower level | 18 balls (robot full) by 23.8 s; no time for cubes | 25.8 s | Maximum denial and ammunition; no cube |
+Team decisions (2026-10-31): take the central balls first (denial, no shooting in this stage);
+then bring props from the strategy areas, right next to the table, to our side, where the
+opponent cannot reach them. Placing cones and letter cubes waits for the manual stage.
+Exception: a **bonus cube only counts if it is in our exchange area when the automatic stage
+ends** (p.30) and the exchange happens once, so the X12 goes straight into exchange area 1.
+At most two bonus cubes may be on our side, or none of ours count (rule d).
 
-Both run in [`auto_central_then_cubes.py`](../../software/autonomous/task_execution/auto_central_then_cubes.py)
-from Red Start 1 (one flag selects the variant).
-
-Rough value of the four extra balls of B: each is up to 10–20 points for us when shot in the
-manual stage, plus up to 10–20 points the opponent cannot score with it, so 40–160 points,
-against 30 points (+ progress toward the 50-point MAKE bonus) for one letter cube in A.
-**Recommendation from the simulation: B**, unless the cube cycle becomes reliable. The
-opponent also reaches the table from the blue side, so the earlier the passes, the more
-balls are left; our first balls come in at 6.7 s.
-
-## Timeline of plan A (simulation)
+Routine: [`auto_central_then_cubes.py`](../../software/autonomous/task_execution/auto_central_then_cubes.py)
+(Red Start 1, default prop card). Simulated result:
 
 | Time | Event |
 | --- | --- |
-| 0.0–0.5 s | Gyro calibration (robot still); intake head starts rising (4.8 s to ~254 mm) |
-| 0.5–5.6 s | Diagonal drive at 150 RPM to the table front (1720, 1427 mm), head rising on the way |
+| 0.0–0.5 s | Gyro calibration; the intake head starts rising (4.8 s to ~254 mm) |
+| 0.5–5.6 s | Diagonal drive at 150 RPM to the table front, head rising on the way |
 | 5.6–9.9 s | Pass A on the upper level (intake + tower on): first balls at 6.7 s, 10 balls |
-| 9.9–15.7 s | Strafe 19 cm, pass B: 4 more balls by 13.5 s (one edge ball is pushed, see notes) |
-| 15.7–21.9 s | Head down, drive to the fortress, turn the gripper toward it, carriage up, jaw (placeholder) |
-| 21.9–27.3 s | Turn, carriage down, drive to the E window, release (placeholder) |
-| 27.3 s | Everything stopped (R19 satisfied) |
+| 9.9–15.7 s | Strafe 19 cm, pass B: 14 balls by 13.5 s (one edge ball is pushed) |
+| 15.7–17.7 s | Turn the gripper (right side) toward the strategy area; carriage to 268 mm, jaw pre-closed |
+| 17.7–24.0 s | Approach the X12, reach in (body 2.26 s over the line, R06 allows 3 s), close, back out |
+| 24.0–29.0 s | Turn, drive over red exchange area 1, open the jaw: **X12 valid, +12 bonus balls** |
+| 29.0 s | Everything stopped (R19 satisfied); a safety stop at 29.5 s halts any overrun |
 
-## Open questions before the cube phase is real
+The cone step (drop on our side) is in the routine but does not fit in 30 s with this order.
+`LOWER_PASS = True` takes 18 balls by 23.8 s instead and leaves no time for the X12.
 
-1. **Reaching the cubes in the fortress.** The cubes sit about 95 mm inside the fortress edge on the
-   171 mm level. The v22 gripper reaches 22 mm beyond the robot footprint, and the elevator
-   tower (right side, up to 642 mm) would touch the fortress. Pushing the own fortress is allowed
-   (p.21) but it must not tilt (R02).
-2. **Placing a cube without entering the channel (R26).** The gripper holds the cube centre 22 mm
-   behind the jaw tips, so the cube centre cannot pass the channel entrance while the jaws stay
-   outside. A cube left with its centre outside tips onto the map and does not score. Options: release
-   with forward speed so the cube slides in, or a gripper that holds the cube by its rear.
-3. **Bonus Battle instead of letter cubes.** A valid X12 bonus cube adds 12 balls that score 20 each
-   (p.30). It needs the AI camera (`ELV_AI_camera_2_0` is in the CAD) to read the prop-card layout.
-   Worth comparing with the letter cube for the time after phase 1, or giving it to the alliance partner.
-4. **Alliance partner.** Two robots per alliance: splitting central balls (ours) and cubes / bonus cubes
-   (partner) avoids both doing a half job.
+Value of the plan: 14 balls held for the manual stage and denied to the opponent, plus 12 bonus
+balls in our resource area, each scoring 20 instead of 10 (p.36): up to 240 points from the bonus
+alone. The opponent also reaches the table from the blue side; our first balls come in at 6.7 s.
+
+## Open questions
+
+1. **Finding the X12 on the robot.** The prop card changes the layout every match (p.51); the
+   routine uses the default card. The AI camera (`ELV_AI_camera_2_0` in the CAD) must read the
+   cube labels (Bonus Battle, p.28) and give the routine the X12 position.
+2. **Timing margin.** The plan ends at 29.0 s in simulation. On the robot, measure each step and
+   keep at least 1 s of margin, or drop pass B (10 balls) to gain about 6 s.
+3. **Gripper on real props.** Jaw closure, carriage height (268 mm, above the cone base) and the
+   grab tolerance are estimates from the CAD; test on a strategy-area mock-up.
+4. **Letter cubes in the manual stage.** Reaching cubes inside the fortress and placing them without
+   entering the channel (R26) are still open design questions for the gripper.
+5. **Alliance partner.** It could take cones / the second bonus cube while we take the balls.
 
 ## Evaluation
 
 | Candidate | Setup revision | Repetitions / success / uncertainty | Timing evidence | Failure / corrective action | Decision |
 | --- | --- | --- | --- | --- | --- |
-| A | v22 CAD, simulator 2026-10-31 | Simulation, deterministic: 14 balls, cube route fits | Timeline above; `simulation/field2d/test_match.py` | Edge ball pushed on pass B (13–14 of 15) | Pending team review |
-| B | Same | Simulation: 18 balls | Phase 1 ends 23.8 s | — | Recommended by simulation |
+| Central balls + X12 to the exchange area | v22 CAD, simulator 2026-10-31 | Simulation, deterministic: 14 balls, X12 valid, stationary at 29.0 s | Timeline above; `simulation/field2d/test_match.py` | Edge ball pushed on pass B; 1 s timing margin | Team plan |
+| Central balls only (`LOWER_PASS`) | Same | Simulation: 18 balls by 23.8 s | — | No bonus cube | Fallback |
 
 Coordinate [autonomous controls](../04_controls/autonomous/README.md), [mode contracts](../04_controls/stateflow/README.md), and [competition tests](../06_verification/competition_tests/README.md). Record strategy changes and actual outcomes in [notebook results](../08_engineering_notebook/test_results/README.md).

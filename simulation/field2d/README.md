@@ -141,6 +141,15 @@ time. Captured balls follow the ball path through the robot ("ball_path": 18 slo
 reference balls) and the shooter launches them as free balls; `sim.world` counts captures, shots and
 balls landing in each fortress. `sim.balls_collected` and the [3D viewer](../field3d/README.md) show the count.
 
+### Props and gripper ([`props.py`](props.py)) and match clock ([`match.py`](match.py))
+
+With balls, the simulation also has the props: 4 bonus cubes and 4 cones on the strategy areas
+(default prop card) and 8 letter cubes per alliance in the fortresses. The gripper
+(`robot_config.json` "gripper", jaw slide `DC6`, grab point on the carriage) holds a prop once the
+jaws close on it and drops it on the support below when they open; `score_preview` applies the
+bonus-cube rules (p.30) and counts cones and letter cubes. `sim.monitor` (match.py) checks R19 at
+30 s and R06 for the robot body.
+
 ### Mechanisms ([`mechanisms.py`](mechanisms.py))
 
 `Simulation(..., mechanisms=load_mechanisms())` moves the mechanism motors from the

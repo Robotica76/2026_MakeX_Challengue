@@ -12,6 +12,7 @@ from balls import load_intake
 from kinematics import load_drive_train
 from match import STAGES, MatchMonitor, format_clock, stage_at
 from mechanisms import load_mechanisms
+from props import load_gripper, score_preview
 from robot import RobotPose, load_config, start_pose
 from simulation import Simulation, load_gyro_sign
 
@@ -92,10 +93,11 @@ class OnCycleTest(unittest.TestCase):
 
 
 class AutomaticRoutineTest(unittest.TestCase):
-    def test_central_balls_then_cube_route_stops_in_time(self):
+    def test_central_balls_then_x12_bonus_cube_stops_in_time(self):
         cfg = load_config()
         sim = Simulation(cfg, start_pose(cfg, fl.build_field()), load_drive_train(), 30, load_gyro_sign(),
-                         ball_scenario="initial", intake=load_intake(), mechanisms=load_mechanisms())
+                         ball_scenario="initial", intake=load_intake(), mechanisms=load_mechanisms(),
+                         gripper=load_gripper())
         sim.program = AUTO
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
@@ -111,7 +113,9 @@ class AutomaticRoutineTest(unittest.TestCase):
         self.assertGreaterEqual(upper, 13)                            # two passes on the upper level
         self.assertTrue(sim.monitor.auto_end["stationary"])           # R19
         self.assertEqual(sim.monitor.r06_penalties, 0)                # body never 3 s outside
-        self.assertIn("cube released", text)                          # the cube route fits in time
+        bonus = score_preview(sim.props, sim.elements, "red")["bonus"]
+        self.assertEqual(bonus["valid"], ["X12"])                     # in exchange area 1 at 30 s
+        self.assertEqual(bonus["bonus_balls"], 12)
 
 
 if __name__ == "__main__":

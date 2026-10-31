@@ -86,6 +86,7 @@ def classify(name: str, spec: dict) -> Dict[str, Optional[str]]:
         "spinner": spinner,
         "carriage": any(name.startswith(p) for p in spec["carriage"]["prefixes"]),
         "intake_lift": name in spec.get("intake_lift", {}).get("parts", []),
+        "jaw": name in spec.get("gripper_jaw", {}).get("parts", []),
         "mast": any(name.startswith(p) for p in spec["mast"]["prefixes"]),
         "hidden": any(name.startswith(p) for p in spec.get("hide_prefixes", [])),
     }
@@ -143,6 +144,7 @@ class RobotModel:
         self.carriage = self.root.attach_new_node("carriage")
         self.mast = self.carriage.attach_new_node("mast")
         self.intake_lift = self.root.attach_new_node("intake_lift")
+        self.jaw = self.carriage.attach_new_node("gripper_jaw")
         centres = spinner_centres(parts, self.spec)
         self.spinners = {}
         self.spinner_specs = {}
@@ -169,6 +171,8 @@ class RobotModel:
                 parent = self.wheels[groups["wheel"]]
             elif groups["spinner"] in self.spinners:
                 parent = self.spinners[groups["spinner"]]
+            elif groups["jaw"]:
+                parent = self.jaw
             elif groups["mast"]:
                 parent = self.mast
             elif groups["carriage"]:
@@ -209,6 +213,10 @@ class RobotModel:
         info = self.spec["carriage"]
         self.carriage_mm = max(0.0, min(info["travel_mm"], height_mm))
         self.carriage.set_z((self.carriage_mm - info["asset_height_mm"]) / 1000.0)
+
+    def set_gripper_jaw(self, closure_mm: float) -> None:
+        """Moving jaw closure from fully open (mm)."""
+        self.jaw.set_y(max(0.0, closure_mm) / 1000.0)
 
     def set_intake_lift(self, height_mm: float) -> None:
         """Intake head height above its lowest position (mm, clamped by the simulation)."""

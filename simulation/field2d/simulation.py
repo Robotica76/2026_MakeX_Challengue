@@ -22,6 +22,7 @@ from balls import Ball, Intake, field_balls
 from kinematics import DriveTrain, body_velocity, integrate
 from match import MatchMonitor
 from mechanisms import Mechanisms
+from props import Gripper, Prop, field_props
 from mblock_runtime import DCBus, GamepadInput, MotorBus, ProgramRunner, Sensors, SimClock
 from robot import DEFAULT_CONFIG, RobotConfig, RobotPose
 from uncertainty import Variation
@@ -64,12 +65,15 @@ class Simulation:
                  time_limit: float = AUTO_STAGE_S, gyro_sign: int = 1,
                  gamepad: Optional[GamepadInput] = None, variation: Optional[Variation] = None,
                  ball_scenario: str = "none", intake: Optional[Intake] = None,
-                 mechanisms: Optional[Mechanisms] = None):
+                 mechanisms: Optional[Mechanisms] = None, gripper: Optional[Gripper] = None):
         self.cfg, self.start_pose, self.drive = cfg, start, drive
         self.ball_scenario, self.intake = ball_scenario, intake   # see balls.py
         self.balls: List[Ball] = field_balls(fl.build_field(), ball_scenario)
         self.dc = DCBus()                          # power expansion board ports (intake, ...)
         self.mechanisms = mechanisms or Mechanisms()  # elevator, intake lift, rollers (mechanisms.py)
+        self.gripper = gripper                     # props.py: takes bonus cubes, cones, letter cubes
+        self.elements = fl.build_field()
+        self.props: List[Prop] = field_props(self.elements) if ball_scenario != "none" else []
         self._path_data = json.loads(DEFAULT_CONFIG.read_text()).get("ball_path")
         self.world = self._new_world()
         self.monitor = self._new_monitor()
@@ -136,6 +140,9 @@ class Simulation:
         self.dc = DCBus()
         self.mechanisms.reset()
         self.balls = field_balls(fl.build_field(), self.ball_scenario)
+        self.props = field_props(self.elements) if self.ball_scenario != "none" else []
+        if self.gripper:
+            self.gripper.held = None
         if self.intake:
             self.intake.reset()
         self.world = self._new_world()
@@ -198,6 +205,9 @@ class Simulation:
                 self.intake.update(self.pose, self.balls, self.dc.power(self.intake.port),
                                    self.mechanisms.position("intake_lift"))
             self._update_sensors(vx, vy, omega, dt)
+            if self.gripper and self.props:
+                self.gripper.update(self.pose, self.mechanisms.position("elevator"),
+                                    self.mechanisms.position("gripper_jaw"), self.props, self.elements)
             mech_moving = any(abs(self.dc.power(m.port)) >= 5 for m in self.mechanisms.linear.values())
             self.monitor.update(self.clock.now, dt, self.pose, (vx, vy, omega), mech_moving)
             self.clock.advance(dt)
