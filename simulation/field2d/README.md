@@ -103,6 +103,7 @@ for simulator stand-ins (`mblock_runtime.py`). Supported so far:
 | `novapi.get_acceleration(axis)` | m/s², robot frame (`x` forward, `y` left, `z` = 9.81), low-passed 20 ms |
 | `mbuild.gamepad.get_joystick(name)` | `Lx`, `Ly`, `Rx`, `Ry` in -100..100 (+y up) from the gamepad window |
 | `mbuild.gamepad.is_key_pressed(name)` | `Up` `Down` `Left` `Right` `N1`..`N4` `L1` `L2` `R1` `R2` `≡` `+` `Bluetooth` |
+| `mbuild.power_expand_board.set_power(port, pct)`, `.stop(port)` | Power per port (`DC1`..`DC8`, `BL1`, `BL2`), clamped to ±100 %; read by the intake model (the DC motors themselves are not modelled) |
 | `time.sleep`, `time.time`, `time.ticks_ms`, `novapi.timer`, `novapi.reset_timer` | Simulated time |
 | `import x` (project module) | `x.py` beside the program, else the one `x.py` under `software/` |
 
@@ -114,6 +115,20 @@ simulated API or catches every exception; only a single long call into C code
 could outlive it, and the run message then says so. Commanded speeds are clamped to
 `max_rpm` for every port, so `get_value("speed")` matches the simulated motion.
 An unreadable or non-UTF-8 program file is reported as an error.
+
+### Balls and intake ([`balls.py`](balls.py))
+
+`Simulation(..., ball_scenario=..., intake=load_intake())` adds the 70 balls of the rules
+(p.26): 10 in each own resource box (shelf at 758.5 mm) and 15 on each level of the central
+resource area. Scenario `released` puts the own resource balls on the floor in front of their
+box, as after the observer removes the barrier in the manual stage (p.32; resting positions
+are an estimate). The default `none` keeps earlier studies unchanged.
+
+The intake (`robot_config.json` "intake") collects every floor ball whose centre enters a box
+at the robot front (v22 CAD: 200–285 mm ahead, 190 mm right to 208 mm left) while its port
+(`DC1`, an assumption) has at least 30 % power, up to 18 balls (the v22 basket and tower hold
+6 + 12). Balls do not roll or get pushed, and balls on the shelves or the central levels are
+out of reach. `sim.balls_collected` and the [3D viewer](../field3d/README.md) show the count.
 
 ### Motor mapping and sensors (`robot_config.json`)
 

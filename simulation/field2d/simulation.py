@@ -17,8 +17,9 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 import field_layout as fl
+from balls import Ball, Intake, field_balls
 from kinematics import DriveTrain, body_velocity, integrate
-from mblock_runtime import GamepadInput, MotorBus, ProgramRunner, Sensors, SimClock
+from mblock_runtime import DCBus, GamepadInput, MotorBus, ProgramRunner, Sensors, SimClock
 from robot import DEFAULT_CONFIG, RobotConfig, RobotPose
 from uncertainty import Variation
 
@@ -58,8 +59,12 @@ def out_of_bounds(cfg: RobotConfig, pose: RobotPose) -> bool:
 class Simulation:
     def __init__(self, cfg: RobotConfig, start: RobotPose, drive: DriveTrain,
                  time_limit: float = AUTO_STAGE_S, gyro_sign: int = 1,
-                 gamepad: Optional[GamepadInput] = None, variation: Optional[Variation] = None):
+                 gamepad: Optional[GamepadInput] = None, variation: Optional[Variation] = None,
+                 ball_scenario: str = "none", intake: Optional[Intake] = None):
         self.cfg, self.start_pose, self.drive = cfg, start, drive
+        self.ball_scenario, self.intake = ball_scenario, intake   # see balls.py
+        self.balls: List[Ball] = field_balls(fl.build_field(), ball_scenario)
+        self.dc = DCBus()                          # power expansion board ports (intake, ...)
         self.variation = variation or Variation()  # ideal robot unless a study passes one
         self.marks: List[dict] = []                # simtrace.mark() records, see Monte Carlo
         self.trace_options: dict = {}              # simtrace.options() for the program
@@ -85,6 +90,10 @@ class Simulation:
     def time(self) -> float:
         return self.clock.now
 
+    @property
+    def balls_collected(self) -> int:
+        return len(self.intake.collected) if self.intake else 0
+
     def reset(self, cfg: Optional[RobotConfig] = None, start: Optional[RobotPose] = None) -> None:
         """Stop any run and put the robot back on its start pose."""
         self._stop_runner()
@@ -96,6 +105,10 @@ class Simulation:
         self.clock = SimClock()
         self.motors = self._new_motors()
         self.sensors = Sensors()
+        self.dc = DCBus()
+        self.balls = field_balls(fl.build_field(), self.ball_scenario)
+        if self.intake:
+            self.intake.reset()
         self._velocity, self._accel = (0.0, 0.0, 0.0), (0.0, 0.0)
         self._gyro_drift = 0.0
         self.marks = []
@@ -107,7 +120,8 @@ class Simulation:
             return
         self.reset()
         self._runner = ProgramRunner(self.program, self.clock, self.motors, self.sensors, self.gamepad,
-                                     MODULE_ROOTS, self.variation, self._record_mark, self.trace_options)
+                                     MODULE_ROOTS, self.variation, self._record_mark, self.trace_options,
+                                     self.dc)
         try:
             self._runner.start()
         except SyntaxError as exc:
@@ -146,6 +160,8 @@ class Simulation:
             vx, vy, omega = body_velocity(self.cfg, self.drive.wheel_rpms(rpms), var.wheel_scale)
             vx, vy, omega = vx * var.slip_forward, vy * var.slip_strafe, omega * var.slip_turn
             self.pose = integrate(self.pose, vx, vy, omega, dt)
+            if self.intake:
+                self.intake.update(self.pose, self.balls, self.dc.power(self.intake.port))
             self._update_sensors(vx, vy, omega, dt)
             self.clock.advance(dt)
             self._check()

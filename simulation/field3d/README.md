@@ -41,6 +41,7 @@ cd simulation/field3d
 | `M` | Flag mast on/off (installed in the Modification Stage) |
 | `L` | Field labels |
 | `S` | Screenshot (`field3d_screenshot.png`) |
+| `--balls initial / released / none` | Balls of the rules' initial state (default), the own resource balls released on the floor (manual stage), or none |
 | `H` / `Esc` | Help on/off / quit |
 
 Run limits are the same as in 2D: 30 s by default (`--time-limit`, 0 = none), the run
@@ -54,6 +55,18 @@ stops when a footprint corner leaves the field, on a program error, or on Stop.
 | 4 mecanum wheels | Tyre, rollers, hub, coupling per corner | Encoder angle of each drive motor port |
 | Elevator carriage | `CAR_`, `GR_`, `FLAG_receptor` (the 18 parts that move 358 mm between the two v22 STEP files) | `E`/`Q` keys or `--carriage` (the simulator has no elevator motor model yet) |
 | Flag mast | `FLAG_mastil`, `FLAG_cabeza`, `FLAG_pasador`, `FLAG_ligas`, reference flag | `M` key or `--mast` |
+| Balls | The 70 balls of the simulation (`simulation/field2d/balls.py`); collected balls disappear and the HUD counts them | Intake model on `DC1` (`power_expand_board`) |
+
+## Ball collection demo
+
+Menu option 4 of the launcher, or
+`viewer3d.py --balls released --program ../control/test_ball_collection.py --time-limit 100`:
+the robot sweeps the balls released from both red own resource areas and fills its 18-ball
+intake in about 19 s.
+
+| After pass 1 (9 s) | End (19 s) |
+| --- | --- |
+| ![after pass 1](docs/ball_demo_9s.png) | ![end](docs/ball_demo_19s.png) |
 
 ## Field details (from the rules)
 
@@ -111,7 +124,7 @@ is documented in [`state_stream.py`](state_stream.py):
  "pose": {"x_mm": 1234.5, "y_mm": 567.8, "theta_deg": 90.0},
  "velocity": {"vx_mm_s": 0.0, "vy_mm_s": 0.0, "omega_deg_s": 0.0},
  "wheels": {"front_left": {"rpm": 0.0, "angle_deg": 0.0}, "...": {}},
- "carriage_mm": 0.0, "mast": false}
+ "carriage_mm": 0.0, "mast": false, "balls_collected": 0}
 ```
 
 `python stream_listener.py` prints the messages and is the starting point for a bridge:

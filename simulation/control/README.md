@@ -16,6 +16,11 @@ unchanged:
   prints whether each arrived and the odometry pose.
 - `test_chassis_control_manual.py`: `joystick_drive` driven from the emulated
   gamepad (Open gamepad in the viewer).
+- `test_ball_collection.py`: collects the balls released from both red own resource
+  areas with the intake on `DC1` (`viewer3d.py --balls released`, menu option 4 of the
+  3D launcher). In simulation it fills the intake (18 balls) in about 19 s. It shows how
+  tight the route is: to clear the resource-area legs and still reach both ball rows, the
+  robot centre must stay within a 15 mm (area 1) and 33 mm (area 2) corridor.
 
 Simulated results check the control logic with ideal wheels (no slip, no motor
 dynamics, no collisions); they do not replace calibration on the robot.

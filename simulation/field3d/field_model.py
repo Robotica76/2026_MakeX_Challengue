@@ -32,6 +32,7 @@ from typing import List, Optional, Sequence, Tuple
 import numpy as np
 
 import field_layout as fl
+from balls import field_balls
 from robot_model import Part, _geom_node
 
 MM = 1 / 1000.0
@@ -213,14 +214,7 @@ def resource_area(el) -> List[Part]:
         parts.append(box(f"{el.name}:box_side_{side}", el.x + side * (half_box - t / 2), mid_y, t, el.h,
                          RES_SHELF_Z, el.z, wall_rgba))
     parts.append(box(f"{el.name}:box_front", el.x, wall + s * (el.h - 5), RES_BOX_INNER, 10, RES_SHELF_Z, el.z - 60, wall_rgba))
-    # 10 balls, rows of 3-4-3 (Fig 4.4-5)
-    n = 0
-    for row, count in enumerate((3, 4, 3)):
-        for k in range(count):
-            bx = el.x + (k - (count - 1) / 2) * (BALL_D + 2)
-            by = mid_y + (row - 1) * (BALL_D - 8)
-            parts.append(ball(f"detail_{el.name}_ball_{n}", bx, by, RES_SHELF_Z))
-            n += 1
+    # the 10 balls come from balls.py (field_parts / the simulation)
     # top rails along the front and back at the post height
     for edge in (wall + s * POST / 2, wall + s * (el.h - POST / 2)):
         parts.append(box(f"{el.name}:rail_{int(edge)}", el.x, edge, el.w + POST, POST, el.z - POST, el.z, METAL_RGBA))
@@ -275,21 +269,14 @@ def strategy_area(el, slots: List[fl.Element]) -> List[Part]:
 
 
 def central_resource(el) -> List[Part]:
-    """Table at 654 mm with two ball levels, 15 balls each (p.19-21, p.26)."""
+    """Table at 654 mm with two ball levels (p.19-21); the 15 balls per level come from balls.py."""
     parts = [box(el.name, el.x, el.y, el.w, el.h, el.z - PLATE_T, el.z, PLATE_RGBA)]
     for sx in (-1, 1):
         for sy in (-1, 1):
             parts.append(box(f"{el.name}:leg_{sx}_{sy}", el.x + sx * (el.w / 2 - POST / 2), el.y + sy * (el.h / 2 - POST / 2),
                              POST, POST, 0, el.z - PLATE_T, METAL_RGBA))
-    n = 0
     for level in CENTRAL_BALL_LEVELS:
         parts.append(box(f"{el.name}:level_{int(level)}", el.x, el.y, el.w - POST, el.h - POST, level - 10, level, PLATE_RGBA))
-        for row, count in ((0, 8), (1, 7)):
-            for k in range(count):
-                by = el.y + (k - (count - 1) / 2) * (BALL_D + 4)
-                bx = el.x + (row - 0.5) * (BALL_D + 6)
-                parts.append(ball(f"detail_central_ball_{n}", bx, by, level))
-                n += 1
     return parts
 
 
@@ -409,21 +396,28 @@ def frame_parts() -> List[Part]:
     return parts
 
 
-def field_parts(elements: List[fl.Element]) -> List[Part]:
+def ball_part(b) -> Part:
+    return sphere(f"detail_{b.name}", b.x, b.y, b.z, BALL_D / 2, BALL_RGBA)
+
+
+def field_parts(elements: List[fl.Element], ball_scenario: str = "initial") -> List[Part]:
+    """Static field. ball_scenario (balls.py) adds balls as static parts; the viewer
+    passes "none" and draws the simulation's balls itself so they can be collected."""
     parts = [box("floor", fl.CX, fl.CY, fl.FIELD_W, fl.FIELD_H, -10, 0, FLOOR_RGBA)]
     parts += frame_parts()
     for el in elements:
         parts += element_parts(el, elements)
+    parts += [ball_part(b) for b in field_balls(elements, ball_scenario)]
     return parts
 
 
-def build_field_node(elements: List[fl.Element]):
+def build_field_node(elements: List[fl.Element], ball_scenario: str = "none"):
     """Panda3D NodePath with the whole field. Opaque parts are merged into a few
     batches so the field renders fast; transparent parts stay separate."""
     from panda3d.core import NodePath, TransparencyAttrib
     root = NodePath("field")
     opaque = root.attach_new_node("opaque")
-    for part in field_parts(elements):
+    for part in field_parts(elements, ball_scenario):
         transparent = part.rgba[3] < 0.99
         node = (root if transparent else opaque).attach_new_node(_geom_node(part))
         node.set_color(*part.rgba)

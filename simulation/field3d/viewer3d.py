@@ -29,6 +29,7 @@ for p in (str(HERE), str(FIELD2D)):
 os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 
 import field_layout as fl  # noqa: E402
+from balls import SCENARIOS as BALL_SCENARIOS, load_intake  # noqa: E402
 from kinematics import load_drive_train  # noqa: E402
 from mblock_runtime import GamepadInput  # noqa: E402
 from robot import DEFAULT_CONFIG, load_config, start_pose  # noqa: E402
@@ -58,7 +59,8 @@ def build_simulation(args, gamepad):
     cfg = load_config(args.config)
     elements = fl.build_field()
     sim = Simulation(cfg, start_pose(cfg, elements), load_drive_train(args.config), args.time_limit,
-                     load_gyro_sign(args.config), gamepad)
+                     load_gyro_sign(args.config), gamepad, ball_scenario=args.balls,
+                     intake=load_intake(args.config))
     if args.program:
         sim.program = args.program.resolve()
     return sim, elements
@@ -101,6 +103,9 @@ class Viewer3D:
         render = base.render
         self.field = build_field_node(self.elements)
         self.field.reparent_to(render)
+        self.ball_root = render.attach_new_node("balls")
+        self.ball_nodes = []
+        self._sync_balls()
         self.robot = RobotModel(load_model_spec(self.args.model))
         self.robot.root.reparent_to(render)
         self.robot.show_mast(self.args.mast)
@@ -134,6 +139,26 @@ class Viewer3D:
             np_.set_light_off()
         self.labels.hide()
         self._place_robot()
+
+    def _sync_balls(self):
+        """One node per simulated ball; collected balls are hidden. Rebuilt when the
+        simulation resets (new Ball objects)."""
+        from field_model import ball_part
+        from robot_model import _geom_node
+        balls = self.sim.balls
+        if [id(n.get_python_tag("ball")) for n in self.ball_nodes] != [id(b) for b in balls]:
+            self.ball_root.get_children().detach()
+            self.ball_nodes = []
+            for b in balls:
+                part = ball_part(b)
+                node = self.ball_root.attach_new_node(_geom_node(part))
+                node.set_color(*part.rgba)
+                node.set_python_tag("ball", b)
+                self.ball_nodes.append(node)
+        for node in self.ball_nodes:
+            hidden = node.get_python_tag("ball").collected
+            if hidden != node.is_hidden():
+                node.hide() if hidden else node.show()
 
     def _place_robot(self):
         pose = self.sim.pose
@@ -257,7 +282,8 @@ class Viewer3D:
         self.hud.setText(f"{name}   t = {sim.time:5.1f}{limit} s   {sim.state.status}\n"
                          f"x {pose.x:6.0f}  y {pose.y:6.0f} mm   heading {math.degrees(pose.theta) % 360:5.1f} deg   "
                          f"carriage {self.robot.carriage_mm:3.0f} mm   mast {'on' if self.robot.mast_visible else 'off'}   "
-                         f"camera {self.cam_mode}{stream}")
+                         f"camera {self.cam_mode}{stream}"
+                         + (f"\nballs collected {sim.balls_collected} / {sim.intake.capacity}" if sim.intake and sim.balls else ""))
         message = sim.state.message if sim.state.status in ("error", "out_of_bounds", "done", "stopped") else self.message
         error = sim.state.status in ("error", "out_of_bounds") or self.message_error
         self.status_text.setText(message or "")
@@ -309,7 +335,7 @@ class Viewer3D:
             return
         msg = state_message(self.robot.spec["name"], self.sim.time, self.sim.state.status, self.sim.pose,
                             self.sim._velocity, wheel_state(self.sim), self.robot.carriage_mm,
-                            self.robot.mast_visible)
+                            self.robot.mast_visible, self.sim.balls_collected)
         self.publisher.maybe_send(now, msg)
 
     def _update(self, task):
@@ -322,6 +348,7 @@ class Viewer3D:
             sign = 1 if self._keys["e"] else -1
             self.robot.set_carriage(self.robot.carriage_mm + sign * CARRIAGE_SPEED_MM_S * dt)
         self._place_robot()
+        self._sync_balls()
         self._update_trail()
         self._drag_camera()
         self._apply_camera()
@@ -338,6 +365,7 @@ class Viewer3D:
                 self.sim.step(frame_s)
                 t += frame_s
         self._place_robot()
+        self._sync_balls()
         self._update_trail()
         self._apply_camera()
         self._refresh_hud()
@@ -363,6 +391,9 @@ def parse_args(argv=None):
     parser.add_argument("--camera", choices=CAMERAS, default="orbit")
     parser.add_argument("--carriage", type=float, default=0.0, help="initial carriage height in mm (0..358)")
     parser.add_argument("--mast", action="store_true", help="start with the flag mast installed")
+    parser.add_argument("--balls", choices=BALL_SCENARIOS, default="initial",
+                        help="balls on the field: initial (rules), released (own resource balls on the floor, "
+                             "manual stage) or none")
     parser.add_argument("--stream", help="UDP target HOST:PORT for the state stream (default 127.0.0.1:5005)")
     parser.add_argument("--stream-rate", type=float, default=DEFAULT_RATE_HZ, help="state messages per second")
     parser.add_argument("--no-stream", action="store_true", help="do not send the state stream")

@@ -182,6 +182,28 @@ class MotorBus:
         return round(angle / res) * res if res > 0 else angle
 
 
+class DCBus:
+    """Power (-100..100 %) per power expansion board port (DC1..DC8, BL1, BL2), written
+    by the program through mbuild.power_expand_board and read by the simulation
+    (e.g. the intake). The DC motors themselves are not modelled."""
+
+    def __init__(self):
+        self._power: Dict[str, float] = {}
+        self._lock = threading.Lock()
+
+    def set(self, port: str, power: float) -> None:
+        with self._lock:
+            self._power[str(port)] = max(-100.0, min(100.0, float(power)))
+
+    def power(self, port: str) -> float:
+        with self._lock:
+            return self._power.get(str(port), 0.0)
+
+    def snapshot(self) -> Dict[str, float]:
+        with self._lock:
+            return dict(self._power)
+
+
 class Sensors:
     """Gyroscope and accelerometer readings, written by the simulation each step.
 
@@ -272,7 +294,7 @@ class GamepadInput:
 
 def _build_modules(clock: SimClock, motors: MotorBus, stop: threading.Event,
                    sensors: Sensors, gamepad: GamepadInput, variation=None, trace=None,
-                   trace_options=None):
+                   trace_options=None, dc: Optional[DCBus] = None):
     def check():
         if stop.is_set():
             raise ProgramStopped()
@@ -349,11 +371,26 @@ def _build_modules(clock: SimClock, motors: MotorBus, stop: threading.Event,
         def __getattr__(self, name):
             raise UnsupportedAPI(f"gamepad.{name}() is not simulated yet")
 
+    dc = dc if dc is not None else DCBus()
+
+    class _PowerExpandBoard:
+        def set_power(self, port, power):
+            check()
+            dc.set(port, power)
+
+        def stop(self, port):
+            check()
+            dc.set(port, 0.0)
+
+        def __getattr__(self, name):
+            raise UnsupportedAPI(f"power_expand_board.{name}() is not simulated yet")
+
     mbuild = types.ModuleType("mbuild")
     encoder_motor = types.ModuleType("mbuild.encoder_motor")
     encoder_motor.encoder_motor_class = encoder_motor_class
     mbuild.encoder_motor = encoder_motor
     mbuild.gamepad = _Gamepad()
+    mbuild.power_expand_board = _PowerExpandBoard()
 
     # Simulator-only: lets an analysis program record the true pose at chosen
     # moments (Monte Carlo). Not available on the robot.
@@ -370,8 +407,10 @@ class ProgramRunner:
 
     def __init__(self, path: Path, clock: SimClock, motors: MotorBus,
                  sensors: Optional[Sensors] = None, gamepad: Optional[GamepadInput] = None,
-                 module_roots: Sequence[Path] = (), variation=None, trace=None, trace_options=None):
+                 module_roots: Sequence[Path] = (), variation=None, trace=None, trace_options=None,
+                 dc: Optional[DCBus] = None):
         self.path = Path(path)
+        self.dc = dc if dc is not None else DCBus()
         self.variation, self.trace, self.trace_options = variation, trace, trace_options
         self.module_roots = [Path(r) for r in module_roots]
         self.clock, self.motors = clock, motors
@@ -386,7 +425,7 @@ class ProgramRunner:
         # OSError / UnicodeDecodeError (unreadable file) and SyntaxError surface here.
         code = compile(self.path.read_text(encoding="utf-8"), str(self.path), "exec")
         fakes = _build_modules(self.clock, self.motors, self.stop_event, self.sensors, self.gamepad,
-                               self.variation, self.trace, self.trace_options)
+                               self.variation, self.trace, self.trace_options, self.dc)
         real_import = builtins.__import__
         local_modules: Dict[str, types.ModuleType] = {}  # project files, fresh for each run
         self._project_files = {str(self.path)}

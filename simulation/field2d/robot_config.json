@@ -51,5 +51,19 @@
   },
   "sensors": {
     "gyro_z_positive": "clockwise"
+  },
+  "intake": {
+    "port": "DC1",
+    "direction": 1,
+    "min_power": 30,
+    "zone_mm": {
+      "x_min": 200.0,
+      "x_max": 285.0,
+      "y_min": -190.0,
+      "y_max": 208.0
+    },
+    "max_ball_center_z_mm": 60.0,
+    "capacity": 18,
+    "source": "v22 CAD: INT_ parts span y_left -190..208 mm and reach the front edge (x 249 mm); capacity = 6 basket + 12 tower REF balls. Port DC1 is an assumption (TBD)."
   }
 }

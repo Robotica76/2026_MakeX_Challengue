@@ -43,11 +43,13 @@ echo "  MakeX Storm Breaker - 3D simulator"
 echo "  1. Simulator (empty)"
 echo "  2. Chassis demo - automatic  (Space starts it, about 44 s)"
 echo "  3. Chassis demo - manual     (J opens the gamepad, then Space)"
+echo "  4. Ball collection demo      (Space starts it, about 19 s)"
 echo
-read -r -p "Choose 1, 2 or 3: " choice
+read -r -p "Choose 1, 2, 3 or 4: " choice
 case "$choice" in
     2) "$PY" viewer3d.py --program ../control/test_chassis_control_automatico.py --time-limit 60 ;;
     3) "$PY" viewer3d.py --program ../control/test_chassis_control_manual.py --time-limit 100 --camera follow ;;
+    4) "$PY" viewer3d.py --program ../control/test_ball_collection.py --balls released --time-limit 100 ;;
     *) "$PY" viewer3d.py ;;
 esac
 status=$?
