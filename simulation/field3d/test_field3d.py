@@ -13,7 +13,7 @@ HERE = Path(__file__).resolve().parent
 sys.path[:0] = [str(HERE), str(HERE.parent / "field2d")]
 
 import field_layout as fl  # noqa: E402
-from field_model import field_parts  # noqa: E402
+from field_model import field_parts, prop_base  # noqa: E402
 from robot import RobotPose  # noqa: E402
 from robot_model import RobotModel, classify, load_model_spec, load_parts  # noqa: E402
 from state_stream import SCHEMA_VERSION, StatePublisher, parse_target, state_message  # noqa: E402
@@ -112,12 +112,28 @@ class RobotNodeTest(unittest.TestCase):
 class FieldTest(unittest.TestCase):
     def test_every_element_is_built_with_its_height(self):
         elements = fl.build_field()
-        built = {p.name: p for p in field_parts(elements)}
+        parts = field_parts(elements)
+        names = {p.name for p in parts}
         for el in elements:
-            self.assertIn(el.name, built)
-            top = built[el.name].vertices[:, 2].max() * 1000
-            self.assertAlmostEqual(top, el.z if el.z > 0 and el.kind not in ("zone", "slot") else 2.0, delta=0.01,
-                                   msg=el.name)
+            self.assertIn(el.name, names)
+            group = [p for p in parts if p.name == el.name or p.name.startswith(el.name + ":")]
+            top = max(p.vertices[:, 2].max() for p in group) * 1000
+            want = el.z if el.z > 0 and el.kind not in ("zone", "slot") else 2.0
+            if el.kind == "prop":        # standing on the strategy area top (259 mm)
+                want = prop_base(el, elements) + el.z
+            self.assertAlmostEqual(top, want, delta=0.01, msg=el.name)
+
+    def test_rules_details_are_present(self):
+        parts = field_parts(fl.build_field())
+        names = [p.name for p in parts]
+        self.assertEqual(sum("_resource_" in n and "_pin_" in n for n in names), 16)              # p.24: 16 pins
+        self.assertEqual(sum(n.startswith("detail_red_resource") and "_ball_" in n for n in names), 20)  # p.26
+        self.assertEqual(sum(n.startswith("detail_central_ball_") for n in names), 30)          # 15 per level
+        self.assertEqual(sum(n.startswith("detail_") and "_cube_" in n and ":" not in n for n in names), 16)  # p.23
+        shelf = next(p for p in parts if p.name == "red_resource_1:shelf_1")
+        self.assertAlmostEqual(shelf.vertices[:, 2].max() * 1000, 758.5, places=3)         # p.13 Fig 4.2-6
+        pin = next(p for p in parts if p.name.startswith("detail_red_resource_1_pin"))
+        self.assertAlmostEqual((pin.vertices[:, 2].max() - pin.vertices[:, 2].min()) * 1000, 290, places=3)  # p.24
 
     def test_floor_covers_the_field(self):
         floor = next(p for p in field_parts([]) if p.name == "floor")

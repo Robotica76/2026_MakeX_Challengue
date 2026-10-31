@@ -124,7 +124,9 @@ class Viewer3D:
             text = TextNode(el.name)
             text.set_text(el.label)
             text.set_align(TextNode.A_center)
-            text.set_text_color(0.1, 0.12, 0.15, 1)
+            text.set_text_color(1, 1, 1, 1)
+            text.set_shadow(0.04, 0.04)
+            text.set_shadow_color(0, 0, 0, 0.8)
             np_ = self.labels.attach_new_node(text)
             np_.set_pos(el.x * MM, el.y * MM, max(el.z, 0) * MM + 0.08)
             np_.set_scale(0.08)
@@ -237,11 +239,11 @@ class Viewer3D:
         from panda3d.core import TextNode
         base = self.base
         self.hud = OnscreenText(text="", parent=base.a2dTopLeft, pos=(0.04, -0.07), scale=0.045,
-                                align=TextNode.A_left, fg=(0.08, 0.1, 0.13, 1), mayChange=True)
+                                align=TextNode.A_left, fg=(1, 1, 1, 1), shadow=(0, 0, 0, 0.85), mayChange=True)
         self.status_text = OnscreenText(text="", parent=base.a2dBottomLeft, pos=(0.04, 0.16), scale=0.042,
-                                        align=TextNode.A_left, fg=(0.08, 0.1, 0.13, 1), mayChange=True)
+                                        align=TextNode.A_left, fg=(1, 1, 1, 1), shadow=(0, 0, 0, 0.85), mayChange=True)
         self.help = OnscreenText(text=HELP, parent=base.a2dBottomLeft, pos=(0.04, 0.08), scale=0.034,
-                                 align=TextNode.A_left, fg=(0.25, 0.27, 0.3, 1), mayChange=False)
+                                 align=TextNode.A_left, fg=(0.9, 0.92, 0.95, 1), shadow=(0, 0, 0, 0.85), mayChange=False)
         self._refresh_hud()
 
     def say(self, text, error=False):
@@ -259,7 +261,7 @@ class Viewer3D:
         message = sim.state.message if sim.state.status in ("error", "out_of_bounds", "done", "stopped") else self.message
         error = sim.state.status in ("error", "out_of_bounds") or self.message_error
         self.status_text.setText(message or "")
-        self.status_text.setFg((0.75, 0.12, 0.12, 1) if error else (0.08, 0.35, 0.18, 1))
+        self.status_text.setFg((1.0, 0.45, 0.45, 1) if error else (0.55, 1.0, 0.65, 1))
 
     def _setup_controls(self):
         from viewer import GamepadLauncher, ProgramController   # 2D viewer helpers

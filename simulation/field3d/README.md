@@ -55,10 +55,30 @@ stops when a footprint corner leaves the field, on a program error, or on Stop.
 | Elevator carriage | `CAR_`, `GR_`, `FLAG_receptor` (the 18 parts that move 358 mm between the two v22 STEP files) | `E`/`Q` keys or `--carriage` (the simulator has no elevator motor model yet) |
 | Flag mast | `FLAG_mastil`, `FLAG_cabeza`, `FLAG_pasador`, `FLAG_ligas`, reference flag | `M` key or `--mast` |
 
-The field comes from `simulation/field2d/field_layout.py` (footprints and heights,
-with the sources and estimates recorded there): obstacles as solids up to their
-height, overhead structures as slabs the robot can drive under, zones as floor
-patches, the perimeter frame semi-transparent.
+## Field details (from the rules)
+
+The field uses the footprints and heights of `simulation/field2d/field_layout.py`
+(placements are estimates recorded there) and builds each structure with the shape
+given in the [rules guide](../../resources/rules/) V1.1, section 4.2–4.3
+(`field_model.py` cites the page of every dimension):
+
+| Structure | Detail in 3D | Rules |
+| --- | --- | --- |
+| Own resource area (×4) | Posts to 965 mm, side shelves at 758.5 mm with 2 pins each, central ball box (373 / 293 mm) with 10 balls, mesh below | p.13, Fig 4.2-6, 4.4-5 |
+| Pin placement area (×2) | 985 × 195 mm shelf at 405 mm, MAKEX board below, posts to 965 mm with the flag poles at 961 mm | p.14–16, Fig 4.2-9/11 |
+| Cone hanging posts (×4) | 40 mm posts, 405 mm high | p.17 |
+| Strategy area (×2) | 960 × 215 × 259 mm frame, 52.5 mm top rail, four 140 mm channel windows with 80 mm dividers, gold trim | p.17–18, Fig 4.2-14 |
+| Central resource area | Table top at 654 mm, two ball levels 200 mm apart with 15 balls each, X mark (red / blue chevrons) from 654 to 947 mm | p.19–21, Fig 4.2-17 |
+| Mobile fortress (×2) | 640 × 640 × 646 mm, letter-cube level at 171 mm with 8 cubes, ball level at 407 mm, walls with the V cut-out | p.21–23, Fig 4.2-19 |
+| Props | Pins 290 mm (70 / 100 mm), balls 70 mm, letter and bonus cubes 120 mm, cones 170 mm (120 mm base, 100→60 mm body) standing on the strategy area | p.23–26 |
+| Frame | 900 mm high, semi-transparent, black floor as on the printed map | p.10 |
+
+Plate thicknesses, post sections, the bottom rail of the strategy channel, the ball
+level heights and the fortress cut-out are read off the figures (marked "estimate"
+in the code). The prop layout is the default of `field_layout.py`; the real one comes
+from the prop card drawn before each match.
+
+![Field detail](docs/field_detail.png)
 
 ## Robot model pipeline
 
@@ -108,10 +128,10 @@ The stream is one-way (simulator → tools); nothing outside can drive the simul
 
 ## Checks
 
-`python -m unittest` in this directory (14 tests): wheel, carriage and mast groups match
+`python -m unittest` in this directory (15 tests): wheel, carriage and mast groups match
 the CAD; the model stands on the floor with the 499.5 × 499.0 mm footprint; wheel pivots at
 the measured axles; the CAD forward axis follows the simulated heading; every field element
-is built at its height; stream messages round-trip and respect the rate; and an offscreen
+is built at its height and the rules details are present (16 pins, 20 + 30 balls, 16 letter cubes, shelf at 758.5 mm, 290 mm pins); stream messages round-trip and respect the rate; and an offscreen
 render of the automatic demo (skipped when no graphics context is available).
 
 ## Limits
