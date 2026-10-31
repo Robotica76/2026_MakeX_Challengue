@@ -1,0 +1,23 @@
+{
+  "name": "storm_breaker_v22",
+  "asset": "assets/storm_breaker_v22.glb",
+  "cad_source": "mechanical/assemblies/full_robot/v22/cad/Robot_StormBreaker_v22_con_mastil_y_bandera_carro_arriba.step.zip",
+  "frame": "CAD frame, metres: +y forward (intake), +x right (gripper), +z up, origin at the floor under the footprint centre",
+  "hide_prefixes": ["REF_pelota"],
+  "carriage": {
+    "prefixes": ["CAR_", "GR_", "FLAG_", "REF_bandera"],
+    "asset_height_mm": 358.0,
+    "travel_mm": 358.0,
+    "source": "parts that move 358 mm in z between the carro_abajo (inicial) and carro_arriba STEP files"
+  },
+  "mast": {
+    "prefixes": ["FLAG_mastil", "FLAG_cabeza", "FLAG_pasador", "FLAG_ligas", "REF_bandera"],
+    "note": "installed in the Modification Stage; hidden by default"
+  },
+  "wheels": {
+    "front_left":  {"parts": ["CH_mecanum_80_L_del_izq", "CH_hub_mecanum_80_del_izq", "CH_coupling_mecanum_80_del_izq"], "center_mm": [-221.2, 45.0, 40.0]},
+    "front_right": {"parts": ["CH_mecanum_80_R_del_der", "CH_hub_mecanum_80_del_der", "CH_coupling_mecanum_80_del_der"], "center_mm": [221.2, 45.0, 40.0]},
+    "rear_left":   {"parts": ["CH_mecanum_80_R_tras_izq", "CH_hub_mecanum_80_tras_izq", "CH_coupling_mecanum_80_tras_izq"], "center_mm": [-221.2, -203.0, 40.0]},
+    "rear_right":  {"parts": ["CH_mecanum_80_L_tras_der", "CH_hub_mecanum_80_tras_der", "CH_coupling_mecanum_80_tras_der"], "center_mm": [221.2, -203.0, 40.0]}
+  }
+}
