@@ -196,6 +196,60 @@ class CompetitionProgramTest(unittest.TestCase):
         self.assertGreater(b_driven, 100.0)
 
 
+class StormBreakerProgramTest(unittest.TestCase):
+    """software/robot/main/storm_breaker_2026.py: blocks and Python are the same program, and its
+    automatic stage secures the X12 bonus in the simulator."""
+    PROGRAM = LEGACY.parents[1] / "robot" / "main" / "storm_breaker_2026.py"
+
+    def test_blocks_round_trip(self):
+        import sys
+        sys.path.insert(0, str(LEGACY.parents[2] / "tools" / "scripts"))
+        from python_to_mblock import write_mblock
+        with TemporaryDirectory() as d:
+            out = Path(d) / "sb.mblock"
+            write_mblock(self.PROGRAM.read_text(encoding="utf-8"), out)
+            back = mblock_to_python(out)
+        source = self.PROGRAM.read_text(encoding="utf-8")
+        tree_a, tree_b = ast.parse(source), ast.parse(back)
+        funcs = lambda t: {n.name: ast.dump(n) for n in t.body if isinstance(n, ast.FunctionDef)}  # noqa: E731
+        main = lambda t: [ast.dump(n) for n in t.body                                             # noqa: E731
+                          if not isinstance(n, (ast.FunctionDef, ast.Import, ast.ImportFrom, ast.Assign))]
+        self.assertEqual(funcs(tree_b), funcs(tree_a))
+        self.assertEqual(main(tree_b), main(tree_a))
+
+    def test_committed_mblock_is_up_to_date(self):
+        back = mblock_to_python(self.PROGRAM.with_suffix(".mblock"))
+        self.assertEqual(program_parts(back)[0], program_parts(self.PROGRAM.read_text(encoding="utf-8"))[0],
+                         "run tools/scripts/python_to_mblock.py on storm_breaker_2026.py")
+
+    def test_automatic_stage_secures_the_x12(self):
+        from balls import load_intake
+        from mechanisms import load_mechanisms
+        from props import denial_count, load_gripper
+        cfg = load_config()
+        sim = Simulation(cfg, start_pose(cfg, fl.build_field()), load_drive_train(), 31, load_gyro_sign(),
+                         ball_scenario="initial", intake=load_intake(), mechanisms=load_mechanisms(),
+                         gripper=load_gripper())
+        self.addCleanup(sim.reset)
+        sim.program = self.PROGRAM
+        with contextlib.redirect_stdout(io.StringIO()):
+            sim.run()
+            sim.gamepad.apply_event({"event": "press", "control": "button_1"})
+            k = 0
+            while sim.running:
+                sim.step(1 / 60)
+                k += 1
+                if k == 15:
+                    sim.gamepad.apply_event({"event": "release", "control": "button_1"})
+        self.assertEqual(sim.bonus_judged["red"]["valid"], ["X12"])
+        self.assertEqual(sim.bonus_judged["red"]["on_side"], 2)                  # X12 + X9 (denied)
+        self.assertEqual(sim.collisions.collisions, [])
+        self.assertEqual(sim.half.events, [])
+        self.assertTrue(sim.monitor.auto_end["stationary"])
+        denial = denial_count(sim.props, sim.balls, "red")
+        self.assertEqual((denial["cones"], denial["props_on_line"]), (2, 0))
+
+
 class ReloadTest(unittest.TestCase):
     def test_mblock_is_translated_and_reloaded_when_saved(self):
         from viewer import ProgramController

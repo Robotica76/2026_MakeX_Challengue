@@ -240,3 +240,23 @@ the robot at its final weight. Detailed procedures for the starred items:
 - [ ] Update `montecarlo_config_calibrated.json` with measured spreads and regenerate the report.
 - [ ] Mechanical vibration checks: rollers spin freely, wheels-in-air test, slow-motion video.
 - [ ] Check whether unpowered odometry wheels are legal in MakeX 2026.
+
+
+## Profiled motion in the competition program (2026-10-31)
+
+`software/robot/main/storm_breaker_2026.py` (also as mBlock blocks) drives with its own controller,
+written so blocks can express it:
+
+- **Odometry:** four encoders unmixed for mecanum, the heading from the gyro angle block
+  (`motion_sensor_angle`) with the bias measured at the start, strafe scaled by `STRAFE_SLIP`; the
+  footprint centre is the wheel centre + 79 mm forward.
+- **Motion `go_N_N_N_N_N(x, y, heading, v_max, v_end)`:** field coordinates; translation and
+  rotation at the same time; speed `min(v_max, sqrt(v_end^2 + 2 D d), v_prev + A dt)`: time-optimal
+  braking instead of the P controller's slow tail (`drive()` spent ~2 s per move converging);
+  `v_end > 0` passes a waypoint without stopping; feedback from the odometry every 10 ms; the
+  rotation's effect on the footprint centre is compensated.
+- **Travel:** long moves face their direction (forward wheels slip less than strafing).
+- **Mechanisms** run as timed jobs inside the motion loop.
+
+Monte Carlo tuning (`montecarlo_strategy.py`): v 700 mm/s, a 1200 mm/s^2, d 1400 mm/s^2. The
+automatic stage takes 15.4 s to secure the X12 (25 s with `drive()`).

@@ -5,8 +5,8 @@ The program runs unchanged in a worker thread. Its imports of `novapi`,
 
 - encoder_motor_class(port, index): set_speed(rpm), set_power(%), stop(),
   move(degrees, rpm), get_value("speed" | "angle").
-- novapi.get_gyroscope(axis) (deg/s), novapi.get_acceleration(axis), timer(),
-  reset_timer(); time.sleep / time / monotonic / ticks_ms follow the simulation
+- novapi.get_gyroscope(axis) (deg/s), novapi.get_acceleration(axis), get_rotation(axis) (deg,
+  the integrated gyro, block "motion_sensor_angle"), reset_rotation(axis), timer(), reset_timer(); time.sleep / time / monotonic / ticks_ms follow the simulation
   clock, so sleeps take simulated time.
 - mbuild.gamepad: get_joystick("Lx" | "Ly" | "Rx" | "Ry") in -100..100 and
   is_key_pressed(name), fed by the emulated gamepad window (GamepadInput).
@@ -268,11 +268,19 @@ class Sensors:
         self.gyro = {"x": 0.0, "y": 0.0, "z": 0.0}
         self.accel = {"x": 0.0, "y": 0.0, "z": 9.81}
         self.ranging: Dict[str, float] = {}    # cm per sensor port, written by the simulation
+        self.rot = {"x": 0.0, "y": 0.0, "z": 0.0}   # integrated gyro (deg), novapi.get_rotation()
 
-    def set(self, gyro_z: float, ax: float, ay: float) -> None:
+    def set(self, gyro_z: float, ax: float, ay: float, dt: float = 0.0) -> None:
         with self._lock:
             self.gyro["z"] = gyro_z
             self.accel["x"], self.accel["y"] = ax, ay
+            self.rot["z"] += gyro_z * dt
+
+    def reset_rotation(self, axis: str = "all") -> None:
+        with self._lock:
+            for k in self.rot:
+                if axis in ("all", k):
+                    self.rot[k] = 0.0
 
     RANGE_NONE_CM = 200.0
 
@@ -285,7 +293,7 @@ class Sensors:
             return self.ranging.get(port, self.RANGE_NONE_CM)
 
     def read(self, kind: str, axis: str) -> float:
-        table = self.gyro if kind == "gyro" else self.accel
+        table = {"gyro": self.gyro, "accel": self.accel, "rot": self.rot}[kind]
         with self._lock:
             if axis not in table:
                 raise UnsupportedAPI(f"axis {axis!r} (use 'x', 'y' or 'z')")
@@ -427,6 +435,8 @@ def _build_modules(clock: SimClock, motors: MotorBus, stop: threading.Event,
     novapi.reset_timer = reset_timer
     novapi.get_gyroscope = lambda axis: (check(), sensors.read("gyro", axis))[1]
     novapi.get_acceleration = lambda axis: (check(), sensors.read("accel", axis))[1]
+    novapi.get_rotation = lambda axis: (check(), sensors.read("rot", axis))[1]     # block "angle around z"
+    novapi.reset_rotation = lambda axis="all": (check(), sensors.reset_rotation(axis))[1]
 
     class _Gamepad:
         def get_joystick(self, name):

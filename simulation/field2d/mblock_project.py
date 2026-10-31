@@ -70,6 +70,20 @@ MATHOP = {"abs": "abs({})", "floor": "math.floor({})", "ceiling": "math.ceil({})
           "ln": "math.log({})", "log": "math.log10({})", "e ^": "math.exp({})", "10 ^": "math.pow(10, {})"}
 DECLARATIONS = {"novapi.smartservo_init", "novapi.distance_sensor_init"}
 
+# Reporter blocks -> Python. VERIFIED: seen in a real project (blocks, or the monitors list of the
+# 2025 project for the motion sensor). ASSUMED: the Python name or the opcode is a best guess until
+# a project with that block is exported from mBlock; fix it here only (python_to_mblock.py uses
+# the same table).
+SENSORS = {
+    # opcode: (python template, field name, verified?)
+    "novapi.motion_sensor_angle": ('novapi.get_rotation("{}")', "AXIS", "opcode verified, Python assumed"),
+    "novapi.motion_sensor_gyro": ('novapi.get_gyroscope("{}")', "AXIS", "opcode verified, Python assumed"),
+    "novapi.motion_sensor_acc": ('novapi.get_acceleration("{}")', "AXIS", "opcode verified, Python assumed"),
+    "novapi.timer": ("novapi.timer()", None, "assumed"),
+}
+ENCODER_GET = "novapi.encoder_motor_get_value"      # assumed: fields PORT, TYPE (angle / speed)
+TIMER_RESET = "novapi.reset_timer"                  # assumed
+
 
 class Translator:
     def __init__(self, project: dict):
@@ -146,6 +160,14 @@ class Translator:
         if op == "novapi.BT_CONTROLLER_BUTTON_PRESSED":
             self.imports.add("gamepad")
             return f'gamepad.is_key_pressed("{self.field(b, "BUTTON")}")'
+        if op in SENSORS:
+            template, fname, _ = SENSORS[op]
+            return template.format(self.field(b, fname)) if fname else template
+        if op == ENCODER_GET:
+            port = self.field(b, "PORT")
+            if port not in self.motors:
+                self.motors.append(port)
+            return f'encoder_motor_{port}.get_value("{self.field(b, "TYPE")}")'
         if op == "novapi.distance_sensor_get_data":
             self.imports.add("ranging")
             num = self.field(b, "NUM")
@@ -220,6 +242,8 @@ class Translator:
             self.servos.setdefault(num, ("M1", "INDEX1"))
             method = "move_to" if op.endswith("move_to") else "move"
             return [f"{pad}smartservo_{num}.{method}({self.value(b, 'POSITION')}, {self.value(b, 'SPEED')})"]
+        if op == TIMER_RESET:
+            return [f"{pad}novapi.reset_timer()"]
         if op in DECLARATIONS:
             return []                                    # declared with the other devices
         self.unknown.add(op)

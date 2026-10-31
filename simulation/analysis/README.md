@@ -97,3 +97,13 @@ to the opponent. About 2.5 min for 128 candidates on 5 cores; results in `result
 .venv/bin/python simulation/analysis/optimize_auto_route.py           # full search
 .venv/bin/python simulation/analysis/optimize_auto_route.py --quick   # two candidates
 ```
+
+## Automatic-stage Monte Carlo
+
+[`montecarlo_strategy.py`](montecarlo_strategy.py) runs `storm_breaker_2026.py` on sampled robots
+(default `montecarlo_config_competition.json`) and ranks strategies by resources, then points, then
+time. Results: [docs/07_strategy/montecarlo_strategy.md](../../docs/07_strategy/montecarlo_strategy.md).
+
+```bash
+.venv/bin/python simulation/analysis/montecarlo_strategy.py --trials 16 --refine   # ~15 min on 5 cores
+```

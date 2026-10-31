@@ -303,7 +303,7 @@ class Simulation:
         fx, fy = self._accel
         self._accel = (fx + k * (ax - fx), fy + k * (ay - fy))
         self._velocity = (vx, vy, omega)
-        self.sensors.set(self._gyro_reading(omega, dt), *self._accel)
+        self.sensors.set(self._gyro_reading(omega, dt), *self._accel, dt)
         if self._ranging:
             self.sensors.set_ranging({port: self.ranging_cm(spec) for port, spec in self._ranging.items()})
 

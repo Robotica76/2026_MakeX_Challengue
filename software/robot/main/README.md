@@ -21,3 +21,11 @@ of `auto_pull_central.py` (N2 / N3 / N4 choose it before N1). Ports follow
 ```bash
 .venv/bin/python tools/scripts/bundle_for_mblock.py software/robot/main/robot_2026.py
 ```
+
+[`storm_breaker_2026.py`](storm_breaker_2026.py) / [`storm_breaker_2026.mblock`](storm_breaker_2026.mblock):
+the competition program as blocks and as Python (the same program; regenerate the blocks with
+`tools/scripts/python_to_mblock.py` after editing the Python). Automatic: X12 into exchange area 1
+plus the X9 and the cones onto our side (Monte Carlo winner); manual: "≡" / "+" modes; final: N4
+in Red Start 1 hangs the flag. Blocks whose Python name or opcode is still assumed (gyro angle /
+rate Python names, encoder angle, timer) are listed in `simulation/field2d/mblock_project.py`
+(`SENSORS`): export a project with those blocks from mBlock to confirm them.
