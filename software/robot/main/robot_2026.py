@@ -10,8 +10,9 @@
 #     automatic: drive() / turn_to() closed loop on encoders + gyro (Avanzar_N -> ch.forward,
 #     avance_derecha_N -> ch.right, girar_derecha_90 -> ch.turn(90), ...). With
 #     ch.USE_SENSORS = False everything falls back to open-loop move(), like 2025.
-#   - automatic stage: the pull strategy (auto_pull_central.run), chosen before the start:
-#     N2 "mixed" (default), N3 "balls", N4 "props" (press while waiting for N1)
+#   - automatic stage: auto_pull_central.run(strategy), chosen before the start (press while
+#     waiting for N1): N2 "bonus" (default: X12 into exchange area 1, the winning plan, see
+#     simulation/control/match_2026.py), N3 "balls", N4 "props"
 #   - mechanisms: the v22 ports, DC motors instead of smart servos (robot_config.json
 #     "mechanisms"; ports are assumptions until the electrical team confirms them):
 #       DC1 intake throat rollers   DC2 intake head lift   DC3 elevator carriage   DC4 tower
@@ -45,7 +46,7 @@ FEEDER_POWER = 80
 HEAD_POWER = 100
 ELEVATOR_POWER = 100
 JAW_POWER = 60
-STRATEGY_KEYS = (("N2", "mixed"), ("N3", "balls"), ("N4", "props"))
+STRATEGY_KEYS = (("N2", "bonus"), ("N3", "balls"), ("N4", "props"))
 
 MODE_BALLS, MODE_GRIPPER = 0, 1
 

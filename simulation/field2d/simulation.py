@@ -24,6 +24,7 @@ from ball_physics import named_colliders
 from match import CollisionMonitor, MatchMonitor
 from mechanisms import Mechanisms
 from props import Gripper, Prop, field_props, rake_props
+import referee
 from mblock_runtime import DCBus, GamepadInput, MotorBus, ProgramRunner, Sensors, ServoBus, SimClock
 from robot import DEFAULT_CONFIG, RobotConfig, RobotPose
 from uncertainty import Variation
@@ -91,6 +92,7 @@ class Simulation:
         self.clock = SimClock()
         self.motors = self._new_motors()
         self.sensors = Sensors()
+        self.bonus_judged = None                   # referee.manual_stage_start() at 30 s
         self.servos = ServoBus()                   # smart servos (angles), mbuild.smartservo
         self._ranging = json.loads(DEFAULT_CONFIG.read_text()).get("ranging_sensors", {})
         self._colliders = [box for _, box in named_colliders(self.elements)]
@@ -151,6 +153,7 @@ class Simulation:
         self.clock = SimClock()
         self.motors = self._new_motors()
         self.sensors = Sensors()
+        self.bonus_judged = None
         self.servos = ServoBus()
         self.dc = DCBus()
         self.mechanisms.reset()
@@ -233,6 +236,7 @@ class Simulation:
             self.monitor.update(self.clock.now, dt, self.pose, (vx, vy, omega), mech_moving)
             self.collisions.update(self.clock.now, self.pose, self.mechanisms.position("intake_lift"))
             self.clock.advance(dt)
+            self._referee()
             self._check()
         if self.running and self.state.trail[-1] != (self.pose.x, self.pose.y):
             self.state.trail.append((self.pose.x, self.pose.y))
@@ -297,6 +301,14 @@ class Simulation:
         """simtrace.mark() from the program thread; the sim is paused meanwhile (lockstep)."""
         p = self.pose
         self.marks.append({"label": label, "t": self.clock.now, "x": p.x, "y": p.y, "theta": p.theta, **info})
+
+    def _referee(self) -> None:
+        """Manual stage start (30 s) in runs that go past the automatic stage: bonus exchange,
+        own resource balls released (referee.py)."""
+        if (self.bonus_judged is None and self.world and self.ball_scenario == "initial"
+                and (not self.time_limit or self.time_limit > referee.MANUAL_START_S)
+                and self.clock.now >= referee.MANUAL_START_S - 1e-9):
+            self.bonus_judged = referee.manual_stage_start(self)
 
     def _check(self) -> None:
         if out_of_bounds(self.cfg, self.pose):

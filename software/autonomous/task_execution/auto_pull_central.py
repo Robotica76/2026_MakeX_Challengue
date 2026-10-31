@@ -43,9 +43,12 @@ import chassis as ch
 #   "balls"  21-22 balls                                    done 27.0 s
 #   "mixed"  16-17 balls + 1 cone + X12 (lower strategy area) done 25.1 s
 #   "props"  11 balls + 2 cones + X9 + X12                  done 28.0 s (1 s margin)
+#   "bonus"  X12 into red exchange area 1 (valid: +12 balls at 20 points in the manual stage),
+#            balls of one upper pass, the cone on our floor
 # The props passes go first with the head high; the floor passes come once the head is low.
-STRATEGY = "mixed"
+STRATEGY = "bonus"
 STRATEGIES = {
+    "bonus": ["props_low_b", "floor_low_b", "bonus_low_b", "upper_b"],
     "balls": ["upper_b", "upper_a", "lower_a", "lower_b"],
     "mixed": ["props_low_b", "upper_b", "lower_b", "floor_low_b"],
     "props": ["props_low_b", "props_low_a", "floor_low_a", "floor_low_b", "lower_b"],
@@ -65,7 +68,8 @@ PLAN = {
     "lower_heights": (85.0, 50.0),     # lower level (ball centres 85)
     "prop_height": 250.0,      # head on the props (cones and cubes from 259 mm)
     "floor_prop_height": 50.0,  # head on props lying on the floor (cube top 120 mm)
-    "x_in_floor": 1925.0,      # floor props at the line (centre ~2220): head front 2210, clear of the dividers
+    "x_in_floor": 1925.0,
+    "grab_head_height": 150.0,  # head above the cone (170 mm) while the gripper takes the X12      # floor props at the line (centre ~2220): head front 2210, clear of the dividers
 }
 try:                           # simulator only: route optimizer overrides
     import simtrace
@@ -81,8 +85,16 @@ HEAD_MM_S = 53.0
 START_X, START_Y = 325.0, 325.0
 END_BY = 29.0
 HARD_STOP = 29.5
-PASS_S = {"upper": 7.0, "lower": 7.0, "props": 5.5, "floor": 5.0}   # first estimate of a pass (s); then the longest measured
+PASS_S = {"upper": 7.0, "lower": 7.0, "props": 5.5, "floor": 5.0, "bonus": 8.5}   # first estimate of a pass (s); then the longest measured
 CLEAR_X = 1920.0           # robot centre x with the head (front 285 mm) clear of the central strip
+# Gripper (right side, robot_config.json "gripper"): grab point 228.5 mm right of and 89 mm behind
+# the robot centre, 85.5 mm high with the carriage down (a cube on the floor is in reach).
+GRAB_RIGHT, GRAB_BACK = 228.5, 89.0
+PINNED_MM = 177.0          # a prop pulled by the head rides this far in front of the robot centre
+X12_LANE_Y = 839.5         # default prop card: X12 on the lower strategy area, third spot
+EXCHANGE_DROP = (1520.0, 340.0)   # cube centre: overlaps red exchange area 1 (x 1361-1679, y <= 318)
+PARK = (1968.0, 745.0)     # waiting spot at 30 s: clear of the released balls and the cone; head
+                           # front 2217 (< 2220, clear of the strategy area)
 
 T0 = time.time()
 jobs = []
@@ -99,7 +111,7 @@ def now():
 
 
 def stop_all():
-    for port in ("DC1", "DC2", "DC7"):
+    for port in ("DC1", "DC2", "DC6", "DC7"):
         pb.stop(port)
     ch.stop()
 
@@ -170,6 +182,9 @@ def pull_out(name, next_height):
     the strategy area, the head starts moving to the next pass height (saves the wait)."""
     state = {"moved": False}
 
+    if TASKS[name] == "floor":
+        next_height = None     # the head stays on the floor props until they are on our side
+
     def cycle():
         tick()
         if not state["moved"] and next_height is not None and field_xy()[0] < CLEAR_X:
@@ -206,7 +221,35 @@ def props_pass(name, next_height):
     pull_out(name, next_height)
 
 
-TASKS = {"upper_a": "upper", "upper_b": "upper", "lower_a": "lower", "lower_b": "lower",
+def jaw(seconds):
+    """Run the gripper jaw (DC6): seconds > 0 closes, < 0 opens; returns at once."""
+    pb.set_power("DC6", 100 if seconds > 0 else -100)
+    jobs.append(["DC6", now() + abs(seconds)])
+
+
+def bonus_pass(name, next_height):
+    """The X12, pulled onto our floor by floor_low_b, into red exchange area 1 with the gripper:
+    the gripper (right side) faces +x, straddles the cube from our side and closes; the robot
+    turns back and lowers it into the area, opens, and parks clear of it (p.30 e)."""
+    px, py = field_xy()[0] + PINNED_MM, X12_LANE_Y   # where floor_low_b left it, in front of the robot
+    gy = py + GRAB_BACK - 15.0             # 15 mm short of centre (grab tolerance 25): keeps the body
+                                           # front at the cone base (y ~1004); check this clearance on the robot
+    head_to(PLAN["grab_head_height"])
+    jaw(0.35)                              # 138 -> 124 mm, still open for the 120 mm cube
+    report(name + " approach", go_to(px - GRAB_RIGHT - 200.0, gy))
+    report(name + " gripper to +x", ch.turn_to(-90, speed=PLAN["travel_speed"], timeout=3, on_cycle=tick))
+    finish_jobs()
+    report(name + " grab", go_to(px - GRAB_RIGHT, gy, speed=PLAN["approach_speed"], tol=1.0))
+    jaw(0.3)                               # -> 112 mm: holds the cube
+    finish_jobs()
+    report(name + " gripper to -y", ch.turn_to(0, speed=PLAN["travel_speed"], timeout=3, on_cycle=tick))
+    report(name + " over the area", go_to(EXCHANGE_DROP[0] + GRAB_BACK, EXCHANGE_DROP[1] + GRAB_RIGHT, tol=1.0))
+    jaw(-0.8)
+    finish_jobs()
+    report(name + " released", go_to(PARK[0], PARK[1]))
+
+
+TASKS = {"bonus_low_b": "bonus", "upper_a": "upper", "upper_b": "upper", "lower_a": "lower", "lower_b": "lower",
          "props_low_a": "props", "props_low_b": "props", "props_up_a": "props", "props_up_b": "props",
          "floor_low_a": "floor", "floor_low_b": "floor", "floor_up_a": "floor", "floor_up_b": "floor"}
 
@@ -221,6 +264,8 @@ def approach_height(name):
         return PLAN["prop_height"]
     if level == "floor":
         return PLAN["floor_prop_height"]
+    if level == "bonus":
+        return PLAN["grab_head_height"]
     return PLAN[level + "_heights"][0]
 
 
@@ -239,7 +284,8 @@ def main(calibrate=True):
         if i + 1 < len(tasks) and now() + estimate(name) + estimate(tasks[i + 1]) <= END_BY:
             nxt = approach_height(tasks[i + 1])
         t = now()
-        (props_pass if TASKS[name] in ("props", "floor") else table_pass)(name, nxt)
+        kind = TASKS[name]
+        (bonus_pass if kind == "bonus" else props_pass if kind in ("props", "floor") else table_pass)(name, nxt)
         pass_time[name[:5]] = max(pass_time.get(name[:5], 0.0), now() - t)
     finish_jobs()
 

@@ -1,10 +1,18 @@
 # Manual Strategy
 
-Define student driver workflow only within verified operator and phase permissions. No task order, timing, or control binding is confirmed.
+The manual stage (100 s) after the "bonus" automatic stage. The driver uses `robot_2026.py`
+("≡" ball mode: L1 intake, R1 shoot, Up/Down head); `simulation/control/match_2026.py` plays the
+same plan as moves so the simulator can time and score it.
 
-| Scenario / candidate task | Rule / requirement IDs | Priority rationale | Driver / teammate responsibility | Robot feedback needed | Recovery question | Notebook record |
-| --- | --- | --- | --- | --- | --- | --- |
-| TBD | TBD | TBD | TBD | TBD | TBD | TBD |
+| Step | Simulated time | What the driver does | Why |
+| --- | --- | --- | --- |
+| 1 | 30-39 s | Sweep resource area 1 facing -x at y 590 (own 10 + 12 bonus balls, 18 fit), head down | bonus balls score 20 |
+| 2 | 41-62 s | Shoot from (1600, 1000), launcher toward the blue fortress, aimed 150 mm short of its centre | path crosses the centre over the low strategy area |
+| 3 | 64-81 s | Rest of area 1, then resource area 2 (y 2465) | own balls are uncontested |
+| 4 | 83-100 s | Shoot from (1600, 2300) | path over the upper strategy area |
+| 5 | 102-126 s | Central table upper level (head 255 mm, capture), shoot | contested balls last |
+
+Result (simulation): 30 shots, 18 in the blue fortress, 300 points with the X12 bonus.
 
 ## Practice evaluation
 
@@ -12,4 +20,5 @@ Define student driver workflow only within verified operator and phase permissio
 | --- | --- | --- | --- | --- | --- |
 | TBD | TBD | TBD | TBD | TBD | TBD |
 
-Coordinate [manual control contracts](../04_controls/manual_control/README.md), [scoring priorities](scoring_strategy.md), and [competition verification](../06_verification/competition_tests/README.md). Capture lessons in the [notebook](../08_engineering_notebook/lessons_learned/README.md).
+Open points: shooter calibration (power vs distance) on the robot, balls bouncing out of the
+fortress, pins / X mark / letter cubes for the extra points.

@@ -42,6 +42,7 @@ from kinematics import load_drive_train  # noqa: E402
 from match import format_clock, stage_at  # noqa: E402
 from mechanisms import load_mechanisms  # noqa: E402
 from props import load_gripper, score_preview  # noqa: E402
+from referee import match_score  # noqa: E402
 from mblock_runtime import GamepadInput  # noqa: E402
 from robot import DEFAULT_CONFIG, load_config, mecanum_wheels, start_pose  # noqa: E402
 from simulation import AUTO_STAGE_S, Simulation, load_gyro_sign  # noqa: E402
@@ -447,8 +448,11 @@ class Viewer3D:
         prev = score_preview(self.sim.props, self.sim.elements, self.sim.cfg.alliance)
         bonus = prev["bonus"]
         held = self.sim.gripper.held.label if self.sim.gripper and self.sim.gripper.held else "-"
+        score = match_score(self.sim, self.sim.cfg.alliance)
         return (f"\ngripper holds {held}   bonus cubes valid {', '.join(bonus['valid']) or 'none'} "
-                f"(+{bonus['bonus_balls']} balls)   cones hung {prev['cones']}   letter cubes in channels {prev['letter_cubes']}")
+                f"(+{bonus['bonus_balls']} balls)   cones hung {prev['cones']}   letter cubes in channels {prev['letter_cubes']}"
+                f"\nSCORE {self.sim.cfg.alliance} {score['total']}   balls in the opponent fortress {score['balls']} "
+                f"(bonus {score['bonus_balls']} at 20)   not simulated: {score['not_simulated']}")
 
     def _ball_text(self):
         w = self.sim.world

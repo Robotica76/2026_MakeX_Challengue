@@ -17,7 +17,25 @@ the v22 model; nothing has been run on the robot.
 | Bonus cube in own exchange area at the end of the stage | p.29–30 | X3–X12 extra balls placed in the own resource area, each scoring 20 instead of 10 |
 | X mark must not be touched | R24, p.72–73 | The routine stays below the table top (654 mm) and away from the X |
 
-## Plan (team, current): pull the central elements to our side
+## Winning plan (current): X12 into our exchange area
+
+Default `STRATEGY = "bonus"` in `auto_pull_central.py` (2026-10-31). A valid X12 at the end of the
+stage gives 12 extra balls in our resource area and makes the first 12 balls we score worth 20
+(p.30, p.36): it scored 300 points against 80-130 for the other strategies with the same manual
+stage (`simulation/analysis/simulate_match.py --compare`).
+
+| Time | Event |
+| --- | --- |
+| 0-8.3 s | props_low_b: the head pulls the X12 and a cone off the strategy area (they drop at the line) |
+| 8.3-13.4 s | floor_low_b: head at 50 mm, pulls both onto our floor |
+| 13.4-22.7 s | the gripper (right side) straddles the X12 from our side, closes, the robot turns and puts it in red exchange area 1 |
+| 22.7-25.1 s | open, park at (1968, 745), clear of the cube and the released balls; stationary at 30 s |
+
+Checks to do on the robot: the grab stops 15 mm short of the cube centre so the body front stays
+at the cone base (~0 mm margin in the model); the default prop card is assumed (the AI camera must
+find the X12).
+
+## Plan: pull the central elements to our side
 
 Team decision (2026-10-31): in the automatic stage, do not store or shoot; drag as many central
 elements as possible onto our side, where the opponent cannot reach them (R06), and use or place
