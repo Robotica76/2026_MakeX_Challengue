@@ -7,7 +7,7 @@
 Estudio de `software/controls/drivetrain/chassis.py` en el simulador 2D
 (`simulation/field2d`) con 300 robots simulados por escenario, cada uno con
 errores distintos de ruedas, motores, deslizamiento, giroscopio y encoders.
-Generado el 2026-10-23 por `simulation/analysis/make_chassis_report.py`
+Generado el 2026-10-30 por `simulation/analysis/make_chassis_report.py`
 (semilla 2026, 3 min). Volver a correrlo reproduce estos números.
 
 ### Resumen
@@ -19,26 +19,26 @@ actual de `chassis.py`.
 
 | Escenario | Movimientos que pasan | Peor p95 avance/lateral | Peor p95 giro | Rutina completa (media) |
 | --- | --- | --- | --- | --- |
-| chassis.py tal cual | 0/10 | 4,46 cm | 3,06° | 25,7 s |
-| A: tolerancias finas | 0/10 | 3,87 cm | 2,15° | 27,1 s |
-| B: A + STRAFE_FACTOR 1.075 | 0/10 | 2,09 cm | 2,16° | 27,2 s |
-| C: A + robot calibrado | 10/10 | 0,63 cm | 1,27° | 26,8 s |
-| D: C sin GYRO_SCALE | 6/10 | 0,63 cm | 2,14° | 26,8 s |
+| chassis.py tal cual | 0/10 | 4,47 cm | 3,06° | 24,5 s |
+| A: tolerancias finas | 0/10 | 3,86 cm | 2,13° | 25,8 s |
+| B: A + STRAFE_FACTOR 1.075 | 0/10 | 2,11 cm | 2,13° | 25,9 s |
+| C: A + robot calibrado | 10/10 | 0,63 cm | 1,20° | 25,5 s |
+| D: C sin GYRO_SCALE | 6/10 | 0,63 cm | 2,12° | 25,5 s |
 
 1. **`chassis.py` tal cual no cumple** en ninguno de los 10 tipos de movimiento.
 2. **Las tolerancias están en el límite del requisito.** `drive()` se detiene en cuanto
    está a menos de `TOL_CM = 1.0` cm, así que un robot ideal ya termina
    0,95–1,00 cm antes del objetivo.
-3. **El resto del error no lo ven los encoders.** En al menos el 99,7 % de los
+3. **El resto del error no lo ven los encoders.** En al menos el 100,0 % de los
    casos la odometría dice "llegué", pero el robot real está en otro lugar. El
    deslizamiento lateral explica casi todo el error al moverse (ρ = -0,96) y
-   el error de escala del giroscopio el de los giros (ρ = +0,94).
+   el error de escala del giroscopio el de los giros (ρ = +0,95).
 4. **Con tolerancias finas y el robot calibrado sí cumple** (escenario C): todos los
    movimientos pasan, con peor error de 0,76 cm y cotas inferiores de
-   99,0 % (movimientos) y 96,1 % (giros).
+   99,0 % (movimientos) y 96,5 % (giros).
 5. **La escala del giroscopio hay que corregirla en el código.** Sin `GYRO_SCALE`
    (escenario D) pasan 0 de 4 giros. `chassis.py` todavía no tiene esa constante.
-6. **Costo en tiempo:** la rutina pasa de 25,7 s a 26,8 s de
+6. **Costo en tiempo:** la rutina pasa de 24,5 s a 25,5 s de
    media con las tolerancias finas.
 
 Los rangos de error son **estimaciones**, no mediciones del robot. El estudio prueba la
@@ -150,46 +150,46 @@ punto de inicio.
 
 | Movimiento | Tolerancia | Dentro / total | Cota inf. 95 % | Resultado | Error medio | p95 | Máx. | Tiempo medio |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| forward 60 | 1 cm | 46/300 | 12,0 % | **FALLA** | 1,66 | 2,67 | 3,11 | 2,7 s |
-| backward 60 | 1 cm | 43/300 | 11,1 % | **FALLA** | 1,66 | 2,69 | 3,13 | 2,7 s |
-| right 30 | 1 cm | 2/300 | 0,1 % | **FALLA** | 2,98 | 4,46 | 5,53 | 1,8 s |
-| left 30 | 1 cm | 2/300 | 0,1 % | **FALLA** | 2,99 | 4,45 | 5,53 | 1,8 s |
-| diagonal 30/30 | 1 cm | 1/300 | 0,0 % | **FALLA** | 2,93 | 4,41 | 5,47 | 2,3 s |
-| diagonal back | 1 cm | 1/300 | 0,0 % | **FALLA** | 2,93 | 4,36 | 5,57 | 2,3 s |
-| turn_to 90 | 1,5° | 155/300 | 46,8 % | **FALLA** | 1,51 | 2,94 | 4,49 | 2,7 s |
-| turn_to 0 | 1,5° | 151/300 | 45,4 % | **FALLA** | 1,56 | 3,06 | 4,27 | 2,7 s |
-| turn -90 | 1,5° | 152/300 | 45,8 % | **FALLA** | 1,53 | 3,06 | 4,54 | 2,7 s |
-| turn 90 | 1,5° | 152/300 | 45,8 % | **FALLA** | 1,53 | 3,06 | 4,46 | 2,8 s |
+| forward 60 | 1 cm | 44/300 | 11,4 % | **FALLA** | 1,66 | 2,67 | 3,11 | 2,7 s |
+| backward 60 | 1 cm | 44/300 | 11,4 % | **FALLA** | 1,66 | 2,68 | 3,13 | 2,7 s |
+| right 30 | 1 cm | 3/300 | 0,3 % | **FALLA** | 2,98 | 4,45 | 5,51 | 1,8 s |
+| left 30 | 1 cm | 1/300 | 0,0 % | **FALLA** | 2,99 | 4,47 | 5,53 | 1,8 s |
+| diagonal 30/30 | 1 cm | 1/300 | 0,0 % | **FALLA** | 2,93 | 4,42 | 5,48 | 2,3 s |
+| diagonal back | 1 cm | 1/300 | 0,0 % | **FALLA** | 2,93 | 4,33 | 5,55 | 2,3 s |
+| turn_to 90 | 1,5° | 154/300 | 46,4 % | **FALLA** | 1,51 | 2,93 | 4,52 | 2,4 s |
+| turn_to 0 | 1,5° | 151/300 | 45,4 % | **FALLA** | 1,55 | 2,99 | 4,07 | 2,4 s |
+| turn -90 | 1,5° | 155/300 | 46,8 % | **FALLA** | 1,52 | 3,05 | 4,40 | 2,4 s |
+| turn 90 | 1,5° | 153/300 | 46,1 % | **FALLA** | 1,52 | 3,06 | 4,48 | 2,4 s |
 
 #### C: tolerancias finas y robot calibrado
 
 | Movimiento | Tolerancia | Dentro / total | Cota inf. 95 % | Resultado | Error medio | p95 | Máx. | Tiempo medio |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| forward 60 | 1 cm | 300/300 | 99,0 % | **PASA** | 0,39 | 0,62 | 0,74 | 2,9 s |
-| backward 60 | 1 cm | 300/300 | 99,0 % | **PASA** | 0,40 | 0,63 | 0,72 | 2,9 s |
-| right 30 | 1 cm | 300/300 | 99,0 % | **PASA** | 0,34 | 0,54 | 0,76 | 2,0 s |
-| left 30 | 1 cm | 300/300 | 99,0 % | **PASA** | 0,34 | 0,54 | 0,71 | 2,0 s |
-| diagonal 30/30 | 1 cm | 300/300 | 99,0 % | **PASA** | 0,37 | 0,56 | 0,71 | 2,4 s |
-| diagonal back | 1 cm | 300/300 | 99,0 % | **PASA** | 0,37 | 0,55 | 0,70 | 2,4 s |
-| turn_to 90 | 1,5° | 297/300 | 97,4 % | **PASA** | 0,54 | 1,16 | 1,60 | 2,8 s |
-| turn_to 0 | 1,5° | 296/300 | 97,0 % | **PASA** | 0,57 | 1,27 | 2,02 | 2,8 s |
-| turn -90 | 1,5° | 294/300 | 96,1 % | **PASA** | 0,54 | 1,23 | 2,04 | 2,8 s |
-| turn 90 | 1,5° | 294/300 | 96,1 % | **PASA** | 0,59 | 1,22 | 1,91 | 2,8 s |
+| forward 60 | 1 cm | 300/300 | 99,0 % | **PASA** | 0,41 | 0,63 | 0,74 | 2,9 s |
+| backward 60 | 1 cm | 300/300 | 99,0 % | **PASA** | 0,39 | 0,61 | 0,70 | 2,9 s |
+| right 30 | 1 cm | 300/300 | 99,0 % | **PASA** | 0,33 | 0,53 | 0,76 | 2,0 s |
+| left 30 | 1 cm | 300/300 | 99,0 % | **PASA** | 0,33 | 0,52 | 0,71 | 2,0 s |
+| diagonal 30/30 | 1 cm | 300/300 | 99,0 % | **PASA** | 0,37 | 0,56 | 0,70 | 2,4 s |
+| diagonal back | 1 cm | 300/300 | 99,0 % | **PASA** | 0,36 | 0,55 | 0,69 | 2,4 s |
+| turn_to 90 | 1,5° | 300/300 | 99,0 % | **PASA** | 0,52 | 1,09 | 1,49 | 2,5 s |
+| turn_to 0 | 1,5° | 296/300 | 97,0 % | **PASA** | 0,54 | 1,20 | 1,78 | 2,5 s |
+| turn -90 | 1,5° | 296/300 | 97,0 % | **PASA** | 0,51 | 1,16 | 1,95 | 2,5 s |
+| turn 90 | 1,5° | 295/300 | 96,5 % | **PASA** | 0,57 | 1,16 | 1,70 | 2,5 s |
 
 #### D: como C, sin corregir la escala del giroscopio
 
 | Movimiento | Tolerancia | Dentro / total | Cota inf. 95 % | Resultado | Error medio | p95 | Máx. | Tiempo medio |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| forward 60 | 1 cm | 300/300 | 99,0 % | **PASA** | 0,39 | 0,61 | 0,74 | 2,9 s |
-| backward 60 | 1 cm | 300/300 | 99,0 % | **PASA** | 0,40 | 0,63 | 0,72 | 2,9 s |
-| right 30 | 1 cm | 300/300 | 99,0 % | **PASA** | 0,34 | 0,54 | 0,76 | 2,0 s |
-| left 30 | 1 cm | 300/300 | 99,0 % | **PASA** | 0,34 | 0,54 | 0,71 | 2,0 s |
+| forward 60 | 1 cm | 300/300 | 99,0 % | **PASA** | 0,41 | 0,63 | 0,73 | 2,9 s |
+| backward 60 | 1 cm | 300/300 | 99,0 % | **PASA** | 0,39 | 0,61 | 0,70 | 2,9 s |
+| right 30 | 1 cm | 300/300 | 99,0 % | **PASA** | 0,33 | 0,53 | 0,76 | 2,0 s |
+| left 30 | 1 cm | 300/300 | 99,0 % | **PASA** | 0,33 | 0,53 | 0,71 | 2,0 s |
 | diagonal 30/30 | 1 cm | 300/300 | 99,0 % | **PASA** | 0,37 | 0,56 | 0,70 | 2,4 s |
-| diagonal back | 1 cm | 300/300 | 99,0 % | **PASA** | 0,37 | 0,55 | 0,70 | 2,4 s |
-| turn_to 90 | 1,5° | 244/300 | 77,2 % | **FALLA** | 0,89 | 1,95 | 3,59 | 2,8 s |
-| turn_to 0 | 1,5° | 240/300 | 75,8 % | **FALLA** | 0,93 | 2,13 | 3,47 | 2,8 s |
-| turn -90 | 1,5° | 239/300 | 75,5 % | **FALLA** | 0,91 | 2,14 | 3,59 | 2,8 s |
-| turn 90 | 1,5° | 242/300 | 76,5 % | **FALLA** | 0,92 | 2,07 | 3,43 | 2,8 s |
+| diagonal back | 1 cm | 300/300 | 99,0 % | **PASA** | 0,36 | 0,54 | 0,69 | 2,4 s |
+| turn_to 90 | 1,5° | 243/300 | 76,9 % | **FALLA** | 0,88 | 1,95 | 3,60 | 2,5 s |
+| turn_to 0 | 1,5° | 245/300 | 77,6 % | **FALLA** | 0,91 | 2,12 | 3,26 | 2,5 s |
+| turn -90 | 1,5° | 245/300 | 77,6 % | **FALLA** | 0,90 | 2,09 | 3,46 | 2,5 s |
+| turn 90 | 1,5° | 244/300 | 77,2 % | **FALLA** | 0,90 | 2,10 | 3,49 | 2,5 s |
 
 ### Método
 
@@ -227,7 +227,7 @@ para que la lógica de `chassis.py` pueda cumplir.
 
 Study of `software/controls/drivetrain/chassis.py` in the 2D simulator
 (`simulation/field2d`) with 300 simulated robots per scenario, each with its own
-wheel, motor, slip, gyroscope and encoder errors. Generated on 2026-10-23
+wheel, motor, slip, gyroscope and encoder errors. Generated on 2026-10-30
 by `simulation/analysis/make_chassis_report.py` (seed 2026, 3 min).
 Running it again reproduces these numbers.
 
@@ -239,26 +239,26 @@ no requirement, so they use 1.5°, the current tolerance in `chassis.py`.
 
 | Scenario | Moves that pass | Worst p95 drive/strafe | Worst p95 turn | Full routine (mean) |
 | --- | --- | --- | --- | --- |
-| chassis.py as is | 0/10 | 4.46 cm | 3.06° | 25.7 s |
-| A: tight tolerances | 0/10 | 3.87 cm | 2.15° | 27.1 s |
-| B: A + STRAFE_FACTOR 1.075 | 0/10 | 2.09 cm | 2.16° | 27.2 s |
-| C: A + calibrated robot | 10/10 | 0.63 cm | 1.27° | 26.8 s |
-| D: C without GYRO_SCALE | 6/10 | 0.63 cm | 2.14° | 26.8 s |
+| chassis.py as is | 0/10 | 4.47 cm | 3.06° | 24.5 s |
+| A: tight tolerances | 0/10 | 3.86 cm | 2.13° | 25.8 s |
+| B: A + STRAFE_FACTOR 1.075 | 0/10 | 2.11 cm | 2.13° | 25.9 s |
+| C: A + calibrated robot | 10/10 | 0.63 cm | 1.20° | 25.5 s |
+| D: C without GYRO_SCALE | 6/10 | 0.63 cm | 2.12° | 25.5 s |
 
 1. **`chassis.py` as is does not meet it** for any of the 10 move types.
 2. **The tolerances sit on the requirement.** `drive()` stops as soon as it is within
    `TOL_CM = 1.0` cm, so even an ideal robot ends 0.95–1.00 cm
    short of the target.
-3. **The remaining error is invisible to the encoders.** In at least 99.7% of
+3. **The remaining error is invisible to the encoders.** In at least 100.0% of
    the cases odometry says "arrived" while the real robot is elsewhere. Strafe slip
    explains almost all of the drive error (ρ = -0.96) and gyro scale error
-   the turn error (ρ = +0.94).
+   the turn error (ρ = +0.95).
 4. **With tight tolerances and a calibrated robot it passes** (scenario C): every move
    passes, worst error 0.76 cm, lower bounds 99.0% (moves)
-   and 96.1% (turns).
+   and 96.5% (turns).
 5. **The gyro scale has to be corrected in code.** Without `GYRO_SCALE` (scenario D),
    0 of 4 turns pass. `chassis.py` does not have that constant yet.
-6. **Time cost:** the routine goes from 25.7 s to 26.8 s on
+6. **Time cost:** the routine goes from 24.5 s to 25.5 s on
    average with the tight tolerances.
 
 The error ranges are **estimates**, not robot measurements. The study tests the control
@@ -363,46 +363,46 @@ robot). The spread is a few centimetres, so the axes are in cm from the start po
 
 | Move | Tolerance | In tolerance / total | 95% lower bound | Result | Mean error | p95 | Max | Mean time |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| forward 60 | 1 cm | 46/300 | 12.0% | **FAIL** | 1.66 | 2.67 | 3.11 | 2.7 s |
-| backward 60 | 1 cm | 43/300 | 11.1% | **FAIL** | 1.66 | 2.69 | 3.13 | 2.7 s |
-| right 30 | 1 cm | 2/300 | 0.1% | **FAIL** | 2.98 | 4.46 | 5.53 | 1.8 s |
-| left 30 | 1 cm | 2/300 | 0.1% | **FAIL** | 2.99 | 4.45 | 5.53 | 1.8 s |
-| diagonal 30/30 | 1 cm | 1/300 | 0.0% | **FAIL** | 2.93 | 4.41 | 5.47 | 2.3 s |
-| diagonal back | 1 cm | 1/300 | 0.0% | **FAIL** | 2.93 | 4.36 | 5.57 | 2.3 s |
-| turn_to 90 | 1.5° | 155/300 | 46.8% | **FAIL** | 1.51 | 2.94 | 4.49 | 2.7 s |
-| turn_to 0 | 1.5° | 151/300 | 45.4% | **FAIL** | 1.56 | 3.06 | 4.27 | 2.7 s |
-| turn -90 | 1.5° | 152/300 | 45.8% | **FAIL** | 1.53 | 3.06 | 4.54 | 2.7 s |
-| turn 90 | 1.5° | 152/300 | 45.8% | **FAIL** | 1.53 | 3.06 | 4.46 | 2.8 s |
+| forward 60 | 1 cm | 44/300 | 11.4% | **FAIL** | 1.66 | 2.67 | 3.11 | 2.7 s |
+| backward 60 | 1 cm | 44/300 | 11.4% | **FAIL** | 1.66 | 2.68 | 3.13 | 2.7 s |
+| right 30 | 1 cm | 3/300 | 0.3% | **FAIL** | 2.98 | 4.45 | 5.51 | 1.8 s |
+| left 30 | 1 cm | 1/300 | 0.0% | **FAIL** | 2.99 | 4.47 | 5.53 | 1.8 s |
+| diagonal 30/30 | 1 cm | 1/300 | 0.0% | **FAIL** | 2.93 | 4.42 | 5.48 | 2.3 s |
+| diagonal back | 1 cm | 1/300 | 0.0% | **FAIL** | 2.93 | 4.33 | 5.55 | 2.3 s |
+| turn_to 90 | 1.5° | 154/300 | 46.4% | **FAIL** | 1.51 | 2.93 | 4.52 | 2.4 s |
+| turn_to 0 | 1.5° | 151/300 | 45.4% | **FAIL** | 1.55 | 2.99 | 4.07 | 2.4 s |
+| turn -90 | 1.5° | 155/300 | 46.8% | **FAIL** | 1.52 | 3.05 | 4.40 | 2.4 s |
+| turn 90 | 1.5° | 153/300 | 46.1% | **FAIL** | 1.52 | 3.06 | 4.48 | 2.4 s |
 
 #### C: tight tolerances and calibrated robot
 
 | Move | Tolerance | In tolerance / total | 95% lower bound | Result | Mean error | p95 | Max | Mean time |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| forward 60 | 1 cm | 300/300 | 99.0% | **PASS** | 0.39 | 0.62 | 0.74 | 2.9 s |
-| backward 60 | 1 cm | 300/300 | 99.0% | **PASS** | 0.40 | 0.63 | 0.72 | 2.9 s |
-| right 30 | 1 cm | 300/300 | 99.0% | **PASS** | 0.34 | 0.54 | 0.76 | 2.0 s |
-| left 30 | 1 cm | 300/300 | 99.0% | **PASS** | 0.34 | 0.54 | 0.71 | 2.0 s |
-| diagonal 30/30 | 1 cm | 300/300 | 99.0% | **PASS** | 0.37 | 0.56 | 0.71 | 2.4 s |
-| diagonal back | 1 cm | 300/300 | 99.0% | **PASS** | 0.37 | 0.55 | 0.70 | 2.4 s |
-| turn_to 90 | 1.5° | 297/300 | 97.4% | **PASS** | 0.54 | 1.16 | 1.60 | 2.8 s |
-| turn_to 0 | 1.5° | 296/300 | 97.0% | **PASS** | 0.57 | 1.27 | 2.02 | 2.8 s |
-| turn -90 | 1.5° | 294/300 | 96.1% | **PASS** | 0.54 | 1.23 | 2.04 | 2.8 s |
-| turn 90 | 1.5° | 294/300 | 96.1% | **PASS** | 0.59 | 1.22 | 1.91 | 2.8 s |
+| forward 60 | 1 cm | 300/300 | 99.0% | **PASS** | 0.41 | 0.63 | 0.74 | 2.9 s |
+| backward 60 | 1 cm | 300/300 | 99.0% | **PASS** | 0.39 | 0.61 | 0.70 | 2.9 s |
+| right 30 | 1 cm | 300/300 | 99.0% | **PASS** | 0.33 | 0.53 | 0.76 | 2.0 s |
+| left 30 | 1 cm | 300/300 | 99.0% | **PASS** | 0.33 | 0.52 | 0.71 | 2.0 s |
+| diagonal 30/30 | 1 cm | 300/300 | 99.0% | **PASS** | 0.37 | 0.56 | 0.70 | 2.4 s |
+| diagonal back | 1 cm | 300/300 | 99.0% | **PASS** | 0.36 | 0.55 | 0.69 | 2.4 s |
+| turn_to 90 | 1.5° | 300/300 | 99.0% | **PASS** | 0.52 | 1.09 | 1.49 | 2.5 s |
+| turn_to 0 | 1.5° | 296/300 | 97.0% | **PASS** | 0.54 | 1.20 | 1.78 | 2.5 s |
+| turn -90 | 1.5° | 296/300 | 97.0% | **PASS** | 0.51 | 1.16 | 1.95 | 2.5 s |
+| turn 90 | 1.5° | 295/300 | 96.5% | **PASS** | 0.57 | 1.16 | 1.70 | 2.5 s |
 
 #### D: like C, without correcting the gyro scale
 
 | Move | Tolerance | In tolerance / total | 95% lower bound | Result | Mean error | p95 | Max | Mean time |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| forward 60 | 1 cm | 300/300 | 99.0% | **PASS** | 0.39 | 0.61 | 0.74 | 2.9 s |
-| backward 60 | 1 cm | 300/300 | 99.0% | **PASS** | 0.40 | 0.63 | 0.72 | 2.9 s |
-| right 30 | 1 cm | 300/300 | 99.0% | **PASS** | 0.34 | 0.54 | 0.76 | 2.0 s |
-| left 30 | 1 cm | 300/300 | 99.0% | **PASS** | 0.34 | 0.54 | 0.71 | 2.0 s |
+| forward 60 | 1 cm | 300/300 | 99.0% | **PASS** | 0.41 | 0.63 | 0.73 | 2.9 s |
+| backward 60 | 1 cm | 300/300 | 99.0% | **PASS** | 0.39 | 0.61 | 0.70 | 2.9 s |
+| right 30 | 1 cm | 300/300 | 99.0% | **PASS** | 0.33 | 0.53 | 0.76 | 2.0 s |
+| left 30 | 1 cm | 300/300 | 99.0% | **PASS** | 0.33 | 0.53 | 0.71 | 2.0 s |
 | diagonal 30/30 | 1 cm | 300/300 | 99.0% | **PASS** | 0.37 | 0.56 | 0.70 | 2.4 s |
-| diagonal back | 1 cm | 300/300 | 99.0% | **PASS** | 0.37 | 0.55 | 0.70 | 2.4 s |
-| turn_to 90 | 1.5° | 244/300 | 77.2% | **FAIL** | 0.89 | 1.95 | 3.59 | 2.8 s |
-| turn_to 0 | 1.5° | 240/300 | 75.8% | **FAIL** | 0.93 | 2.13 | 3.47 | 2.8 s |
-| turn -90 | 1.5° | 239/300 | 75.5% | **FAIL** | 0.91 | 2.14 | 3.59 | 2.8 s |
-| turn 90 | 1.5° | 242/300 | 76.5% | **FAIL** | 0.92 | 2.07 | 3.43 | 2.8 s |
+| diagonal back | 1 cm | 300/300 | 99.0% | **PASS** | 0.36 | 0.54 | 0.69 | 2.4 s |
+| turn_to 90 | 1.5° | 243/300 | 76.9% | **FAIL** | 0.88 | 1.95 | 3.60 | 2.5 s |
+| turn_to 0 | 1.5° | 245/300 | 77.6% | **FAIL** | 0.91 | 2.12 | 3.26 | 2.5 s |
+| turn -90 | 1.5° | 245/300 | 77.6% | **FAIL** | 0.90 | 2.09 | 3.46 | 2.5 s |
+| turn 90 | 1.5° | 244/300 | 77.2% | **FAIL** | 0.90 | 2.10 | 3.49 | 2.5 s |
 
 ### Method
 

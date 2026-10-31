@@ -25,7 +25,7 @@ was fixed.
 
 | 2025 function | 2026 function | Kept | Improved / fixed |
 | --- | --- | --- | --- |
-| `movimiento_joystick_lanzador()` / `movimiento_joystick_pinza()` | `joystick_drive(front)` with `F1` / `F2` | Same mecanum mixing and the two fronts (launcher / gripper) | One function instead of two copies; deadzone; proportional saturation; heading hold; S-curve smoothing |
+| `movimiento_joystick_lanzador()` / `movimiento_joystick_pinza()` | `joystick_drive(front)` with `F_INTAKE` / `F_GRIPPER` / `F_LAUNCHER` / `F_REAR` | Same mecanum mixing; launcher and gripper fronts kept (`F1`/`F2` aliases) | One function instead of two copies; deadzone; proportional saturation; heading hold; S-curve smoothing |
 | Mixing written inline per motor | `mecanum_mix(vy, vx, w)` / `mecanum_unmix(...)` | Same equations (standard mecanum) | Shared by manual and autonomous; inverse used by odometry |
 | `Avanzar_N(cm)` / `Retroceder_N(cm)` | `forward(cm, front)` / `backward(cm, front)` | Distance in cm | Explicit front (2025 used the gripper front without saying so); closed loop; waits until arrival; returns `True`/`False` |
 | `avance_izquierda_N(cm)` / `avance_derecha_N(cm)` | `left(cm, front)` / `right(cm, front)` | Distance in cm | 2025 used the launcher front, the opposite of `Avanzar_N`; fixed `+5 cm` replaced by calibrated `STRAFE_FACTOR` |
@@ -34,7 +34,7 @@ was fixed.
 | `encoder_motor_Mx.move(...)` called 4 times, no wait | `move_open_loop(...)` | 2025 open-loop behavior, kept as a fallback (`USE_SENSORS = False`) | Per-wheel speeds so all wheels finish together; waits for the theoretical time; tracks the commanded pose |
 | — | `Odometry` (`odo`) | — | New: field pose from encoders + gyroscope; collision and vibration detection |
 | — | `SCurve`, `smoothing_scale()` | — | New: jerk-limited, adaptive manual smoothing |
-| `auxiliar_modo_pinza_lanzador` with buttons "≡" / "+" | `F1` / `F2` constants | Same buttons and meaning | Front handling lives in the drivetrain; mode switching stays in the main program |
+| `auxiliar_modo_pinza_lanzador` with buttons "≡" / "+" | `F_*` front angles (`F1` = launcher, `F2` = gripper) | Same buttons | v22 puts launcher and gripper on the sides, so fronts are angles that rotate forward/strafe; front handling lives in the drivetrain, mode switching in the main program |
 
 ### Defects found in the 2025 code and in the 2025 document
 
@@ -55,7 +55,12 @@ was fixed.
 ### Frames and conventions
 
 - Robot frame: `vy` forward (+), `vx` right (+), `w` clockwise (+). Angles in degrees.
-- Switching the front (`F1` ↔ `F2`) negates `vy` and `vx`, never `w`.
+- Fronts are angles clockwise from the robot forward axis: `F_INTAKE` 0, `F_GRIPPER` 90,
+  `F_REAR` 180, `F_LAUNCHER` −90 (`F1`/`F2` are aliases for launcher/gripper). The
+  front rotates `vy` and `vx` (`to_robot_frame()`), never `w`. Changed for v22, where
+  the gripper and launcher are on the sides ([KI-006](../05_integration/known_issues.md)).
+- Odometry reports the footprint center; the v22 wheel rectangle (center of rotation)
+  is 7.9 cm behind it (`ODOM_CENTER_OFFSET_CM`, [KI-005](../05_integration/known_issues.md)).
 - Field frame: origin and heading 0 where `odo.reset()` is called.
 
 ### Odometry: encoders for distance, gyroscope for heading
@@ -170,7 +175,8 @@ the robot at its final weight. Detailed procedures for the starred items:
 | `WHEEL_DIAMETER` ★ | 8.0 cm | 200 cm run: `× D_real / D_odo` (effective diameter) | 2 |
 | `STRAFE_FACTOR` ★ | 1.0 | 100 cm strafe: `× D_odo / D_real` (estimated 1.05–1.10) | 2 |
 | `GYRO_SCALE` ★ | Not in the code yet | 10 hand turns: `× 3600 / |H|` | 2 |
-| `CM_PER_TURN_DEGREE` | 47 / 90 | Only for `USE_SENSORS = False`: 360° open-loop turn | 3 |
+| `CM_PER_TURN_DEGREE` | 0.603 cm/° (v22 CAD) | Only for `USE_SENSORS = False`: 360° open-loop turn | 3 |
+| `ODOM_CENTER_OFFSET_CM` | 7.9 cm (v22 CAD) | Distance from the wheel-rectangle center to the footprint center; re-measure if the chassis changes | 3 |
 
 ### Control loop
 

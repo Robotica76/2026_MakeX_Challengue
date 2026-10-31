@@ -44,7 +44,7 @@ and driver experience. Rationale and rejected alternatives are logged in
 | Wheels | Mecanum, 8 cm nominal diameter | Effective diameter TBD (calibration step 3 of the Monte Carlo report) |
 | Motors | 4 NovaPi encoder motors: M4 = FL, M1 = FR, M3 = RL, M2 = RR (front F1) | Deduced from 2025 code; verify on robot |
 | Fronts | F1 = launcher (button "≡"), F2 = gripper (button "+") | Carried over from 2025 |
-| Turn geometry | 47 cm of wheel travel per 90°, effective radius ≈ 30 cm | Measured in 2025; recalibrate if the chassis changes |
+| Turn geometry | v22: 0.603 cm of wheel travel per degree (a + b = 345 mm); 2025 robot: 47 cm per 90° | v22 CAD; used in `chassis.py` and the simulators |
 | Footprint / height | v22 CAD: 499.5 × 499.0 mm, 642 mm tall ([v22](../../../mechanical/assemblies/full_robot/v22/README.md)) | CAD only |
 | Wheel layout (v22) | Track 442.5 mm, wheelbase 248 mm, wheel-rectangle center 79 mm behind envelope center; a + b = 345 mm | CAD; differs from `chassis.py` turn constant ([KI-005](../../05_integration/known_issues.md)) |
 

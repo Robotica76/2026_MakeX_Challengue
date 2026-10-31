@@ -59,9 +59,18 @@ Outside the text boxes, `Up`/`Down` change the length and `Right`/`Left` the wid
 by 10 mm (`Shift`: 1 mm), applied immediately. `--length`, `--width` and `--heading`
 set the starting values from the command line.
 
-Wheels (`wheel_diameter_mm` 80, `wheel_width_mm` 40) sit in the footprint corners;
-their top rollers are drawn in the standard "X" layout (front-left/rear-right
-parallel, front-right/rear-left parallel).
+Wheels (`wheel_diameter_mm` 80) sit in the footprint corners unless
+`robot_config.json` gives `wheel_centers_mm` (robot frame, x forward, y left, mm).
+The committed config is the [v22 CAD](../../mechanical/assemblies/full_robot/v22/README.md):
+499.0 x 499.5 mm footprint and the measured wheel centres, with the wheel rectangle
+79 mm behind the footprint centre, so the robot turns about that point and its
+corners sweep a larger circle than a centred robot (spinning inside a start area
+next to the walls leaves the field). The kinematics solve the four wheel speeds by
+least squares for any wheel layout. Resizing the footprint in the panel puts the
+wheels back in the corners (CAD wheel centres only fit the CAD footprint).
+Top rollers are drawn in the standard "X" layout (front-left/rear-right parallel,
+front-right/rear-left parallel). A 3D view of the same simulation is in
+[field3d](../field3d/README.md).
 
 ## Running mBlock programs
 

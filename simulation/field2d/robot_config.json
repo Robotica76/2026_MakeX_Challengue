@@ -1,19 +1,50 @@
 {
-  "name": "robot_mecanum",
+  "name": "storm_breaker_v22",
   "drive": "mecanum",
-  "length_mm": 450,
-  "width_mm": 450,
+  "length_mm": 499.0,
+  "width_mm": 499.5,
   "wheel_diameter_mm": 80,
-  "wheel_width_mm": 40,
+  "wheel_width_mm": 38,
+  "wheel_centers_mm": {
+    "front_left": [
+      45.0,
+      221.2
+    ],
+    "front_right": [
+      45.0,
+      -221.2
+    ],
+    "rear_left": [
+      -203.0,
+      221.2
+    ],
+    "rear_right": [
+      -203.0,
+      -221.2
+    ]
+  },
+  "cad_source": "mechanical/assemblies/full_robot/v22 (STEP frame +y forward, +x right; robot frame here x forward, y left)",
   "alliance": "red",
   "start_area": "red_start_1",
   "heading_deg": 0,
   "drive_train": {
     "motors": {
-      "M4": {"wheel": "front_left", "direction": -1},
-      "M1": {"wheel": "front_right", "direction": 1},
-      "M3": {"wheel": "rear_left", "direction": -1},
-      "M2": {"wheel": "rear_right", "direction": 1}
+      "M4": {
+        "wheel": "front_left",
+        "direction": -1
+      },
+      "M1": {
+        "wheel": "front_right",
+        "direction": 1
+      },
+      "M3": {
+        "wheel": "rear_left",
+        "direction": -1
+      },
+      "M2": {
+        "wheel": "rear_right",
+        "direction": 1
+      }
     },
     "gear_ratio": 1.0,
     "max_rpm": 580

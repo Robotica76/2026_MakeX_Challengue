@@ -8,17 +8,24 @@ adapted to 8 cm wheels. Implementation: [`chassis.py`](chassis.py).
 | Item | Value | Status |
 |---|---|---|
 | Wheels | Mecanum, 8 cm diameter (2025: 6 cm) | Effective diameter TBD (calibrate) |
-| Motor ports | M4 = FL, M1 = FR, M3 = RL, M2 = RR (front F1) | Deduced from 2025 code, verify on robot |
+| Motor ports | M4 = FL, M1 = FR, M3 = RL, M2 = RR (robot forward axis = intake side in v22) | Deduced from 2025 code, verify on robot |
 | Motor signs | FL -1, FR +1, RL -1, RR +1 (left side mirrored) | Deduced from 2025 code, verify on robot |
-| Turn arc | 47 cm of wheel travel per 90 degrees | Measured in 2025, recalibrate if the chassis changes |
+| Turn arc | `CM_PER_TURN_DEGREE` = 34.52 cm × π / 180 = 0.603 cm/° (half track 22.12 + half wheelbase 12.40 cm) | v22 CAD; 2025 robot was 47 cm / 90° |
+| Center of rotation | Wheel rectangle 7.9 cm behind the footprint center (`ODOM_CENTER_OFFSET_CM`) | v22 CAD |
 
 ## Coordinate frames
 
 - Robot frame: `vy` forward (+), `vx` right (+), `w` clockwise (+).
-- Fronts: `F1` = launcher (button "≡"), `F2` = gripper (button "+"). Switching
-  the front inverts forward and strafe, not the turn.
+- Fronts (v22 layout), in degrees clockwise from the robot forward axis:
+  `F_INTAKE = 0` (default), `F_GRIPPER = 90` (right side, button "+", alias `F2`),
+  `F_REAR = 180`, `F_LAUNCHER = -90` (left side, button "≡", alias `F1`). A front
+  rotates forward and strafe so "forward" drives toward that side; it never changes
+  the turn. In 2025 the launcher and gripper were on the forward axis and `F1`/`F2`
+  were ±1; in v22 they are on the sides, so choosing them means strafing.
 - Field frame (odometry): origin and heading 0 where `odo.reset()` was called;
-  `x` to the right and `y` forward of the initial F1 front. Units: cm, degrees.
+  `x` to the right and `y` forward of the robot forward axis. Units: cm, degrees.
+  `odo.x`, `odo.y` are the footprint center; the wheel center (center of rotation)
+  is tracked internally, so turning in place moves the reported point on a 7.9 cm arc.
 
 ## Features and flags
 

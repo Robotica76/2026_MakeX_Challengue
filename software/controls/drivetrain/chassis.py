@@ -11,16 +11,26 @@ WHEEL_DIAMETER = 8.0                              # cm (2025: 6 cm)
 DEGREES_PER_CM = 360 / (3.14159 * WHEEL_DIAMETER)  # 14.32 degrees/cm (2025: 19.10)
 
 # Arc each wheel travels while the robot spins. Depends on the chassis, not the wheel:
-# 47 cm / 90 degrees was measured in 2025 -> effective radius (a + b) approx. 30 cm. Recalibrate if the chassis changes.
-CM_PER_TURN_DEGREE = 47 / 90.0
+# v22 CAD: half track 22.12 cm + half wheelbase 12.40 cm = 34.52 cm (2025 robot: 47 cm / 90 deg).
+CM_PER_TURN_DEGREE = 34.52 * math.pi / 180    # 0.603 cm/deg
+
+# The wheel rectangle (center of rotation) sits behind the footprint center.
+# Odometry reports the footprint center, this far ahead of the wheel center (v22 CAD: 7.9 cm).
+ODOM_CENTER_OFFSET_CM = 7.9
 
 STRAFE_FACTOR = 1.0    # wheel travel / real travel when strafing (2025 used a fixed "+5 cm")
 MAX_SPEED = 100        # max RPM sent to the motors
 DEADZONE = 8           # joystick: values with |v| < DEADZONE are treated as 0
 AUTO_SPEED = 80        # RPM for autonomous routines
 
-F1 = 1    # front = launcher (button "≡")
-F2 = -1   # front = gripper  (button "+")
+# Fronts: which side of the robot the driver (or a routine) treats as "forward",
+# in degrees clockwise from the robot's forward axis. v22 layout:
+F_INTAKE = 0       # intake, front wheels (robot forward axis)
+F_GRIPPER = 90     # gripper, right side
+F_REAR = 180       # electronics box
+F_LAUNCHER = -90   # launcher, left side
+F1 = F_LAUNCHER    # button "≡" (2025 name)
+F2 = F_GRIPPER     # button "+" (2025 name)
 
 # True:  closed loop with encoders + gyroscope + accelerometer.
 # False: purely mechanical (open loop with move(), like 2025). Use if a sensor fails or misbehaves.
@@ -65,7 +75,7 @@ VIB_BASE_TAU = 0.1       # s: slower than this is robot motion, faster is vibrat
 VIB_ENVELOPE_TAU = 0.2   # s: how quickly the vibration level reacts
 
 # ---------------- motors ----------------
-# Mapping deduced from the 2025 code (with front F1):
+# Mapping deduced from the 2025 code, relative to the robot forward axis (v22: intake side):
 #   M4 = FL   M1 = FR
 #   M3 = RL   M2 = RR
 # Left side motors are mirror-mounted, hence sign -1.
@@ -112,6 +122,15 @@ def clamp(value, low, high):
     return max(low, min(high, value))
 
 
+def to_robot_frame(forward, right, front):
+    # Rotates a (forward, right) command given for a front (F_INTAKE, F_GRIPPER, ...)
+    # into the robot frame. Returns (robot_forward, robot_right).
+    a = math.radians(front)
+    c = round(math.cos(a), 12)
+    s = round(math.sin(a), 12)
+    return forward * c - right * s, forward * s + right * c
+
+
 # ---------------- kinematics ----------------
 def mecanum_mix(vy, vx, w):
     # vy: forward (+) / backward (-), vx: right (+) / left (-), w: clockwise turn (+)
@@ -144,8 +163,10 @@ def stop():
 # ---------------- odometry ----------------
 class Odometry:
     # Field position (cm) and heading (degrees, clockwise +) relative to where reset() was called.
-    # x: right of the initial F1 front, y: forward of the initial F1 front.
+    # x: right of the initial robot forward axis, y: forward of it.
     # Distance: encoders. Heading: gyroscope (unaffected by wheel slip).
+    # The robot turns about the wheel center, which is tracked internally (_wx, _wy);
+    # x and y report the footprint center, ODOM_CENTER_OFFSET_CM ahead of it.
 
     def __init__(self):
         self.gyro_bias = 0.0
@@ -167,18 +188,30 @@ class Odometry:
             time.sleep(PERIOD)
         self.gyro_bias = total / n if n else 0.0
 
+    @property
+    def x(self):
+        return self._wx + ODOM_CENTER_OFFSET_CM * math.sin(math.radians(self.heading))
+
+    @property
+    def y(self):
+        return self._wy + ODOM_CENTER_OFFSET_CM * math.cos(math.radians(self.heading))
+
     def reset(self, x=0.0, y=0.0, heading=0.0):
-        self.x = x
-        self.y = y
+        # x, y: footprint center
         self.heading = heading
+        self._wx = x - ODOM_CENTER_OFFSET_CM * math.sin(math.radians(heading))
+        self._wy = y - ODOM_CENTER_OFFSET_CM * math.cos(math.radians(heading))
         self.angles = [read_motor_angle(m) for m in MOTORS] if USE_SENSORS else None
         self.t = now()
 
+    def _translate(self, forward_cm, right_cm, heading):
+        r = math.radians(heading)
+        self._wx += right_cm * math.cos(r) + forward_cm * math.sin(r)
+        self._wy += -right_cm * math.sin(r) + forward_cm * math.cos(r)
+
     def add_commanded(self, forward_cm, right_cm, turn_degrees):
-        # Mechanical mode: assume the robot did exactly what it was told
-        r = math.radians(self.heading)
-        self.x += right_cm * math.cos(r) + forward_cm * math.sin(r)
-        self.y += -right_cm * math.sin(r) + forward_cm * math.cos(r)
+        # Mechanical mode: assume the robot did exactly what it was told (robot frame)
+        self._translate(forward_cm, right_cm, self.heading)
         self.heading += turn_degrees
 
     def update(self):
@@ -201,9 +234,7 @@ class Odometry:
         right /= STRAFE_FACTOR
 
         # project onto the field using the mid-cycle heading
-        r = math.radians((previous_heading + self.heading) / 2)
-        self.x += right * math.cos(r) + forward * math.sin(r)
-        self.y += -right * math.sin(r) + forward * math.cos(r)
+        self._translate(forward, right, (previous_heading + self.heading) / 2)
 
         ax = read_accel("x")
         ay = read_accel("y")
@@ -300,13 +331,14 @@ def reset_smoothing():
 
 
 def joystick_drive(front, hold_heading=True):
-    # front = F1 or F2. Switching the front inverts forward and strafe, but not the turn
+    # front = F_INTAKE, F_GRIPPER, F_LAUNCHER or F_REAR. The front rotates forward and strafe
+    # (stick up drives toward that side), never the turn
     # (with SMOOTHING the reversal is gradual too).
     # With hold_heading, once the turn has settled the gyroscope corrects drift (bumps, slipping wheels).
     global _held_heading, _last_drive_time
     odo.update()
-    vy = apply_deadzone(gamepad.get_joystick("Ly")) * front
-    vx = apply_deadzone(gamepad.get_joystick("Lx")) * front
+    vy, vx = to_robot_frame(apply_deadzone(gamepad.get_joystick("Ly")),
+                            apply_deadzone(gamepad.get_joystick("Lx")), front)
     w = apply_deadzone(gamepad.get_joystick("Rx"))
 
     if SMOOTHING:
@@ -333,7 +365,7 @@ def _ramp(current, target):
     return current + clamp(target - current, -RAMP, RAMP)
 
 
-def drive(forward_cm=0, right_cm=0, front=F1, speed=AUTO_SPEED, timeout=5.0):
+def drive(forward_cm=0, right_cm=0, front=F_INTAKE, speed=AUTO_SPEED, timeout=5.0):
     # Straight move (diagonals included) holding heading with the gyroscope.
     # Ends on arrival, on collision or on timeout. Returns True if it arrived.
     if not USE_SENSORS:
@@ -341,8 +373,7 @@ def drive(forward_cm=0, right_cm=0, front=F1, speed=AUTO_SPEED, timeout=5.0):
     odo.update()
     heading = odo.heading
     r = math.radians(heading)
-    forward_cm *= front
-    right_cm *= front
+    forward_cm, right_cm = to_robot_frame(forward_cm, right_cm, front)
     target_x = odo.x + right_cm * math.cos(r) + forward_cm * math.sin(r)
     target_y = odo.y - right_cm * math.sin(r) + forward_cm * math.cos(r)
 
@@ -401,27 +432,28 @@ def turn(degrees, timeout=3.0):
     return turn_to(odo.heading + degrees, timeout=timeout)
 
 
-def forward(cm, front=F1):
+def forward(cm, front=F_INTAKE):
     return drive(forward_cm=cm, front=front)
 
 
-def backward(cm, front=F1):
+def backward(cm, front=F_INTAKE):
     return drive(forward_cm=-cm, front=front)
 
 
-def right(cm, front=F1):
+def right(cm, front=F_INTAKE):
     return drive(right_cm=cm, front=front)
 
 
-def left(cm, front=F1):
+def left(cm, front=F_INTAKE):
     return drive(right_cm=-cm, front=front)
 
 
 # ---------------- sensorless fallback (open loop, previous version) ----------------
-def move_open_loop(forward_cm=0, right_cm=0, turn_degrees=0, front=F1, speed=AUTO_SPEED):
+def move_open_loop(forward_cm=0, right_cm=0, turn_degrees=0, front=F_INTAKE, speed=AUTO_SPEED):
     # Mechanical parameters only. Used automatically when USE_SENSORS = False.
-    wheel_cm = mecanum_mix(forward_cm * front,
-                           right_cm * front * STRAFE_FACTOR,
+    forward_cm, right_cm = to_robot_frame(forward_cm, right_cm, front)
+    wheel_cm = mecanum_mix(forward_cm,
+                           right_cm * STRAFE_FACTOR,
                            turn_degrees * CM_PER_TURN_DEGREE)
     degrees = [cm * DEGREES_PER_CM for cm in wheel_cm]
     largest = max(abs(d) for d in degrees)
@@ -431,7 +463,7 @@ def move_open_loop(forward_cm=0, right_cm=0, turn_degrees=0, front=F1, speed=AUT
         motor.move(sign * d, speed * abs(d) / largest)
     # move() does not block: wait the theoretical time (RPM * 6 = degrees/s) + margin
     time.sleep(largest / (speed * 6.0) + 0.15)
-    odo.add_commanded(forward_cm * front, right_cm * front, turn_degrees)
+    odo.add_commanded(forward_cm, right_cm, turn_degrees)
     return True
 
 
@@ -439,7 +471,7 @@ def move_open_loop(forward_cm=0, right_cm=0, turn_degrees=0, front=F1, speed=AUT
 # On power-up (robot still, before N1):
 #     odo.calibrate()
 #     odo.reset()
-# Autonomous:
-#     forward(60, F2); turn(90); right(30); turn_to(0)
+# Autonomous (front defaults to F_INTAKE, the robot forward axis):
+#     forward(60); forward(20, F_GRIPPER); turn(90); right(30); turn_to(0)
 # Manual (inside while True):
-#     joystick_drive(F1)   # or F2
+#     joystick_drive(F_INTAKE)   # or F_GRIPPER ("+"), F_LAUNCHER ("≡"), F_REAR
