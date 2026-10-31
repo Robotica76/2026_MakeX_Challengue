@@ -34,6 +34,7 @@ os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 import field_layout as fl  # noqa: E402
 from balls import SCENARIOS as BALL_SCENARIOS, Ball, load_intake  # noqa: E402
 from kinematics import load_drive_train  # noqa: E402
+from match import format_clock, stage_at  # noqa: E402
 from mechanisms import load_mechanisms  # noqa: E402
 from mblock_runtime import GamepadInput  # noqa: E402
 from robot import DEFAULT_CONFIG, load_config, mecanum_wheels, start_pose  # noqa: E402
@@ -398,6 +399,10 @@ class Viewer3D:
                                 align=TextNode.A_left, fg=(1, 1, 1, 1), shadow=(0, 0, 0, 0.85), mayChange=True)
         self.status_text = OnscreenText(text="", parent=base.a2dBottomLeft, pos=(0.04, 0.16), scale=0.042,
                                         align=TextNode.A_left, fg=(1, 1, 1, 1), shadow=(0, 0, 0, 0.85), mayChange=True)
+        self.clock = OnscreenText(text="", parent=base.a2dTopRight, pos=(-0.04, -0.27), scale=0.075,
+                                  align=TextNode.A_right, fg=(1, 0.85, 0.2, 1), shadow=(0, 0, 0, 0.9), mayChange=True)
+        self.rules_text = OnscreenText(text="", parent=base.a2dTopRight, pos=(-0.04, -0.33), scale=0.04,
+                                       align=TextNode.A_right, fg=(1, 1, 1, 1), shadow=(0, 0, 0, 0.9), mayChange=True)
         self.help = OnscreenText(text=HELP, parent=base.a2dBottomLeft, pos=(0.04, 0.08), scale=0.034,
                                  align=TextNode.A_left, fg=(0.9, 0.92, 0.95, 1), shadow=(0, 0, 0, 0.85), mayChange=False)
         self._refresh_hud()
@@ -413,7 +418,23 @@ class Viewer3D:
         return (f"\nballs captured {w.captured}   in robot {w.stored} / {cap}   shots {w.shots}   "
                 f"in fortress: blue {len(w.in_fortress.get('blue', []))}  red {len(w.in_fortress.get('red', []))}")
 
+    def _refresh_clock(self):
+        """Match clock: stage and time left (match.py); rule notes from the monitor."""
+        sim = self.sim
+        name, left, _ = stage_at(sim.time)
+        labels = {"automatic": "AUTOMATIC", "manual": "MANUAL", "modification": "MODIFICATION",
+                  "final": "FINAL", "ended": "MATCH OVER"}
+        self.clock.setText(f"{labels[name]}  {format_clock(left)}\nmatch {format_clock(sim.time)}")
+        colour = (1.0, 0.3, 0.3, 1) if 0 < left <= 5 else {"automatic": (1, 0.85, 0.2, 1),
+                                                          "manual": (0.5, 1, 0.6, 1)}.get(name, (0.8, 0.85, 1, 1))
+        self.clock.setFg(colour)
+        notes = sim.monitor.report()
+        self.rules_text.setText("\n".join(notes))
+        bad = any("(-20" in n or "MOVING" in n for n in notes)
+        self.rules_text.setFg((1.0, 0.45, 0.45, 1) if bad else (0.75, 1.0, 0.8, 1))
+
     def _refresh_hud(self):
+        self._refresh_clock()
         sim, pose = self.sim, self.sim.pose
         name = sim.program.name if sim.program else "no program"
         limit = f" / {sim.time_limit:g}" if sim.time_limit else ""

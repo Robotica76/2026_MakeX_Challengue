@@ -365,9 +365,11 @@ def _ramp(current, target):
     return current + clamp(target - current, -RAMP, RAMP)
 
 
-def drive(forward_cm=0, right_cm=0, front=F_INTAKE, speed=AUTO_SPEED, timeout=5.0):
+def drive(forward_cm=0, right_cm=0, front=F_INTAKE, speed=AUTO_SPEED, timeout=5.0, on_cycle=None):
     # Straight move (diagonals included) holding heading with the gyroscope.
     # Ends on arrival, on collision or on timeout. Returns True if it arrived.
+    # on_cycle: optional function called every control cycle (e.g. to run a mechanism
+    # while driving); it must return quickly.
     if not USE_SENSORS:
         return move_open_loop(forward_cm, right_cm, 0, front, speed)
     odo.update()
@@ -398,12 +400,14 @@ def drive(forward_cm=0, right_cm=0, front=F_INTAKE, speed=AUTO_SPEED, timeout=5.
         vx = _ramp(vx, magnitude * e_right / dist * STRAFE_FACTOR)
         w = clamp(KP_HEADING * normalize(heading - odo.heading), -30, 30)
         set_wheel_speeds(mecanum_mix(vy, vx, w))
+        if on_cycle:
+            on_cycle()
         time.sleep(PERIOD)
     stop()
     return arrived
 
 
-def turn_to(target_heading, speed=AUTO_SPEED, timeout=3.0):
+def turn_to(target_heading, speed=AUTO_SPEED, timeout=3.0, on_cycle=None):
     # Turns to an absolute heading (degrees, clockwise +, 0 = heading when odometry was reset).
     if not USE_SENSORS:
         return move_open_loop(turn_degrees=normalize(target_heading - odo.heading), speed=speed)
@@ -421,15 +425,17 @@ def turn_to(target_heading, speed=AUTO_SPEED, timeout=3.0):
             target = math.copysign(MIN_SPEED, target)
         w = _ramp(w, target)
         set_wheel_speeds(mecanum_mix(0, 0, w))
+        if on_cycle:
+            on_cycle()
         time.sleep(PERIOD)
     stop()
     return arrived
 
 
-def turn(degrees, timeout=3.0):
+def turn(degrees, timeout=3.0, on_cycle=None):
     # relative: degrees > 0 clockwise, < 0 counterclockwise
     odo.update()
-    return turn_to(odo.heading + degrees, timeout=timeout)
+    return turn_to(odo.heading + degrees, timeout=timeout, on_cycle=on_cycle)
 
 
 def forward(cm, front=F_INTAKE):

@@ -11,6 +11,6 @@ Strategy documents contain hypotheses to evaluate, not confirmed scoring rules o
 
 | Strategy proposal | Rule / requirement IDs | Owner / peer reviewer | Evidence / notebook link | Decision / revision |
 | --- | --- | --- | --- | --- |
-| TBD | TBD | TBD | TBD | TBD |
+| Automatic stage: central balls first, letter cubes with the time left ([autonomous strategy](autonomous_strategy.md)) | p.27–38, R06, R19, R26 | TBD (team) / TBD | Simulation, `simulation/field2d/test_match.py` | Plan A implemented; simulation recommends plan B (18 balls); pending review |
 
 Review [competition requirements](../01_requirements/competition_requirements.md) first. Revisit architecture when strategy changes introduce new needs, and record evaluations in the [notebook](../08_engineering_notebook/README.md) with [competition-context verification](../06_verification/competition_tests/README.md).

@@ -48,9 +48,12 @@ echo   4. Ball collection demo      (Space starts it, about 19 s)
 echo   5. Mechanisms demo           (Space starts it: intake head, rollers, carriage)
 echo   6. Intake shelf demo         (Space starts it: central resource upper level)
 echo   7. Full ball system demo     (Space: collect, tower, basket, shoot into the blue fortress)
+echo   8. Automatic stage routine   (Space: 30 s, central balls then cubes, match clock)
 echo.
-choice /c 1234567 /n /m "Choose 1-7: "
-if errorlevel 7 (
+choice /c 12345678 /n /m "Choose 1-8: "
+if errorlevel 8 (
+    "%PY%" viewer3d.py --program ..\..\software\autonomous\task_execution\auto_central_then_cubes.py --time-limit 30
+) else if errorlevel 7 (
     "%PY%" viewer3d.py --program ..\control\test_full_intake.py --balls released --time-limit 100 --xray
 ) else if errorlevel 6 (
     "%PY%" viewer3d.py --program ..\control\test_intake_shelf.py --camera follow --time-limit 60

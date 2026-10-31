@@ -80,6 +80,18 @@ feeder and shooter on, carriage to the top and back down.
 | --- | --- |
 | ![head down](docs/mechanisms_0.5s.png) | ![head up](docs/mechanisms_7.5s.png) |
 
+## Match clock and rule monitors
+
+The top-right corner shows the stage and the time left (automatic 30 s, manual 100 s,
+modification 60 s, final 90 s; [`match.py`](../field2d/match.py)), red in the last 5 s. Below it,
+the rule monitors: **R19** (robot stationary at the end of the automatic stage, chassis and
+slides checked) and **R06** (robot body outside the alliance area, 3 s grace; the intake head
+overhang is allowed by team decision). Menu option 8 runs the automatic routine
+[`auto_central_then_cubes.py`](../../software/autonomous/task_execution/auto_central_then_cubes.py),
+analysed in [autonomous strategy](../../docs/07_strategy/autonomous_strategy.md).
+
+![match clock](docs/auto_clock.png)
+
 ## Whole ball system and vectors
 
 Menu option 7, or `viewer3d.py --balls released --program ../control/test_full_intake.py --time-limit 100 --xray`,

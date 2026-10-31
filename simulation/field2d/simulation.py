@@ -20,6 +20,7 @@ import field_layout as fl
 from ball_physics import BallWorld, load_ball_path
 from balls import Ball, Intake, field_balls
 from kinematics import DriveTrain, body_velocity, integrate
+from match import MatchMonitor
 from mechanisms import Mechanisms
 from mblock_runtime import DCBus, GamepadInput, MotorBus, ProgramRunner, Sensors, SimClock
 from robot import DEFAULT_CONFIG, RobotConfig, RobotPose
@@ -71,6 +72,7 @@ class Simulation:
         self.mechanisms = mechanisms or Mechanisms()  # elevator, intake lift, rollers (mechanisms.py)
         self._path_data = json.loads(DEFAULT_CONFIG.read_text()).get("ball_path")
         self.world = self._new_world()
+        self.monitor = self._new_monitor()
         self.variation = variation or Variation()  # ideal robot unless a study passes one
         self.marks: List[dict] = []                # simtrace.mark() records, see Monte Carlo
         self.trace_options: dict = {}              # simtrace.options() for the program
@@ -102,6 +104,13 @@ class Simulation:
             return self.world.captured
         return len(self.intake.collected) if self.intake else 0
 
+    def _new_monitor(self) -> MatchMonitor:
+        """Rule monitors (match.py): R19 at the end of the automatic stage, R06 boundary."""
+        data = self._path_data or {}
+        bx0, by0, _, bx1, by1, _ = data.get("body_box_mm", (-self.cfg.length_mm / 2, -self.cfg.width_mm / 2, 0.0,
+                                                           self.cfg.length_mm / 2, self.cfg.width_mm / 2, 642.0))
+        return MatchMonitor(self.cfg.alliance, (bx0, by0, bx1, by1))
+
     def _new_world(self) -> Optional[BallWorld]:
         """Ball dynamics and the ball path through the robot (ball_physics.py), when
         there are balls."""
@@ -130,6 +139,7 @@ class Simulation:
         if self.intake:
             self.intake.reset()
         self.world = self._new_world()
+        self.monitor = self._new_monitor()
         self._velocity, self._accel = (0.0, 0.0, 0.0), (0.0, 0.0)
         self._gyro_drift = 0.0
         self.marks = []
@@ -188,6 +198,8 @@ class Simulation:
                 self.intake.update(self.pose, self.balls, self.dc.power(self.intake.port),
                                    self.mechanisms.position("intake_lift"))
             self._update_sensors(vx, vy, omega, dt)
+            mech_moving = any(abs(self.dc.power(m.port)) >= 5 for m in self.mechanisms.linear.values())
+            self.monitor.update(self.clock.now, dt, self.pose, (vx, vy, omega), mech_moving)
             self.clock.advance(dt)
             self._check()
         if self.running and self.state.trail[-1] != (self.pose.x, self.pose.y):

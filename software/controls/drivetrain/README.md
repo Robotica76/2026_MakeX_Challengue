@@ -36,7 +36,8 @@ adapted to 8 cm wheels. Implementation: [`chassis.py`](chassis.py).
 | `ADAPTIVE_SMOOTHING` | Scales the S-curve limits by speed (snappier when slow, gentler when fast) and by accelerometer vibration level. |
 
 Autonomous API: `forward`, `backward`, `right`, `left`, `drive`, `turn`,
-`turn_to`, `stop` (each returns `True` on arrival). Manual: `joystick_drive(front)`.
+`turn_to`, `stop` (each returns `True` on arrival). `drive`, `turn_to` and `turn` accept
+`on_cycle`, a function called every control cycle, to run mechanisms while the robot moves. Manual: `joystick_drive(front)`.
 Setup before the match: `odo.calibrate()` (robot still), then `odo.reset()`.
 
 ## Open items (TBD)
