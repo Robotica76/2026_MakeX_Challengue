@@ -369,7 +369,16 @@
       "forward": 25.0,
       "lateral": 40.0,
       "z": 45.0
-    }
+    },
+    "slot_mm": [
+      -160.0,
+      -450.0,
+      0.0,
+      -18.0,
+      -150.0,
+      160.0
+    ],
+    "slot_note": "free space between the jaws (robot frame x fwd, y left, z with the carriage down; the top follows the carriage): the CAD height bands are bounding boxes and would cover it, so a prop centred here is not pushed; open to the outside (y down to -450) so a prop can enter between the jaws"
   },
   "own_half": {
     "half": "lower",

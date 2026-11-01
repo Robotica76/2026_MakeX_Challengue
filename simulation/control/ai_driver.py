@@ -25,6 +25,8 @@ import time
 STREAM = ("127.0.0.1", 5005)
 STICK_MM_S = 800.0          # program: stick 100 % = 800 mm/s (drive_joystick_N)
 TURN_DPS_PER_STICK = 200.0  # program: Rx 100 % = 200 deg/s
+ACCEL_MM_S2 = 700.0         # driver's braking profile
+STICK_STEP = 0.07           # max stick change per update (~30 per second): smooth, no jumps
 
 
 def wrap(a):
@@ -38,6 +40,7 @@ class Driver:
         self.log = []
         self._plan = self.plan()
         self._sticks = (0.0, 0.0, 0.0)
+        self.deadline = 1e9          # actions give up at this match time (stage ends)
 
     # -- gamepad -------------------------------------------------------------------------
     def press(self, key):
@@ -90,35 +93,47 @@ class Driver:
         yield
 
     def go(self, x, y, heading=None, vmax=650.0, tol=25.0, timeout=8.0):
-        """Drive to field (x, y) mm (and heading, deg) with the sticks: P control on the pose."""
-        end = self.t + timeout
+        """Drive to field (x, y) mm (and heading, deg) with the sticks, smoothly: speed profile
+        sqrt(2 a d) like the automatic stage, stick changes rate-limited (no jumps), turning with
+        hysteresis (starts above 4 deg of error, stops below 2 deg)."""
+        end = min(self.t + timeout, self.deadline)
+        turning = False
         while self.t < end:
             px, py, th = self.pose
             ex, ey = x - px, y - py
             dist = math.hypot(ex, ey)
             herr = wrap(heading - th) if heading is not None else 0.0
-            if dist < tol and abs(herr) < 3.0:
+            if abs(herr) > 4.0:
+                turning = True
+            elif abs(herr) < 2.0:
+                turning = False
+            if dist < tol and not turning:
                 break
             c, s = math.cos(math.radians(th)), math.sin(math.radians(th))
-            speed = min(vmax, 2.2 * dist)
+            speed = 0.0 if dist < tol else min(vmax, math.sqrt(2 * ACCEL_MM_S2 * dist), 1.6 * dist)
             f = (ex * c + ey * s) / max(dist, 1e-6) * speed
             r = (ex * s - ey * c) / max(dist, 1e-6) * speed
             ly, lx = f / STICK_MM_S, r / STICK_MM_S
-            for comp in ("ly", "lx"):                       # past the program's deadzone (8 %)
-                v = ly if comp == "ly" else lx
-                if 0.004 < abs(v) < 0.09:
-                    v = math.copysign(0.09, v)
-                if comp == "ly":
-                    ly = v
-                else:
-                    lx = v
-            ccw = max(-150.0, min(150.0, 4.0 * herr)) if abs(herr) >= 3.0 else 0.0
-            rx = -ccw / TURN_DPS_PER_STICK
-            if 0 < abs(rx) < 0.09:
-                rx = math.copysign(0.09, rx)
+            mag = math.hypot(lx, ly)
+            if 0 < mag < 0.1:                                # past the program's deadzone, same direction
+                lx, ly = lx / mag * 0.1, ly / mag * 0.1
+            rx = 0.0
+            if turning:
+                ccw = max(-120.0, min(120.0, 3.0 * herr))
+                rx = -ccw / TURN_DPS_PER_STICK
+                if abs(rx) < 0.1:
+                    rx = math.copysign(0.1, rx)
+            plx, ply, prx = self._sticks
+            step = STICK_STEP
+            lx = plx + max(-step, min(step, lx - plx))
+            ly = ply + max(-step, min(step, ly - ply))
+            rx = prx + max(-step, min(step, rx - prx))
             self.sticks(lx, ly, rx)
             yield
-        self.sticks(0, 0, 0)
+        while any(abs(v) > 1e-3 for v in self._sticks):     # ease the sticks back to zero
+            plx, ply, prx = self._sticks
+            self.sticks(*(v - max(-STICK_STEP, min(STICK_STEP, v)) for v in (plx, ply, prx)))
+            yield
         yield from self.wait(0.15)
 
     def shoot(self, label, max_s=22.0):
@@ -126,7 +141,7 @@ class Driver:
         start, n = self.t, self.state.get("stored", 0)
         self.say(f"{label}: R2 with {n} balls inside")
         self.press("R2")
-        end = self.t + max_s
+        end = min(self.t + max_s, self.deadline)
         while self.t < end and (self.state.get("stored", 0) > 0 or self.t < start + 2.5):
             yield
         yield from self.wait(0.8)
@@ -145,7 +160,8 @@ class Driver:
         self.press("L1")
         self.say(f"{label}: intake on")
         yield from self.go(x_end, 600, 180, vmax=180, tol=20, timeout=10)
-        yield from self.wait(1.0)
+        if self.t < self.deadline:
+            yield from self.wait(1.0)
         self.release("L1")
         self.say(f"{label}: {self.state.get('stored', 0)} balls inside")
 
@@ -159,19 +175,24 @@ class Driver:
         yield from self.wait_until(30.4)
         self.say(f"manual stage, score {self.state.get('score')}")
         yield from self.go(2000, 900, 0)                    # head still over the strategy area
-        yield from self.go(1955, 1000, 0)
+        yield from self.go(1930, 1000, 0, tol=15)          # head front 2179: clear of the strategy area
         self.press("down")                                  # intake head to the floor
         yield from self.wait(5.0)
         self.release("down")
+        self.deadline = 117.0                               # then: to the starting area
         yield from self.sweep_area_1(1480, "area 1")
         yield from self.go(1600, 900, None)
         yield from self.shoot("shot 1")
-        yield from self.sweep_area_1(1400, "area 1 again")
-        yield from self.go(1600, 900, None)
-        yield from self.shoot("shot 2", max_s=14.0)
-        if self.t < 118:
-            self.say("to the starting area")
-            yield from self.go(450, 450, 0, timeout=9)
+        if self.t < 90:                                     # a second sweep fits
+            yield from self.sweep_area_1(1400, "area 1 again")
+            yield from self.go(1600, 900, None)
+            yield from self.shoot("shot 2", max_s=14.0)
+        self.deadline = 129.5
+        self.release("L1")
+        self.release("R2")
+        self.say("to the starting area")
+        yield from self.go(450, 450, 0, timeout=12)
+        self.deadline = 1e9
         yield from self.wait_until(130.5)
         self.say("modification stage (flag mast)")
         yield from self.wait_until(190.6)
@@ -183,6 +204,7 @@ class Driver:
             yield
         yield from self.wait(4.0)
         self.say(f"flag {self.state.get('flag')}, score {self.state.get('score')}")
+        self.deadline = 277.0
         yield from self.go(700, 700, 0)
         self.press("down")
         yield from self.wait(7.0)
@@ -190,6 +212,8 @@ class Driver:
         yield from self.sweep_area_1(1300, "final sweep")
         yield from self.go(1600, 900, None)
         yield from self.shoot("final shot", max_s=12.0)
+        self.release("L1")
+        self.release("R2")
         self.say(f"end, score {self.state.get('score')}")
         while True:
             self.sticks(0, 0, 0)

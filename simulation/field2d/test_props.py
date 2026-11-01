@@ -94,6 +94,36 @@ class RakeTest(unittest.TestCase):
         self.assertEqual(before, [(p.x, p.y, p.z) for p in props])
 
 
+class PushTest(unittest.TestCase):
+    BODY = [(-250.0, -250.0, 0.0, 115.0, 250.0, 260.0)]
+
+    def test_robot_pushes_a_cube_out_of_its_body(self):
+        from props import push_props
+        cube = Prop("c", "bonus", "X9", "neutral", 1000.0 + 115 + 50, 600.0, 0.0)   # 10 mm into the front
+        push_props(RobotPose(1000.0, 600.0, 0.0), self.BODY, [cube], ELEMENTS, [])
+        self.assertAlmostEqual(cube.x, 1000.0 + 115 + 60 + 0.5)
+        self.assertAlmostEqual(cube.y, 600.0)
+
+    def test_structure_blocks_the_push_and_slot_lets_it_in(self):
+        from props import push_props
+        cube = Prop("c", "bonus", "X9", "neutral", 1165.0, 600.0, 0.0)
+        wall = [(1220.0, 0.0, 0.0, 1300.0, 3000.0, 500.0)]
+        jammed = push_props(RobotPose(1000.0, 600.0, 0.0), self.BODY, [cube], ELEMENTS, wall)
+        self.assertEqual(jammed, ["c"])
+        self.assertEqual(cube.x, 1165.0)                                          # jammed, not moved
+        slot = [(100.0, -60.0, 0.0, 300.0, 60.0, 200.0)]                           # free space at the front
+        self.assertEqual(push_props(RobotPose(1000.0, 600.0, 0.0), self.BODY, [cube], ELEMENTS, [], slot), [])
+        self.assertEqual(cube.x, 1165.0)
+
+    def test_pushed_off_the_strategy_top_it_drops(self):
+        from props import push_props
+        cube = Prop("c", "bonus", "X12", "neutral", 2250.0, 840.0, 259.0)          # 30 mm inside the edge
+        robot = RobotPose(2250.0 + 60 + 250 - 50, 840.0, 0.0)                       # its back 50 mm into the cube
+        push_props(robot, [(-250.0, -250.0, 0.0, 115.0, 250.0, 645.0)], [cube], ELEMENTS, [])
+        self.assertAlmostEqual(cube.x, 2199.5)                                      # centre off the top (x 2220)
+        self.assertEqual(cube.z, 0.0)
+
+
 class BonusRuleTest(unittest.TestCase):
     def setUp(self):
         self.props = field_props(ELEMENTS)

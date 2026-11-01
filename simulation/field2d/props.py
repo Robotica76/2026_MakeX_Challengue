@@ -174,6 +174,66 @@ def _sliding_support(p: Prop, elements) -> float:
     return support_under(p, elements)
 
 
+def _mtv(pose, rect, cx, cy, half):
+    """Smallest translation (dx, dy) that takes the square prop (centre cx, cy, half size) out of the
+    robot-frame rectangle rect = (x0, y0, x1, y1) placed at pose; None if they do not overlap."""
+    x0, y0, x1, y1 = rect
+    corners = [pose.to_field(x, y) for x in (x0, x1) for y in (y0, y1)]
+    square = [(cx - half, cy - half), (cx - half, cy + half), (cx + half, cy - half), (cx + half, cy + half)]
+    c, s = math.cos(pose.theta), math.sin(pose.theta)
+    best = None
+    for ax, ay in ((1.0, 0.0), (0.0, 1.0), (c, s), (-s, c)):
+        a = [px * ax + py * ay for px, py in corners]
+        b = [px * ax + py * ay for px, py in square]
+        overlap = min(max(a), max(b)) - max(min(a), min(b))
+        if overlap <= 0:
+            return None
+        sign = 1.0 if (min(b) + max(b)) / 2 >= (min(a) + max(a)) / 2 else -1.0
+        if best is None or overlap < best[0]:
+            best = (overlap, ax * sign, ay * sign)
+    depth, ux, uy = best
+    return ux * (depth + 0.5), uy * (depth + 0.5)
+
+
+def push_props(pose, parts, props: List[Prop], elements, colliders, openings=()) -> List[str]:
+    """The robot pushes the props it runs into (cubes and cones are light EVA): each prop that
+    overlaps a robot part (robot-frame boxes x0, y0, z0, x1, y1, z1, the head at its lift) in
+    plan and height is moved out along the smallest overlap. A prop never goes into a field
+    structure: then it stays and its name is returned (the robot is jammed against it). A prop
+    pushed off a strategy-area top drops to what is below. `openings`: robot-frame boxes left
+    free inside the bounding bands (the gripper slot between the jaws): a prop centred in one
+    is not pushed."""
+    jammed = []
+    c, s = math.cos(pose.theta), math.sin(pose.theta)
+    for p in props:
+        if p.held or p.dragged:
+            continue
+        lx = (p.x - pose.x) * c + (p.y - pose.y) * s
+        ly = -(p.x - pose.x) * s + (p.y - pose.y) * c
+        if any(x0 <= lx <= x1 and y0 <= ly <= y1 and min(z1, p.z + p.height) - max(z0, p.z) > 0
+               for x0, y0, z0, x1, y1, z1 in openings):
+            continue
+        half = (CONE_BASE if p.kind == "cone" else CUBE) / 2
+        top = p.z + p.height
+        for x0, y0, z0, x1, y1, z1 in parts:
+            if min(z1, top) - max(z0, p.z) <= 2.0:
+                continue
+            move = _mtv(pose, (x0, y0, x1, y1), p.x, p.y, half)
+            if move is None:
+                continue
+            nx, ny = p.x + move[0], p.y + move[1]
+            blocked = any(bx0 < nx + half and bx1 > nx - half and by0 < ny + half and by1 > ny - half
+                          and min(bz1, top) - max(bz0, p.z) > 2.0 and not (p.z >= bz1 - 1.0)
+                          for bx0, by0, bz0, bx1, by1, bz1 in colliders)
+            inside = half <= nx <= fl.FIELD_W - half and half <= ny <= fl.FIELD_H - half
+            if blocked or not inside:
+                jammed.append(p.name)
+                continue
+            p.x, p.y = nx, ny
+            p.z = _sliding_support(p, elements)
+    return jammed
+
+
 def denial_count(props: List[Prop], balls, alliance: str) -> Dict[str, int]:
     """Central props and balls now completely on the alliance's side of the field (the opponent
     cannot reach them there), central balls on the opponent side, and props dropped on the floor

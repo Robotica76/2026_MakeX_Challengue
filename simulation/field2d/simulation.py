@@ -23,7 +23,7 @@ from kinematics import DriveTrain, body_velocity, integrate
 from ball_physics import named_colliders
 from match import CollisionMonitor, HalfMonitor, MatchMonitor
 from mechanisms import Mechanisms
-from props import Gripper, Prop, field_props, rake_props
+from props import Gripper, Prop, field_props, push_props, rake_props
 import referee
 from flag import load_flag
 from mblock_runtime import DCBus, GamepadInput, MotorBus, ProgramRunner, Sensors, ServoBus, SimClock
@@ -100,6 +100,9 @@ class Simulation:
         self.servos = ServoBus()                   # smart servos (angles), mbuild.smartservo
         self._ranging = json.loads(DEFAULT_CONFIG.read_text()).get("ranging_sensors", {})
         self._colliders = [box for _, box in named_colliders(self.elements)]
+        self.prop_jams: List[str] = []             # props the robot presses against a structure
+        self._gripper_slot = tuple(json.loads(DEFAULT_CONFIG.read_text()).get("gripper", {}).get(
+            "slot_mm", (0, 0, 0, 0, 0, 0)))          # free space between the jaws (robot frame)
         self._gyro_drift = 0.0
         self._velocity = (0.0, 0.0, 0.0)   # robot frame vx, vy (mm/s), omega (rad/s)
         self._accel = (0.0, 0.0)           # low-passed, m/s^2
@@ -246,6 +249,18 @@ class Simulation:
                 head = (self._path_data or {}).get("head_box_mm", (0, 0, 46.0, 0, 0, 145.0))
                 rake_props(self.pose, self.mechanisms.position("intake_lift"), self.intake.pulling(self.dc),
                            self.props, self.elements, dt, self.intake, (head[2], head[5]))
+            if self.props and self._path_data:
+                lift = self.mechanisms.position("intake_lift")
+                hx0, hy0, hz0, hx1, hy1, hz1 = self._path_data.get("head_box_mm", (0, 0, 0, 0, 0, 0))
+                parts = [tuple(b) for b in self._path_data.get("body_bands_mm", [])] + \
+                        [(hx0, hy0, hz0 + lift, hx1, hy1, hz1 + lift)]
+                car = self.mechanisms.position("elevator")
+                ox0, oy0, oz0, ox1, oy1, oz1 = self._gripper_slot
+                slot = [(ox0, oy0, oz0, ox1, oy1, oz1 + car),
+                        # intake mouth: a prop under the head (the roller rides on it) is not pushed
+                        (self.intake.body_front_mm, hy0, 0.0, 300.0, hy1, hz0 + lift + 40.0) if self.intake
+                        else (0, 0, 0, 0, 0, 0)]
+                self.prop_jams = push_props(self.pose, parts, self.props, self.elements, self._colliders, slot)
             if self.gripper and self.props:
                 self.gripper.update(self.pose, self.mechanisms.position("elevator"),
                                     self.mechanisms.position("gripper_jaw"), self.props, self.elements)

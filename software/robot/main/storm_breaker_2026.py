@@ -7,7 +7,8 @@
 #   automatic  the X12 bonus cube into red exchange area 1 (+12 balls worth 20 each), taken from
 #              the lower strategy area: the intake head pulls it off the top, pulls it again from
 #              the floor onto our side, the gripper puts it in the exchange area; optionally the
-#              X9 and the second cone pulled onto our side (DENY_X9: the opponent cannot use them)
+#              X9 and the second cone pulled onto our side (DENY_X9; off: with props that the robot
+#              pushes, that pass shoves our X12 out of the exchange area and blocks the park spot)
 #   manual     driver: "≡" ball mode, "+" gripper mode (see manual_loop); R2 held: the robot aims
 #              its launcher at the blue fortress and sets the power from the distance (odometry)
 #   final      N4, with the robot in Red Start 1, hangs the flag on flagpole 2 by itself
@@ -177,7 +178,7 @@ def constants():
     global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal, SHOT_SPEED_FULL, HOOD_DEG, EXIT_LEFT, AIM_SHORT, SHOT_RISE, FORT_X, FORT_Y, aim_d, aim_v, shot_power, t_feed, t_loop
     # tuned values (simulation/analysis/montecarlo_strategy.py); blocks start every variable at 0
     STRATEGY = 1
-    DENY_X9 = 1
+    DENY_X9 = 0
     V_MAX = 700
     V_APPROACH = 500
     V_PULL = 400
@@ -512,6 +513,8 @@ def x12_to_exchange():
     cube_x = pos_x + PINNED
     head_to_N(CONE_CLEAR_HEAD)
     jaw_N(0.35)
+    # straight back first: the cube touches the robot front and a turn here would shove it
+    go_N_N_N_N_N(pos_x - 150, pos_y, 0, V_APPROACH, 0)
     go_N_N_N_N_N(cube_x - GRAB_RIGHT - 200, X12_Y + GRAB_BACK - GRAB_SHORT, 90, V_MAX, 0)
     wait_jobs()
     go_N_N_N_N_N(cube_x - GRAB_RIGHT, X12_Y + GRAB_BACK - GRAB_SHORT, 90, V_APPROACH, 0)

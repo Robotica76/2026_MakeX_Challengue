@@ -19,7 +19,8 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 PROGRAM = ROOT / "software" / "robot" / "main" / "storm_breaker_2026.py"
 
 
-def play(seconds=280.0, program=PROGRAM):
+def play(seconds=280.0, program=PROGRAM, delay_frames=0, every=2):
+    """delay_frames: the driver sees the state this many 1/60 s frames late (the viewer's stream)."""
     import field_layout as fl
     import referee
     from ai_driver import Driver
@@ -34,25 +35,28 @@ def play(seconds=280.0, program=PROGRAM):
                      ball_scenario="initial", intake=load_intake(), mechanisms=load_mechanisms(), gripper=load_gripper())
     sim.program = Path(program)
     driver = Driver()
-    k = 0
+    k, queue = 0, []
     with contextlib.redirect_stdout(io.StringIO()):
         sim.run()
         while sim.running:
             sim.step(1 / 60)
             k += 1
-            if k % 2 == 0:
+            if k % every == 0:
                 state = {"t": sim.time, "pose": {"x_mm": sim.pose.x, "y_mm": sim.pose.y,
                                                  "theta_deg": math.degrees(sim.pose.theta)},
                          "stored": sim.world.stored if sim.world else 0,
                          "score": referee.match_score(sim, "red")["total"],
                          "flag": sim.flag.state if sim.flag else None}
-                for ev in driver.tick(state):
-                    sim.gamepad.apply_event(ev)
+                queue.append(state)
+                if len(queue) > max(1, delay_frames // every):
+                    for ev in driver.tick(queue.pop(0)):
+                        sim.gamepad.apply_event(ev)
     return sim, driver, referee.match_score(sim, "red")
 
 
 def main():
-    sim, driver, score = play()
+    delay = int(sys.argv[1]) if len(sys.argv) > 1 else 0
+    sim, driver, score = play(delay_frames=delay)
     print("\n".join(driver.log))
     print("\nend:", sim.state.status, sim.state.message)
     print("collisions:", [(e["element"], e["part"], round(e["start"], 1)) for e in sim.collisions.collisions] or "none")

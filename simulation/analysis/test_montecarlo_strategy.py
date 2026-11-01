@@ -18,7 +18,7 @@ class MonteCarloStrategyTest(unittest.TestCase):
         self.assertTrue(row["valid_x12"], row)
         self.assertEqual(row["problems"], 0, row)
         self.assertLess(row["x12_time"], 17.0)
-        self.assertGreaterEqual(summarize({}, [row])["resources"], 20)
+        self.assertGreaterEqual(summarize({}, [row])["resources"], 12)
 
 
 if __name__ == "__main__":

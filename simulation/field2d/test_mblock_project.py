@@ -242,12 +242,12 @@ class StormBreakerProgramTest(unittest.TestCase):
                 if k == 15:
                     sim.gamepad.apply_event({"event": "release", "control": "button_1"})
         self.assertEqual(sim.bonus_judged["red"]["valid"], ["X12"])
-        self.assertEqual(sim.bonus_judged["red"]["on_side"], 2)                  # X12 + X9 (denied)
+        self.assertEqual(sim.bonus_judged["red"]["on_side"], 1)                  # X12 only (DENY_X9 off)
         self.assertEqual(sim.collisions.collisions, [])
         self.assertEqual(sim.half.events, [])
         self.assertTrue(sim.monitor.auto_end["stationary"])
         denial = denial_count(sim.props, sim.balls, "red")
-        self.assertEqual((denial["cones"], denial["props_on_line"]), (2, 0))
+        self.assertEqual((denial["cones"], denial["props_on_line"]), (1, 0))
 
 
 class ReloadTest(unittest.TestCase):
