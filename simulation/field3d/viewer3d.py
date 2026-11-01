@@ -117,6 +117,11 @@ class Viewer3D:
             self.base.task_mgr.add(self._update, "update")
             if not self.sim.program:
                 self.say("Load program: an mBlock .py or .mblock file")
+            if args.driver:                       # a program plays the gamepad (state stream feedback)
+                self.gamepad_window.SCRIPT = args.driver.resolve()
+                self.gamepad_window.open()
+            if args.autorun and self.sim.program:
+                self.programs.run()
 
     # --- scene -------------------------------------------------------------------
     def _setup_scene(self):
@@ -597,6 +602,9 @@ class Viewer3D:
         msg = state_message(self.robot.spec["name"], self.sim.time, self.sim.state.status, self.sim.pose,
                             self.sim._velocity, wheel_state(self.sim), self.robot.carriage_mm,
                             self.robot.mast_visible, self.sim.balls_collected, self.robot.intake_lift_mm)
+        msg["stored"] = self.sim.world.stored if self.sim.world else 0     # balls inside the robot
+        msg["score"] = match_score(self.sim, self.sim.cfg.alliance)["total"]
+        msg["flag"] = self.sim.flag.state if self.sim.flag else None
         self.publisher.maybe_send(now, msg)
 
     def _update(self, task):
@@ -674,6 +682,9 @@ def parse_args(argv=None):
     parser.add_argument("--stream", help="UDP target HOST:PORT for the state stream (default 127.0.0.1:5005)")
     parser.add_argument("--stream-rate", type=float, default=DEFAULT_RATE_HZ, help="state messages per second")
     parser.add_argument("--no-stream", action="store_true", help="do not send the state stream")
+    parser.add_argument("--driver", type=Path, help="driver program instead of the gamepad window: it reads the "
+                                                    "state stream and prints gamepad events (gamepad.py protocol)")
+    parser.add_argument("--autorun", action="store_true", help="press Run when the viewer opens")
     parser.add_argument("--screenshot", type=Path, help="render once (offscreen) to this PNG and exit")
     parser.add_argument("--run-for", type=float, default=0, help="with --screenshot: simulate this many seconds first")
     return parser.parse_args(argv)

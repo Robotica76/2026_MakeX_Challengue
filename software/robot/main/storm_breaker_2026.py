@@ -8,7 +8,8 @@
 #              the lower strategy area: the intake head pulls it off the top, pulls it again from
 #              the floor onto our side, the gripper puts it in the exchange area; optionally the
 #              X9 and the second cone pulled onto our side (DENY_X9: the opponent cannot use them)
-#   manual     driver: "≡" ball mode, "+" gripper mode (see manual_loop)
+#   manual     driver: "≡" ball mode, "+" gripper mode (see manual_loop); R2 held: the robot aims
+#              its launcher at the blue fortress and sets the power from the distance (odometry)
 #   final      N4, with the robot in Red Start 1, hangs the flag on flagpole 2 by itself
 # Two robots per alliance: this robot stays at y <= 1527.5 mm (lower half of the red area).
 #
@@ -152,6 +153,18 @@ in_auto = 0
 face = 0
 angle = 0
 h_goal = 0
+SHOT_SPEED_FULL = 0
+HOOD_DEG = 0
+EXIT_LEFT = 0
+AIM_SHORT = 0
+SHOT_RISE = 0
+FORT_X = 0
+FORT_Y = 0
+aim_d = 0
+aim_v = 0
+shot_power = 0
+t_feed = 0
+t_loop = 0
 
 # new class
 encoder_motor_M1 = encoder_motor_class("M1", "INDEX1")
@@ -161,7 +174,7 @@ encoder_motor_M4 = encoder_motor_class("M4", "INDEX1")
 
 
 def constants():
-    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal
+    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal, SHOT_SPEED_FULL, HOOD_DEG, EXIT_LEFT, AIM_SHORT, SHOT_RISE, FORT_X, FORT_Y, aim_d, aim_v, shot_power, t_feed, t_loop
     # tuned values (simulation/analysis/montecarlo_strategy.py); blocks start every variable at 0
     STRATEGY = 1
     DENY_X9 = 1
@@ -204,10 +217,17 @@ def constants():
     PARK_Y = 745
     PARK_HEAD = 250
     END_BY = 29
+    SHOT_SPEED_FULL = 8000
+    HOOD_DEG = 40
+    EXIT_LEFT = 290
+    AIM_SHORT = 150
+    SHOT_RISE = 40
+    FORT_X = 3993
+    FORT_Y = 1527.5
 
 
 def calibrate_N_N_N(x, y, h):
-    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal
+    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal, SHOT_SPEED_FULL, HOOD_DEG, EXIT_LEFT, AIM_SHORT, SHOT_RISE, FORT_X, FORT_Y, aim_d, aim_v, shot_power, t_feed, t_loop
     # robot still: gyro bias, then the odometry starts at field (x, y) mm, heading h deg
     total = 0
     samples = 0
@@ -224,7 +244,7 @@ def calibrate_N_N_N(x, y, h):
 
 
 def set_pose_N_N_N(x, y, h):
-    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal
+    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal, SHOT_SPEED_FULL, HOOD_DEG, EXIT_LEFT, AIM_SHORT, SHOT_RISE, FORT_X, FORT_Y, aim_d, aim_v, shot_power, t_feed, t_loop
     enc_fl = encoder_motor_M4.get_value("angle")
     enc_fr = encoder_motor_M1.get_value("angle")
     enc_rl = encoder_motor_M3.get_value("angle")
@@ -241,7 +261,7 @@ def set_pose_N_N_N(x, y, h):
 
 
 def read_odometry():
-    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal
+    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal, SHOT_SPEED_FULL, HOOD_DEG, EXIT_LEFT, AIM_SHORT, SHOT_RISE, FORT_X, FORT_Y, aim_d, aim_v, shot_power, t_feed, t_loop
     # heading: field degrees counterclockwise (the gyro angle grows clockwise)
     yaw = rot_start - (novapi.get_rotation("z") - gyro_bias * (novapi.timer() - t_cal))
     a_fl = encoder_motor_M4.get_value("angle")
@@ -267,7 +287,7 @@ def read_odometry():
 
 
 def set_wheels_N_N_N(f, r, w):
-    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal
+    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal, SHOT_SPEED_FULL, HOOD_DEG, EXIT_LEFT, AIM_SHORT, SHOT_RISE, FORT_X, FORT_Y, aim_d, aim_v, shot_power, t_feed, t_loop
     # f, r: wheel-centre speed forward / right (mm/s); w: turn rate, deg/s counterclockwise
     w_cw = 0 - w * TURN_MM_PER_DEG
     w_fl = f + r + w_cw
@@ -291,7 +311,7 @@ def set_wheels_N_N_N(f, r, w):
 
 
 def go_N_N_N_N_N(x, y, h, vmax, vend):
-    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal
+    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal, SHOT_SPEED_FULL, HOOD_DEG, EXIT_LEFT, AIM_SHORT, SHOT_RISE, FORT_X, FORT_Y, aim_d, aim_v, shot_power, t_feed, t_loop
     # field (x, y) mm, heading h deg; vmax mm/s; vend > 0: pass the point without stopping
     go_done = 0
     go_end = novapi.timer() + GO_TIMEOUT
@@ -358,7 +378,7 @@ def go_N_N_N_N_N(x, y, h, vmax, vend):
 
 
 def travel_N_N_N_N_N(x, y, h, vmax, vend):
-    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal
+    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal, SHOT_SPEED_FULL, HOOD_DEG, EXIT_LEFT, AIM_SHORT, SHOT_RISE, FORT_X, FORT_Y, aim_d, aim_v, shot_power, t_feed, t_loop
     # long move facing the way it goes (forward travel slips ~1 %, strafing ~7 %), turning to h
     # in the last FACE_DIST mm
     face = 1
@@ -367,7 +387,7 @@ def travel_N_N_N_N_N(x, y, h, vmax, vend):
 
 
 def atan2_N_N(ay, ax):
-    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal
+    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal, SHOT_SPEED_FULL, HOOD_DEG, EXIT_LEFT, AIM_SHORT, SHOT_RISE, FORT_X, FORT_Y, aim_d, aim_v, shot_power, t_feed, t_loop
     # angle of (ax, ay) in degrees, -180..180 (blocks have atan only)
     if ax > 0:
         angle = math.degrees(math.atan(ay / ax))
@@ -383,13 +403,13 @@ def atan2_N_N(ay, ax):
 
 
 def stop_wheels():
-    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal
+    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal, SHOT_SPEED_FULL, HOOD_DEG, EXIT_LEFT, AIM_SHORT, SHOT_RISE, FORT_X, FORT_Y, aim_d, aim_v, shot_power, t_feed, t_loop
     set_wheels_N_N_N(0, 0, 0)
     v_now = 0
 
 
 def head_estimate():
-    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal
+    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal, SHOT_SPEED_FULL, HOOD_DEG, EXIT_LEFT, AIM_SHORT, SHOT_RISE, FORT_X, FORT_Y, aim_d, aim_v, shot_power, t_feed, t_loop
     estimate = head_mm
     if head_moving == 1:
         if novapi.timer() < head_t1:
@@ -397,7 +417,7 @@ def head_estimate():
 
 
 def head_to_N(mm):
-    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal
+    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal, SHOT_SPEED_FULL, HOOD_DEG, EXIT_LEFT, AIM_SHORT, SHOT_RISE, FORT_X, FORT_Y, aim_d, aim_v, shot_power, t_feed, t_loop
     # intake head lift, open loop at 53 mm/s; returns at once (service_jobs stops it)
     head_estimate()
     head_from = estimate
@@ -412,7 +432,7 @@ def head_to_N(mm):
 
 
 def carriage_to_N(mm):
-    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal
+    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal, SHOT_SPEED_FULL, HOOD_DEG, EXIT_LEFT, AIM_SHORT, SHOT_RISE, FORT_X, FORT_Y, aim_d, aim_v, shot_power, t_feed, t_loop
     carriage_from = carriage_mm
     carriage_mm = mm
     carriage_t0 = novapi.timer()
@@ -425,7 +445,7 @@ def carriage_to_N(mm):
 
 
 def jaw_N(seconds):
-    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal
+    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal, SHOT_SPEED_FULL, HOOD_DEG, EXIT_LEFT, AIM_SHORT, SHOT_RISE, FORT_X, FORT_Y, aim_d, aim_v, shot_power, t_feed, t_loop
     # gripper jaw: seconds > 0 closes, < 0 opens
     jaw_t1 = novapi.timer() + abs(seconds)
     jaw_moving = 1
@@ -436,7 +456,7 @@ def jaw_N(seconds):
 
 
 def service_jobs():
-    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal
+    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal, SHOT_SPEED_FULL, HOOD_DEG, EXIT_LEFT, AIM_SHORT, SHOT_RISE, FORT_X, FORT_Y, aim_d, aim_v, shot_power, t_feed, t_loop
     if head_moving == 1:
         if novapi.timer() > head_t1:
             power_expand_board.stop("DC2")
@@ -452,7 +472,7 @@ def service_jobs():
 
 
 def wait_jobs():
-    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal
+    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal, SHOT_SPEED_FULL, HOOD_DEG, EXIT_LEFT, AIM_SHORT, SHOT_RISE, FORT_X, FORT_Y, aim_d, aim_v, shot_power, t_feed, t_loop
     while not (head_moving + carriage_moving + jaw_moving == 0):
         time.sleep(0.001)
         service_jobs()
@@ -461,7 +481,7 @@ def wait_jobs():
 
 
 def props_pass_N(lane):
-    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal
+    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal, SHOT_SPEED_FULL, HOOD_DEG, EXIT_LEFT, AIM_SHORT, SHOT_RISE, FORT_X, FORT_Y, aim_d, aim_v, shot_power, t_feed, t_loop
     # head on the props of the strategy area top: they come off and drop at the centre line
     head_to_N(PROP_HEAD)
     go_N_N_N_N_N(X_LANE, lane, 0, V_MAX, 0)
@@ -474,7 +494,7 @@ def props_pass_N(lane):
 
 
 def floor_pass_N(lane):
-    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal
+    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal, SHOT_SPEED_FULL, HOOD_DEG, EXIT_LEFT, AIM_SHORT, SHOT_RISE, FORT_X, FORT_Y, aim_d, aim_v, shot_power, t_feed, t_loop
     # head at the floor: the props at the line come onto our side
     head_to_N(FLOOR_HEAD)
     go_N_N_N_N_N(X_LANE, lane, 0, V_MAX, 0)
@@ -487,7 +507,7 @@ def floor_pass_N(lane):
 
 
 def x12_to_exchange():
-    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal
+    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal, SHOT_SPEED_FULL, HOOD_DEG, EXIT_LEFT, AIM_SHORT, SHOT_RISE, FORT_X, FORT_Y, aim_d, aim_v, shot_power, t_feed, t_loop
     # gripper (right side) toward +x, straddle the cube from our side, close, turn while carrying
     cube_x = pos_x + PINNED
     head_to_N(CONE_CLEAR_HEAD)
@@ -503,7 +523,7 @@ def x12_to_exchange():
 
 
 def park():
-    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal
+    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal, SHOT_SPEED_FULL, HOOD_DEG, EXIT_LEFT, AIM_SHORT, SHOT_RISE, FORT_X, FORT_Y, aim_d, aim_v, shot_power, t_feed, t_loop
     # clear of the cube and of the balls the observers release at 30 s; head over the strategy area
     head_to_N(PARK_HEAD)
     go_N_N_N_N_N(PARK_X - 100, PARK_Y, 0, V_MAX, 0)
@@ -512,7 +532,7 @@ def park():
 
 
 def automatic():
-    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal
+    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal, SHOT_SPEED_FULL, HOOD_DEG, EXIT_LEFT, AIM_SHORT, SHOT_RISE, FORT_X, FORT_Y, aim_d, aim_v, shot_power, t_feed, t_loop
     in_auto = 1
     novapi.reset_timer()
     calibrate_N_N_N(325, 325, 0)
@@ -538,8 +558,36 @@ def automatic():
         pass
 
 
+def aim_and_shoot():
+    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal, SHOT_SPEED_FULL, HOOD_DEG, EXIT_LEFT, AIM_SHORT, SHOT_RISE, FORT_X, FORT_Y, aim_d, aim_v, shot_power, t_feed, t_loop
+    # R2 held: launcher (left side) toward the blue fortress, power from the distance (ballistic,
+    # SHOT_SPEED_FULL mm/s at 100 %: calibrate with real shots), feed while R2 is held
+    read_odometry()
+    atan2_N_N(FORT_Y - pos_y, FORT_X - pos_x)
+    stop_wheels()
+    go_N_N_N_N_N(pos_x, pos_y, angle - 90, 300, 0)
+    aim_d = math.sqrt((FORT_X - pos_x) * (FORT_X - pos_x) + (FORT_Y - pos_y) * (FORT_Y - pos_y)) - EXIT_LEFT - AIM_SHORT
+    aim_v = math.sqrt(9810 * aim_d * aim_d / (2 * math.cos(math.radians(HOOD_DEG)) * math.cos(math.radians(HOOD_DEG)) * (aim_d * math.tan(math.radians(HOOD_DEG)) - SHOT_RISE)))
+    shot_power = 100 * aim_v / SHOT_SPEED_FULL
+    if shot_power > 100:
+        shot_power = 100
+    power_expand_board.set_power("BL1", shot_power)
+    t_feed = novapi.timer() + 0.5
+    while not (not gamepad.is_key_pressed("R2")):
+        time.sleep(0.001)
+        read_odometry()
+        if novapi.timer() > t_feed:
+            power_expand_board.set_power("DC5", 80)
+            power_expand_board.set_power("DC4", 80)
+        time.sleep(PERIOD)
+    power_expand_board.stop("DC5")
+    power_expand_board.stop("DC4")
+    power_expand_board.stop("BL1")
+    hold_heading = heading
+
+
 def hang_flag():
-    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal
+    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal, SHOT_SPEED_FULL, HOOD_DEG, EXIT_LEFT, AIM_SHORT, SHOT_RISE, FORT_X, FORT_Y, aim_d, aim_v, shot_power, t_feed, t_loop
     # final stage, N4 with the robot in Red Start 1 (where the team puts it after the modification
     # stage): flag rod on the left side, facing the back wall over flagpole 2 (y 1010)
     set_pose_N_N_N(325, 325, 0)
@@ -555,7 +603,7 @@ def hang_flag():
 
 
 def drive_joystick_N(side):
-    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal
+    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal, SHOT_SPEED_FULL, HOOD_DEG, EXIT_LEFT, AIM_SHORT, SHOT_RISE, FORT_X, FORT_Y, aim_d, aim_v, shot_power, t_feed, t_loop
     # manual driving: sticks toward the chosen front (0 intake, 90 gripper), acceleration
     # limited like the automatic profile, heading held by the gyro while not turning
     read_odometry()
@@ -601,9 +649,13 @@ def drive_joystick_N(side):
 
 
 def manual_loop():
-    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal
+    global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal, SHOT_SPEED_FULL, HOOD_DEG, EXIT_LEFT, AIM_SHORT, SHOT_RISE, FORT_X, FORT_Y, aim_d, aim_v, shot_power, t_feed, t_loop
     mode = 0
     hold_heading = heading
+    head_moving = 0
+    head_estimate()
+    head_mm = estimate
+    t_loop = novapi.timer()
     while True:
         time.sleep(0.001)
         if gamepad.is_key_pressed("≡"):
@@ -612,13 +664,24 @@ def manual_loop():
             mode = 1
         if gamepad.is_key_pressed("N4"):
             hang_flag()
+        if gamepad.is_key_pressed("R2"):
+            aim_and_shoot()
+        dt = novapi.timer() - t_loop
+        t_loop = novapi.timer()
         if mode == 0:
             drive_joystick_N(0)
+            # the head height is tracked here too, so the flag routine knows where it starts
             if gamepad.is_key_pressed("Up"):
                 power_expand_board.set_power("DC2", 100)
+                head_mm = head_mm + 53 * dt
+                if head_mm > 380:
+                    head_mm = 380
             else:
                 if gamepad.is_key_pressed("Down"):
                     power_expand_board.set_power("DC2", -100)
+                    head_mm = head_mm - 53 * dt
+                    if head_mm < 0:
+                        head_mm = 0
                 else:
                     power_expand_board.stop("DC2")
             if gamepad.is_key_pressed("R1"):
