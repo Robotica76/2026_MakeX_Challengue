@@ -103,6 +103,12 @@ class Driver:
         self.release(key)
         yield
 
+    def head_to(self, mm):
+        """Intake head to `mm` (53 mm/s) from its streamed height, while the robot does other things."""
+        now = self.state.get("intake_lift_mm", 0.0)
+        if abs(mm - now) > 5:
+            self.press_for("up" if mm > now else "down", abs(mm - now) / 53.0)
+
     def predicted(self):
         """Pose LATENCY_S ahead, from the streamed velocity: the stream and the events each take
         about a frame, so the driver steers from where the robot will be."""
@@ -180,7 +186,7 @@ class Driver:
         yield from self.wait(0.3)
         self.say(f"{label}: done, score {self.state.get('score')}")
 
-    def sweep_area_1(self, x_end, label, head_down_s=1.8):
+    def sweep_area_1(self, x_end, label, head_down_s=None):
         """Resource area 1: turn away from the balls, line up beside them with the head just over
         them, head to the floor and intake on while driving along the rows."""
         yield from self.go(1870, 1120, 180, label=label + " turn spot")
@@ -189,8 +195,7 @@ class Driver:
         yield from self.go(1900, 640, 180, vmax=500, tol=25, label=label + " beside the rows")
         yield from self.go(1900, 600, 180, vmax=200, tol=20, label=label + " sweep start")
         self.press("L1")
-        if head_down_s:
-            self.press_for("down", head_down_s)
+        self.head_to(0)                                     # floor balls: head down at the sweep
         self.say(f"{label}: intake on")
         yield from self.go(x_end, 600, 180, vmax=260, tol=25, timeout=6, label=label + " sweep")
         if self.t < self.deadline:
@@ -207,14 +212,18 @@ class Driver:
         yield from self.tap("button_1")
         yield from self.wait_until(30.4)
         self.say(f"manual stage, score {self.state.get('score')}")
-        yield from self.go(1940, 950, 0, label="off the park spot")   # head front 2189, still high
-        self.press_for("down", 3.2)                        # head 250 -> ~80 mm while driving
+        px, py, _ = self.pose
+        if px > 1900:                                       # parked next to the strategy area
+            yield from self.go(1940, 950, 0, label="off the park spot")   # head front 2189, still high
+        else:                                               # parked west of the released balls
+            yield from self.go(1250, 1100, 0, label="north of the balls")
+        self.head_to(80)                                    # just over the balls while driving
         self.deadline = 117.0                               # then: to the starting area
         yield from self.sweep_area_1(1460, "area 1")
         yield from self.go(1600, 900, None, label="shooting spot")
         yield from self.shoot("shot 1")
         if self.t < 95:                                     # a second sweep fits
-            self.press_for("up", 1.6)                       # head over the balls again
+            self.head_to(80)                                # head over the balls again
             yield from self.sweep_area_1(1380, "area 1 again")
             yield from self.go(1600, 900, None, label="shooting spot")
             yield from self.shoot("shot 2", max_s=14.0)
@@ -236,7 +245,7 @@ class Driver:
         yield from self.wait(4.0)
         self.say(f"flag {self.state.get('flag')}, score {self.state.get('score')}")
         self.deadline = 277.0
-        self.press_for("down", 5.5)                        # head 370 -> ~80 while driving
+        self.head_to(80)                                    # head from the flag height while driving
         yield from self.go(700, 700, 0, label="away from the flag")
         yield from self.sweep_area_1(1300, "final sweep")
         yield from self.go(1600, 900, None)

@@ -47,6 +47,7 @@ def play(seconds=280.0, program=PROGRAM, delay_frames=0, every=2):
                                                  "theta_deg": math.degrees(sim.pose.theta)},
                          "velocity": {"vx_mm_s": vx, "vy_mm_s": vy, "omega_deg_s": math.degrees(w)},
                          "stored": sim.world.stored if sim.world else 0,
+                         "intake_lift_mm": sim.mechanisms.position("intake_lift"),
                          "score": referee.match_score(sim, "red")["total"],
                          "flag": sim.flag.state if sim.flag else None}
                 queue.append(state)
