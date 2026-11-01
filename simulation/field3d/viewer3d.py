@@ -445,9 +445,48 @@ class Viewer3D:
                                   align=TextNode.A_right, fg=(1, 0.85, 0.2, 1), shadow=(0, 0, 0, 0.9), mayChange=True)
         self.rules_text = OnscreenText(text="", parent=base.a2dTopRight, pos=(-0.04, -0.42), scale=0.04,
                                        align=TextNode.A_right, fg=(1, 1, 1, 1), shadow=(0, 0, 0, 0.9), mayChange=True)
+        # scoreboard, top centre: total, breakdown and a flash of the last change
+        self.score_total = OnscreenText(text="", parent=base.a2dTopRight, pos=(-0.04, -0.1), scale=0.085,
+                                        align=TextNode.A_right, fg=(1, 0.35, 0.35, 1), shadow=(0, 0, 0, 0.95),
+                                        mayChange=True)
+        self.score_detail = OnscreenText(text="", parent=base.a2dTopRight, pos=(-0.04, -0.155), scale=0.032,
+                                         align=TextNode.A_right, fg=(1, 1, 1, 1), shadow=(0, 0, 0, 0.9), mayChange=True)
+        self.score_flash = OnscreenText(text="", parent=base.a2dTopRight, pos=(-0.6, -0.1), scale=0.07,
+                                        align=TextNode.A_right, fg=(0.5, 1, 0.55, 1), shadow=(0, 0, 0, 0.9),
+                                        mayChange=True)
+        self._last_total, self._flash_until = None, 0.0
         self.help = OnscreenText(text=HELP, parent=base.a2dBottomLeft, pos=(0.04, 0.08), scale=0.034,
                                  align=TextNode.A_left, fg=(0.9, 0.92, 0.95, 1), shadow=(0, 0, 0, 0.85), mayChange=False)
         self._refresh_hud()
+
+    def _refresh_score(self):
+        """Scoreboard (referee.match_score, rules guide table p.53-54)."""
+        sim = self.sim
+        score = match_score(sim, sim.cfg.alliance)
+        total = score["total"]
+        team = sim.cfg.alliance.upper()
+        self.score_total.setText(f"{team}  {total}")
+        width = self.score_total.textNode.getWidth() * 0.085      # flash just left of the total
+        self.score_flash.setPos(-0.08 - width, -0.1)
+        bonus = f"{min(score['balls'], score['bonus_balls'])} x20 + {max(0, score['balls'] - score['bonus_balls'])} x10" \
+            if score["bonus_balls"] else f"{score['balls']} x10"
+        parts = [f"balls {bonus} = {score['precision']}"]
+        if score["bonus_cubes"]:
+            parts.append(f"bonus {'+'.join(score['bonus_cubes'])}")
+        for key, label in (("flag", "flag"), ("cones", "cones"), ("letter_cubes", "letters")):
+            if score[key]:
+                parts.append(f"{label} {score[key]}")
+        if score["penalties"]:
+            parts.append(f"penalties -{score['penalties']}")
+        self.score_detail.setText("   ".join(parts) + f"\n(not simulated: {score['not_simulated']})")
+        if self._last_total is not None and total != self._last_total and sim.running:
+            change = total - self._last_total
+            self.score_flash.setText(f"{change:+d}")
+            self.score_flash.setFg((0.5, 1, 0.55, 1) if change > 0 else (1, 0.45, 0.45, 1))
+            self._flash_until = sim.time + 1.5
+        if sim.time > self._flash_until or sim.time < self._flash_until - 1.6:
+            self.score_flash.setText("")
+        self._last_total = total
 
     def say(self, text, error=False):
         self.message, self.message_error = text, error
@@ -456,11 +495,8 @@ class Viewer3D:
         prev = score_preview(self.sim.props, self.sim.elements, self.sim.cfg.alliance)
         bonus = prev["bonus"]
         held = self.sim.gripper.held.label if self.sim.gripper and self.sim.gripper.held else "-"
-        score = match_score(self.sim, self.sim.cfg.alliance)
         return (f"\ngripper holds {held}   bonus cubes valid {', '.join(bonus['valid']) or 'none'} "
-                f"(+{bonus['bonus_balls']} balls)   cones hung {prev['cones']}   letter cubes in channels {prev['letter_cubes']}"
-                f"\nSCORE {self.sim.cfg.alliance} {score['total']}   balls in the opponent fortress {score['balls']} "
-                f"(bonus {score['bonus_balls']} at 20)   not simulated: {score['not_simulated']}")
+                f"(+{bonus['bonus_balls']} balls)   cones hung {prev['cones']}   letter cubes in channels {prev['letter_cubes']}")
 
     def _ball_text(self):
         w = self.sim.world
@@ -487,6 +523,7 @@ class Viewer3D:
 
     def _refresh_hud(self):
         self._refresh_clock()
+        self._refresh_score()
         sim, pose = self.sim, self.sim.pose
         source = getattr(self, "programs", None) and self.programs.source
         name = source.name if source else "no program"

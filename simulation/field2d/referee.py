@@ -13,6 +13,7 @@ Match score at the end (p.36-50, table p.53-54), per alliance:
   cones               20 each, hung on the alliance's cone posts
   letter cubes        30 each in a strategy channel (+50 per complete MAKE side, not judged)
   team flag           50, hung on an own flagpole in the final stage (flag.py)
+  penalties           -20 per R06 violation (body outside the area > 3 s), -20 if moving at 30 s (R19)
   not simulated       pins (10 / 30), X mark (30)
 
 End of the manual stage (p.53): the robot goes back (partly) into its starting area, is taken out
@@ -89,6 +90,12 @@ def match_score(sim, alliance: str = "red") -> Dict[str, object]:
     prev = score_preview(sim.props, sim.elements, alliance)
     cones, letters = prev["cones"] * 20, prev["letter_cubes"] * 30
     flag = sim.flag.points if getattr(sim, "flag", None) and alliance == sim.cfg.alliance else 0
+    penalties = 0
+    monitor = getattr(sim, "monitor", None)
+    if monitor is not None and alliance == sim.cfg.alliance:
+        penalties += 20 * monitor.r06_penalties                                  # R06: outside > 3 s
+        if monitor.auto_end is not None and not monitor.auto_end["stationary"]:
+            penalties += 20                                                      # R19: moving at 30 s
     return {"balls": n, "bonus_balls": extra, "bonus_cubes": bonus["valid"], "precision": precision,
-            "cones": cones, "letter_cubes": letters, "flag": flag, "total": precision + cones + letters + flag,
-            "not_simulated": "pins, X mark"}
+            "cones": cones, "letter_cubes": letters, "flag": flag, "penalties": penalties,
+            "total": precision + cones + letters + flag - penalties, "not_simulated": "pins, X mark"}
