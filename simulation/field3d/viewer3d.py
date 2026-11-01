@@ -92,13 +92,16 @@ class Viewer3D:
         from panda3d.core import load_prc_file_data
         width, height = (int(v) for v in args.size.lower().split("x"))
         load_prc_file_data("", f"win-size {width} {height}\nwindow-title Storm Breaker 3D\n"
-                               "framebuffer-multisample 1\nmultisamples 4\nsync-video 1\n"
+                               "framebuffer-multisample 1\nmultisamples 4\nsync-video 0\nclock-mode limited\nclock-frame-rate 60\n"
                                + ("window-type offscreen\naudio-library-name null\n" if args.screenshot else ""))
         from direct.showbase.ShowBase import ShowBase
         self.base = ShowBase()
         self.args = args
         self.gamepad = GamepadInput()
         self.sim, self.elements = build_simulation(args, self.gamepad)
+        # macOS slows a window that is behind others to ~8 fps: simulate up to 0.3 s per frame so
+        # the match clock still runs at real time (the picture is just choppier)
+        self.sim.max_frame_s = 0.3
         self.message, self.message_error = "", False
         from viewer import ProgramController   # 2D viewer helper: .py / .mblock, reload on save
         self.programs = ProgramController(self.sim, self.say)

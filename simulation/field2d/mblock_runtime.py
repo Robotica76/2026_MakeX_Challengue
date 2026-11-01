@@ -23,8 +23,8 @@ Anything else the program calls raises UnsupportedAPI, reported in the viewer,
 so missing stand-ins are obvious instead of silently ignored.
 
 A loop that polls the API without sleeping (mBlock's "wait until" is `while not ...: pass`)
-pays 1 ms of simulated time every 200 calls, as the NovaPi's bus calls would take, so it stays
-in step with the simulation and sees short gamepad presses.
+pays 10 ms of simulated time every 100 calls, so it stays in step with the simulation and still
+sees short gamepad presses (a press lasts well over 10 ms).
 
 Stop works even for loops that never call a simulated API (`while True: pass`)
 or that catch everything (`except BaseException`): ProgramRunner.stop() injects
@@ -45,8 +45,10 @@ from pathlib import Path
 from typing import Dict, Optional, Sequence
 
 
-BUSY_CALLS = 200            # simulated API calls without a sleep before the program pays time
-BUSY_CALL_COST_S = 0.001    # simulated time per batch: keeps busy loops in step with the simulation
+BUSY_CALLS = 100            # simulated API calls without a sleep before the program pays time
+BUSY_CALL_COST_S = 0.01     # simulated time per batch: keeps busy loops in step with the simulation
+                            # (each batch is a hand-over with the simulation: 10 ms keeps the 3D
+                            # viewer at real time while a program waits; 1 ms made it crawl)
 
 
 class UnsupportedAPI(Exception):

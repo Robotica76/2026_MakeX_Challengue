@@ -84,6 +84,7 @@ class Simulation:
         self.variation = variation or Variation()  # ideal robot unless a study passes one
         self.marks: List[dict] = []                # simtrace.mark() records, see Monte Carlo
         self.trace_options: dict = {}              # simtrace.options() for the program
+        self.max_frame_s = MAX_FRAME_S             # longest frame simulated in one step (viewers)
         self.time_limit = time_limit  # 0 = no limit
         self.gyro_sign = gyro_sign
         self.gamepad = gamepad or GamepadInput()
@@ -219,7 +220,7 @@ class Simulation:
         """Advance by one viewer frame of wall time (real-time playback)."""
         if not self.running:
             return
-        remaining = min(frame_s, MAX_FRAME_S)
+        remaining = min(frame_s, self.max_frame_s)
         lockstep = True
         while remaining > 1e-9 and self.running:
             allowed = self.clock.sync() if lockstep else float("inf")
