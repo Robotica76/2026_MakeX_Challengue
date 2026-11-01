@@ -652,6 +652,7 @@ class Viewer3D:
         from panda3d.core import ClockObject
         clock = ClockObject.get_global_clock()
         dt = clock.get_dt()
+        self._frame_cap(clock.get_real_time())
         self._speed_meter(clock.get_real_time(), dt)
         self.programs.watch(clock.get_frame_time())   # reload when the file is saved again
         self.sim.step(dt)
@@ -675,6 +676,15 @@ class Viewer3D:
         self._refresh_hud()
         self._publish(clock.get_frame_time())
         return Task.cont
+
+    def _frame_cap(self, wall, fps=60.0):
+        """At most `fps` frames per second, also when the match is over or the window is hidden
+        (Panda's limited clock alone let the loop spin at ~2000 fps there)."""
+        import time as _time
+        last = getattr(self, "_last_frame_wall", None)
+        if last is not None and wall - last < 1.0 / fps:
+            _time.sleep(1.0 / fps - (wall - last))
+        self._last_frame_wall = max(wall, (last or wall) + 1.0 / fps) if last is not None else wall
 
     def _speed_meter(self, wall, dt):
         """Every 5 s of wall time: frames per second and simulated seconds per wall second
