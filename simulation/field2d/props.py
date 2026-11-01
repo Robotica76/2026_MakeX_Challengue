@@ -174,6 +174,9 @@ def _sliding_support(p: Prop, elements) -> float:
     return support_under(p, elements)
 
 
+REACH_MM = 520.0          # robot corners (~360 mm from the centre with the head) + a prop half size
+
+
 def _mtv(pose, rect, cx, cy, half):
     """Smallest translation (dx, dy) that takes the square prop (centre cx, cy, half size) out of the
     robot-frame rectangle rect = (x0, y0, x1, y1) placed at pose; None if they do not overlap."""
@@ -206,8 +209,8 @@ def push_props(pose, parts, props: List[Prop], elements, colliders, openings=())
     jammed = []
     c, s = math.cos(pose.theta), math.sin(pose.theta)
     for p in props:
-        if p.held or p.dragged:
-            continue
+        if p.held or p.dragged or abs(p.x - pose.x) > REACH_MM or abs(p.y - pose.y) > REACH_MM:
+            continue                              # far props cannot touch the robot (broad phase)
         lx = (p.x - pose.x) * c + (p.y - pose.y) * s
         ly = -(p.x - pose.x) * s + (p.y - pose.y) * c
         if any(x0 <= lx <= x1 and y0 <= ly <= y1 and min(z1, p.z + p.height) - max(z0, p.z) > 0

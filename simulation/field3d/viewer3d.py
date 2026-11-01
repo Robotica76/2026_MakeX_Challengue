@@ -612,6 +612,7 @@ class Viewer3D:
         from panda3d.core import ClockObject
         clock = ClockObject.get_global_clock()
         dt = clock.get_dt()
+        self._speed_meter(clock.get_real_time(), dt)
         self.programs.watch(clock.get_frame_time())   # reload when the file is saved again
         self.sim.step(dt)
         self._refresh_buttons()
@@ -634,6 +635,21 @@ class Viewer3D:
         self._refresh_hud()
         self._publish(clock.get_frame_time())
         return Task.cont
+
+    def _speed_meter(self, wall, dt):
+        """Every 5 s of wall time: frames per second and simulated seconds per wall second
+        (printed in the terminal; below 1 the simulation runs slower than the match clock)."""
+        m = getattr(self, "_meter", None)
+        if m is None:
+            self._meter = [wall, self.sim.time, 0, 0.0]
+            return
+        m[2] += 1
+        m[3] = max(m[3], dt)
+        if wall - m[0] >= 5.0:
+            span = wall - m[0]
+            print(f"[viewer] {m[2] / span:4.1f} fps, simulation {(self.sim.time - m[1]) / span:4.2f}x real time, "
+                  f"slowest frame {m[3] * 1000:.0f} ms", flush=True)
+            self._meter = [wall, self.sim.time, 0, 0.0]
 
     def run_headless(self, seconds, frame_s=1 / 60):
         """Advance the simulation without real time (screenshots and tests)."""
