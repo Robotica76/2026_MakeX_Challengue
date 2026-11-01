@@ -42,8 +42,10 @@ def play(seconds=280.0, program=PROGRAM, delay_frames=0, every=2):
             sim.step(1 / 60)
             k += 1
             if k % every == 0:
+                vx, vy, w = sim._velocity
                 state = {"t": sim.time, "pose": {"x_mm": sim.pose.x, "y_mm": sim.pose.y,
                                                  "theta_deg": math.degrees(sim.pose.theta)},
+                         "velocity": {"vx_mm_s": vx, "vy_mm_s": vy, "omega_deg_s": math.degrees(w)},
                          "stored": sim.world.stored if sim.world else 0,
                          "score": referee.match_score(sim, "red")["total"],
                          "flag": sim.flag.state if sim.flag else None}

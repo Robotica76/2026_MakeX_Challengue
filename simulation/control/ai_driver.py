@@ -25,8 +25,9 @@ import time
 STREAM = ("127.0.0.1", 5005)
 STICK_MM_S = 800.0          # program: stick 100 % = 800 mm/s (drive_joystick_N)
 TURN_DPS_PER_STICK = 200.0  # program: Rx 100 % = 200 deg/s
-ACCEL_MM_S2 = 700.0         # driver's braking profile
-STICK_STEP = 0.07           # max stick change per update (~30 per second): smooth, no jumps
+ACCEL_MM_S2 = 1000.0        # driver's braking profile
+STICK_STEP = 0.1            # max stick change per update (~30 per second): smooth, no jumps
+LATENCY_S = 0.12            # stream + event delay the driver compensates (predicted pose)
 
 
 def wrap(a):
@@ -41,6 +42,8 @@ class Driver:
         self._plan = self.plan()
         self._sticks = (0.0, 0.0, 0.0)
         self.deadline = 1e9          # actions give up at this match time (stage ends)
+        self.timed = []              # (release time, key): keys held while the robot does other things
+        self.moves = []              # (label, seconds, reached / close / timeout)
 
     # -- gamepad -------------------------------------------------------------------------
     def press(self, key):
@@ -68,9 +71,17 @@ class Driver:
         p = self.state["pose"]
         return p["x_mm"], p["y_mm"], p["theta_deg"]
 
+    def press_for(self, key, seconds):
+        """Hold a key for `seconds` without waiting (e.g. the head moving while the robot drives)."""
+        self.press(key)
+        self.timed.append((self.t + seconds, key))
+
     def tick(self, state):
         self.state = state
         self.events = []
+        for item in [i for i in self.timed if self.t >= i[0]]:
+            self.release(item[1])
+            self.timed.remove(item)
         try:
             next(self._plan)
         except StopIteration:
@@ -92,14 +103,25 @@ class Driver:
         self.release(key)
         yield
 
-    def go(self, x, y, heading=None, vmax=650.0, tol=25.0, timeout=8.0):
-        """Drive to field (x, y) mm (and heading, deg) with the sticks, smoothly: speed profile
-        sqrt(2 a d) like the automatic stage, stick changes rate-limited (no jumps), turning with
-        hysteresis (starts above 4 deg of error, stops below 2 deg)."""
+    def predicted(self):
+        """Pose LATENCY_S ahead, from the streamed velocity: the stream and the events each take
+        about a frame, so the driver steers from where the robot will be."""
+        px, py, th = self.pose
+        v = self.state.get("velocity") or {}
+        vx, vy, w = v.get("vx_mm_s", 0.0), v.get("vy_mm_s", 0.0), v.get("omega_deg_s", 0.0)
+        c, s = math.cos(math.radians(th)), math.sin(math.radians(th))
+        return (px + (vx * c - vy * s) * LATENCY_S, py + (vx * s + vy * c) * LATENCY_S,
+                th + w * LATENCY_S, math.hypot(vx, vy))
+
+    def go(self, x, y, heading=None, vmax=800.0, tol=25.0, timeout=5.0, label=""):
+        """Drive to field (x, y) mm (and heading, deg) with the sticks: speed profile sqrt(2 a d),
+        rate-limited sticks, turning with hysteresis and while translating; steers from the
+        predicted pose; done when inside `tol`, or close and nearly still (no hunting)."""
+        start = self.t
         end = min(self.t + timeout, self.deadline)
-        turning = False
+        turning, still_since, reason = False, None, "timeout"
         while self.t < end:
-            px, py, th = self.pose
+            px, py, th, speed_now = self.predicted()
             ex, ey = x - px, y - py
             dist = math.hypot(ex, ey)
             herr = wrap(heading - th) if heading is not None else 0.0
@@ -108,9 +130,17 @@ class Driver:
             elif abs(herr) < 2.0:
                 turning = False
             if dist < tol and not turning:
+                reason = "reached"
                 break
+            if dist < 2.5 * tol and abs(herr) < 6.0 and speed_now < 40.0:
+                still_since = self.t if still_since is None else still_since
+                if self.t - still_since > 0.4:
+                    reason = "close"
+                    break
+            else:
+                still_since = None
             c, s = math.cos(math.radians(th)), math.sin(math.radians(th))
-            speed = 0.0 if dist < tol else min(vmax, math.sqrt(2 * ACCEL_MM_S2 * dist), 1.6 * dist)
+            speed = 0.0 if dist < tol else min(vmax, math.sqrt(2 * ACCEL_MM_S2 * dist), 2.0 * dist)
             f = (ex * c + ey * s) / max(dist, 1e-6) * speed
             r = (ex * s - ey * c) / max(dist, 1e-6) * speed
             ly, lx = f / STICK_MM_S, r / STICK_MM_S
@@ -119,22 +149,23 @@ class Driver:
                 lx, ly = lx / mag * 0.1, ly / mag * 0.1
             rx = 0.0
             if turning:
-                ccw = max(-120.0, min(120.0, 3.0 * herr))
+                ccw = max(-180.0, min(180.0, 3.5 * herr))
                 rx = -ccw / TURN_DPS_PER_STICK
                 if abs(rx) < 0.1:
                     rx = math.copysign(0.1, rx)
             plx, ply, prx = self._sticks
-            step = STICK_STEP
-            lx = plx + max(-step, min(step, lx - plx))
-            ly = ply + max(-step, min(step, ly - ply))
-            rx = prx + max(-step, min(step, rx - prx))
+            lx = plx + max(-STICK_STEP, min(STICK_STEP, lx - plx))
+            ly = ply + max(-STICK_STEP, min(STICK_STEP, ly - ply))
+            rx = prx + max(-STICK_STEP, min(STICK_STEP, rx - prx))
             self.sticks(lx, ly, rx)
             yield
         while any(abs(v) > 1e-3 for v in self._sticks):     # ease the sticks back to zero
             plx, ply, prx = self._sticks
             self.sticks(*(v - max(-STICK_STEP, min(STICK_STEP, v)) for v in (plx, ply, prx)))
             yield
-        yield from self.wait(0.15)
+        self.moves.append((label or f"({x:.0f},{y:.0f})", round(self.t - start, 2), reason))
+        if reason == "timeout":
+            self.say(f"move to ({x:.0f}, {y:.0f}) timed out")
 
     def shoot(self, label, max_s=22.0):
         """Hold R2 (the program aims and sets the power) until the robot is empty."""
@@ -149,19 +180,21 @@ class Driver:
         yield from self.wait(0.3)
         self.say(f"{label}: done, score {self.state.get('score')}")
 
-    def sweep_area_1(self, x_end, label):
-        """Resource area 1: turn away from the balls, line up beside them, intake on, drive along."""
-        yield from self.go(1870, 1120, None)               # turning here: clear of the rows and
-        yield from self.go(1870, 1120, 180)                # of the partner half
+    def sweep_area_1(self, x_end, label, head_down_s=1.8):
+        """Resource area 1: turn away from the balls, line up beside them with the head just over
+        them, head to the floor and intake on while driving along the rows."""
+        yield from self.go(1870, 1120, 180, label=label + " turn spot")
         _, py, _ = self.pose
-        yield from self.go(1900, py, 180)
-        yield from self.go(1900, 640, 180, vmax=400, tol=20)
-        yield from self.go(1900, 600, 180, vmax=150, tol=10)   # slow: 22 mm from the shelf legs
+        yield from self.go(1900, py, 180, tol=30, label=label + " line up")
+        yield from self.go(1900, 640, 180, vmax=500, tol=25, label=label + " beside the rows")
+        yield from self.go(1900, 600, 180, vmax=200, tol=20, label=label + " sweep start")
         self.press("L1")
+        if head_down_s:
+            self.press_for("down", head_down_s)
         self.say(f"{label}: intake on")
-        yield from self.go(x_end, 600, 180, vmax=180, tol=20, timeout=10)
+        yield from self.go(x_end, 600, 180, vmax=260, tol=25, timeout=6, label=label + " sweep")
         if self.t < self.deadline:
-            yield from self.wait(1.0)
+            yield from self.wait(0.8)
         self.release("L1")
         self.say(f"{label}: {self.state.get('stored', 0)} balls inside")
 
@@ -174,18 +207,16 @@ class Driver:
         yield from self.tap("button_1")
         yield from self.wait_until(30.4)
         self.say(f"manual stage, score {self.state.get('score')}")
-        yield from self.go(2000, 900, 0)                    # head still over the strategy area
-        yield from self.go(1930, 1000, 0, tol=15)          # head front 2179: clear of the strategy area
-        self.press("down")                                  # intake head to the floor
-        yield from self.wait(5.0)
-        self.release("down")
+        yield from self.go(1940, 950, 0, label="off the park spot")   # head front 2189, still high
+        self.press_for("down", 3.2)                        # head 250 -> ~80 mm while driving
         self.deadline = 117.0                               # then: to the starting area
-        yield from self.sweep_area_1(1480, "area 1")
-        yield from self.go(1600, 900, None)
+        yield from self.sweep_area_1(1460, "area 1")
+        yield from self.go(1600, 900, None, label="shooting spot")
         yield from self.shoot("shot 1")
-        if self.t < 90:                                     # a second sweep fits
-            yield from self.sweep_area_1(1400, "area 1 again")
-            yield from self.go(1600, 900, None)
+        if self.t < 95:                                     # a second sweep fits
+            self.press_for("up", 1.6)                       # head over the balls again
+            yield from self.sweep_area_1(1380, "area 1 again")
+            yield from self.go(1600, 900, None, label="shooting spot")
             yield from self.shoot("shot 2", max_s=14.0)
         self.deadline = 129.5
         self.release("L1")
@@ -205,16 +236,16 @@ class Driver:
         yield from self.wait(4.0)
         self.say(f"flag {self.state.get('flag')}, score {self.state.get('score')}")
         self.deadline = 277.0
-        yield from self.go(700, 700, 0)
-        self.press("down")
-        yield from self.wait(7.0)
-        self.release("down")
+        self.press_for("down", 5.5)                        # head 370 -> ~80 while driving
+        yield from self.go(700, 700, 0, label="away from the flag")
         yield from self.sweep_area_1(1300, "final sweep")
         yield from self.go(1600, 900, None)
         yield from self.shoot("final shot", max_s=12.0)
         self.release("L1")
         self.release("R2")
         self.say(f"end, score {self.state.get('score')}")
+        slow = [m for m in self.moves if m[2] == "timeout"]
+        self.say(f"moves: {len(self.moves)}, timed out: {len(slow)} {slow[:4]}")
         while True:
             self.sticks(0, 0, 0)
             yield
