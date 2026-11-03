@@ -112,6 +112,21 @@ class PullModeTest(unittest.TestCase):
         self.assertLess(b.x, 2220.0 - R)                                   # completely on our side
 
 
+class XMarkTest(unittest.TestCase):
+    def test_a_fast_ball_turns_the_colour_of_its_side(self):
+        b = Ball("b", 1950.0, 1527.0, 800.0)
+        w = world([b])
+        self.assertEqual(w.x_mark_state, "both")                           # each colour faces its camp
+        b.asleep, b.vx, b.vz = False, 4000.0, 0.0                          # red shot, toward +x
+        run(w, 0.15)
+        self.assertEqual(w.x_mark_state, "red")
+        slow = Ball("s", 2700.0, 1527.0, 800.0)
+        w2 = world([slow])
+        slow.asleep, slow.vx = False, -600.0                               # too slow to turn it
+        run(w2, 0.4)
+        self.assertEqual(w2.x_mark_state, "both")
+
+
 class RobotContactTest(unittest.TestCase):
     def test_robot_body_pushes_a_ball(self):
         pose = RobotPose(1500.0, 1500.0, 0.0)

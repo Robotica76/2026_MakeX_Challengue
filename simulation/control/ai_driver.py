@@ -12,7 +12,8 @@ Plan (red alliance, Red Start 1, lower half of our area; robot_2026 controls of 
   0 s      N1: the program runs the automatic stage (X12 into exchange area 1, X9 and cones ours)
   30 s     manual: head down, sweep resource area 1 (own 10 + 12 bonus balls) with L1 (intake),
            hold R2 (the program aims at the blue fortress and sets the power); sweep the rest and
-           shoot again; back into the starting area before 130 s (modification stage)
+           shoot again (if the opponent turned the X mark blue, the last 2 balls go at it with N3);
+           back into the starting area before 130 s (modification stage)
   190 s    final: N4 (the program hangs the flag from Red Start 1), then the remaining balls
 """
 
@@ -173,16 +174,18 @@ class Driver:
         if reason == "timeout":
             self.say(f"move to ({x:.0f}, {y:.0f}) timed out")
 
-    def shoot(self, label, max_s=22.0):
-        """Hold R2 (the program aims and sets the power) until the robot is empty."""
+    def shoot(self, label, max_s=22.0, keep=0, key="R2"):
+        """Hold R2 (fortress) or N3 (X mark): the program aims and sets the power; until `keep`
+        balls are left inside."""
         start, n = self.t, self.state.get("stored", 0)
-        self.say(f"{label}: R2 with {n} balls inside")
-        self.press("R2")
+        self.say(f"{label}: {key} with {n} balls inside")
+        self.press(key)
         end = min(self.t + max_s, self.deadline)
-        while self.t < end and (self.state.get("stored", 0) > 0 or self.t < start + 2.5):
+        while self.t < end and (self.state.get("stored", 0) > keep or self.t < start + 2.5):
             yield
-        yield from self.wait(0.8)
-        self.release("R2")
+        if not keep:
+            yield from self.wait(0.8)
+        self.release(key)
         yield from self.wait(0.3)
         self.say(f"{label}: done, score {self.state.get('score')}")
 
@@ -226,7 +229,11 @@ class Driver:
             self.head_to(80)                                # head over the balls again
             yield from self.sweep_area_1(1380, "area 1 again")
             yield from self.go(1600, 900, None, label="shooting spot")
-            yield from self.shoot("shot 2", max_s=14.0)
+            flipped = self.state.get("x_mark") == "blue"   # the opponent turned it: win it back
+            yield from self.shoot("shot 2", max_s=14.0, keep=2 if flipped else 0)
+            if flipped and self.state.get("stored", 0) > 0:
+                yield from self.shoot("X mark", max_s=6.0, key="button_3")
+                self.say(f"X mark: {self.state.get('x_mark')}")
         self.deadline = 129.5
         self.release("L1")
         self.release("R2")

@@ -171,6 +171,9 @@ class Carry:
 
 
 # --- world ------------------------------------------------------------------------------
+X_HIT_SPEED = 1200.0          # mm/s: a ball at least this fast turns the X mark (estimate)
+
+
 class BallWorld:
     def __init__(self, elements: List[fl.Element], balls: List[Ball], intake: Optional[Intake],
                  path: Optional[BallPath], body_box: Box, head_box: Box):
@@ -188,6 +191,12 @@ class BallWorld:
         self.dropped = 0
         self.shots = 0
         self.in_fortress: Dict[str, List[str]] = {k: [] for k in self.fortress}
+        # X mark (p.44-46): "both" at the start (each colour faces its own camp); a ball that
+        # hits it hard turns the colour of the side it comes from toward that side (model of
+        # "shoot it to turn the colored face toward its own alliance": check on a real field)
+        self.x_mark_box = next((box for name, box in named_colliders(elements) if name == "x_mark"), None)
+        self.x_mark_state = "both"
+        self.x_mark_hits: List[str] = []
         for b in balls:
             b.vx = b.vy = b.vz = 0.0
             b.asleep, b.state, b.rest = True, "field", 0.0
@@ -208,6 +217,9 @@ class BallWorld:
         self._capture(pose, lift, dc)
         self._move_carried(dt, pose, velocity, dc)
         awake = [b for b in self.balls if b.state == "field" and not b.asleep]
+        if self.x_mark_box:
+            for b in awake:
+                self._x_mark_hit(b)
         for b in awake:
             self._integrate(b, dt)
         for b in self.balls:
@@ -388,6 +400,24 @@ class BallWorld:
                 b.asleep = True
         else:
             b.rest = 0.0
+
+    def _x_mark_hit(self, b) -> None:
+        x0, y0, z0, x1, y1, z1 = self.x_mark_box
+        gap = R + 3.0
+        if not (x0 - gap <= b.x <= x1 + gap and y0 - gap <= b.y <= y1 + gap and z0 - gap <= b.z <= z1 + gap):
+            return
+        if abs(b.vx) < X_HIT_SPEED:                           # speed toward the X (not a falling ball)
+            return
+        cx = (x0 + x1) / 2
+        if b.vx > 0 and b.x < cx:
+            side = "red"                                      # coming from the red side (+x)
+        elif b.vx < 0 and b.x > cx:
+            side = "blue"
+        else:
+            return                                            # bouncing off: not a hit
+        if self.x_mark_state != side:
+            self.x_mark_state = side
+            self.x_mark_hits.append(side)
 
     def _settle(self, b) -> bool:
         """Floor, then the field structures. A ball a structure pushes into the floor (pressed

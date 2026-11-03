@@ -473,7 +473,8 @@ class Viewer3D:
         parts = [f"balls {bonus} = {score['precision']}"]
         if score["bonus_cubes"]:
             parts.append(f"bonus {'+'.join(score['bonus_cubes'])}")
-        for key, label in (("flag", "flag"), ("cones", "cones"), ("letter_cubes", "letters")):
+        for key, label in (("flag", "flag"), ("x_mark", "X"), ("pins", "pins"), ("cones", "cones"),
+                           ("letter_cubes", "letters")):
             if score[key]:
                 parts.append(f"{label} {score[key]}")
         if score["penalties"]:
@@ -645,6 +646,7 @@ class Viewer3D:
         msg["stored"] = self.sim.world.stored if self.sim.world else 0     # balls inside the robot
         msg["score"] = match_score(self.sim, self.sim.cfg.alliance)["total"]
         msg["flag"] = self.sim.flag.state if self.sim.flag else None
+        msg["x_mark"] = self.sim.world.x_mark_state if self.sim.world else None
         self.publisher.maybe_send(now, msg)
 
     def _update(self, task):

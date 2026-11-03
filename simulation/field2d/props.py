@@ -32,12 +32,16 @@ CONE_H, CONE_BASE, CONE_GRIP_W = 170.0, 120.0, 90.0   # grip the cone body (100 
 CHANNEL_RAIL_Z = 25.0                                  # strategy channel bottom rail, estimate
 FORTRESS_CUBE_Z = 171.0
 POST_CATCH_MM = 20.0                                   # cone hole centre this close to a post: hung
+PIN_H, PIN_D = 290.0, 100.0                            # p.24: 290 mm tall, base 70, widest 100 mm
+RES_SHELF_Z = 758.5                                    # own resource area side shelves (p.13 Fig 4.2-6)
+RES_PIN_EDGE, RES_PIN_PITCH = 127.0, 120.0             # pins from the frame end and apart (Fig 4.2-6)
+RES_BOX_OUTER = 373.0                                  # central ball box of the resource area
 
 
 @dataclass
 class Prop:
     name: str
-    kind: str              # bonus | cone | letter
+    kind: str              # bonus | cone | letter | pin
     label: str             # X3.. / cone / M A K E
     alliance: str          # neutral for bonus cubes and cones
     x: float               # centre, field mm
@@ -48,11 +52,11 @@ class Prop:
 
     @property
     def height(self) -> float:
-        return CONE_H if self.kind == "cone" else CUBE
+        return {"cone": CONE_H, "pin": PIN_H}.get(self.kind, CUBE)
 
     @property
     def width(self) -> float:
-        return CONE_GRIP_W if self.kind == "cone" else CUBE
+        return {"cone": CONE_GRIP_W, "pin": PIN_D}.get(self.kind, CUBE)
 
 
 def _strategy_top(elements, x, y) -> Optional[float]:
@@ -69,6 +73,11 @@ def field_props(elements: List[fl.Element]) -> List[Prop]:
             base = _strategy_top(elements, el.x, el.y) or 0.0
             kind = "cone" if el.label == "cone" else "bonus"
             props.append(Prop(el.name, kind, el.label, "neutral", el.x, el.y, base))
+        elif el.kind == "overhead" and "_resource_" in el.name and not el.name.endswith("_back"):
+            for side in (-1, 1):              # 4 pins, two on each side shelf (p.13, p.44)
+                for k in range(2):
+                    px = el.x + side * (el.w / 2 - RES_PIN_EDGE - k * RES_PIN_PITCH)
+                    props.append(Prop(f"{el.name}_pin_{side}_{k}", "pin", "pin", el.alliance, px, el.y, RES_SHELF_Z))
         elif el.kind == "movable":            # fortress: 8 letter cubes, two per side (Fig 4.4-13)
             half = el.w / 2
             r = half - 30.0 - CUBE / 2 - 5.0
@@ -216,7 +225,7 @@ def push_props(pose, parts, props: List[Prop], elements, colliders, openings=())
         if any(x0 <= lx <= x1 and y0 <= ly <= y1 and min(z1, p.z + p.height) - max(z0, p.z) > 0
                for x0, y0, z0, x1, y1, z1 in openings):
             continue
-        half = (CONE_BASE if p.kind == "cone" else CUBE) / 2
+        half = {"cone": CONE_BASE, "pin": PIN_D}.get(p.kind, CUBE) / 2
         top = p.z + p.height
         for x0, y0, z0, x1, y1, z1 in parts:
             if min(z1, top) - max(z0, p.z) <= 2.0:
@@ -257,6 +266,14 @@ def denial_count(props: List[Prop], balls, alliance: str) -> Dict[str, int]:
 
 def support_under(p: Prop, elements) -> float:
     """Height of the bottom of a released prop (drops straight down)."""
+    if p.kind == "pin":
+        for el in elements:
+            if el.name.endswith("_pin_area") and el.contains(p.x, p.y):
+                return el.z                               # pin placement area shelf
+            if (el.kind == "overhead" and "_resource_" in el.name and not el.name.endswith("_back")
+                    and el.contains(p.x, p.y) and abs(p.x - el.x) > RES_BOX_OUTER / 2):
+                return RES_SHELF_Z                        # back on a side shelf of the resource area
+        return 0.0
     if p.kind == "cone":
         for el in elements:
             if el.name.endswith(("cone_post_1", "cone_post_2")) and math.hypot(p.x - el.x, p.y - el.y) <= POST_CATCH_MM:
@@ -304,6 +321,26 @@ def bonus_state(props: List[Prop], elements, alliance: str) -> Dict[str, object]
                 valid.append(inside[0])
     balls = sum(int(p.label[1:]) for p in valid)
     return {"valid": [p.label for p in valid], "bonus_balls": balls, "on_side": len(on_side)}
+
+
+def pin_points(props: List[Prop], elements, alliance: str) -> Dict[str, int]:
+    """Pins of the alliance's colour (p.41-42): 30 if the projection is partly in its pin
+    placement area, 10 if completely out of its resource areas, completely on its side and on
+    the floor."""
+    lo, hi = fl.alliance_x_limits(alliance)
+    area = next((el for el in elements if el.name == f"{alliance}_pin_area"), None)
+    resources = [el for el in elements if el.kind == "overhead" and el.name.startswith(f"{alliance}_resource_")
+                 and not el.name.endswith("_back")]
+    placed = floor = 0
+    r = PIN_D / 2
+    for p in props:
+        if p.kind != "pin" or p.alliance != alliance or p.held:
+            continue
+        if area is not None and _overlaps(p, area, PIN_D):
+            placed += 1
+        elif (p.z < 1.0 and lo + r <= p.x <= hi - r and not any(_overlaps(p, el, PIN_D) for el in resources)):
+            floor += 1
+    return {"placement_area": placed, "floor": floor, "points": 30 * placed + 10 * floor}
 
 
 def score_preview(props: List[Prop], elements, alliance: str) -> Dict[str, object]:

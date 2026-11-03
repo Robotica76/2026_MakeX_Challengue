@@ -413,7 +413,8 @@ def field_parts(elements: List[fl.Element], ball_scenario: str = "initial", incl
     if not include_props:
         props = tuple(el.name for el in elements if el.kind == "prop")
         parts = [p for p in parts if not (p.name.split(":")[0] in props or
-                                          (p.name.startswith("detail_") and "_fortress_cube_" in p.name))]
+                                          (p.name.startswith("detail_") and ("_fortress_cube_" in p.name
+                                                                             or "_pin_" in p.name)))]
     return parts
 
 
@@ -423,6 +424,8 @@ def prop_parts(prop) -> List[Part]:
         return cone(prop.name, 0.0, 0.0)
     if prop.kind == "bonus":
         return bonus_cube(prop.name, 0.0, 0.0)
+    if prop.kind == "pin":
+        return [pin(prop.name, 0.0, 0.0, 0.0, prop.alliance)]
     return letter_cube(prop.name, 0.0, 0.0, 0.0, prop.alliance)
 
 

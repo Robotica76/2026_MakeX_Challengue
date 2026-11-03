@@ -22,7 +22,9 @@ class FieldPropsTest(unittest.TestCase):
         self.assertEqual(sum(p.kind == "bonus" for p in props), 4)      # p.24
         self.assertEqual(sum(p.kind == "cone" for p in props), 4)       # p.25
         self.assertEqual(sum(p.kind == "letter" for p in props), 16)    # p.23: 8 per alliance
-        self.assertTrue(all(p.z == 259.0 for p in props if p.kind != "letter"))   # strategy area top
+        self.assertTrue(all(p.z == 259.0 for p in props if p.kind in ("bonus", "cone")))   # strategy area top
+        self.assertEqual(sum(p.kind == "pin" for p in props), 16)       # p.13: 4 per own resource area
+        self.assertTrue(all(p.z == 758.5 for p in props if p.kind == "pin"))
         self.assertTrue(all(p.z == 171.0 for p in props if p.kind == "letter"))   # fortress cube level
         self.assertEqual(sorted(p.label for p in props if p.kind == "letter" and p.alliance == "red"),
                          sorted("MAKEMAKE"))
@@ -92,6 +94,22 @@ class RakeTest(unittest.TestCase):
         before = [(p.x, p.y, p.z) for p in props]
         rake_props(RobotPose(2000.0, 839.5, 0.0), 250.0, False, props, ELEMENTS, 1 / 60, load_intake(), (46.0, 145.0))
         self.assertEqual(before, [(p.x, p.y, p.z) for p in props])
+
+
+class PinTest(unittest.TestCase):
+    def test_pin_points(self):
+        from props import pin_points
+        props = [p for p in field_props(ELEMENTS) if p.kind == "pin" and p.alliance == "red"]
+        self.assertEqual(pin_points(props, ELEMENTS, "red")["points"], 0)          # still on the shelves
+        props[0].x, props[0].y, props[0].z = 98.0, 1500.0, 405.0                  # in the pin placement area
+        props[1].x, props[1].y, props[1].z = 1200.0, 1000.0, 0.0                  # on our floor
+        props[2].x, props[2].y, props[2].z = 2300.0, 1000.0, 0.0                  # not completely on our side
+        self.assertEqual(pin_points(props, ELEMENTS, "red"), {"placement_area": 1, "floor": 1, "points": 40})
+
+    def test_pin_drops_onto_the_placement_area_shelf(self):
+        pin = next(p for p in field_props(ELEMENTS) if p.kind == "pin")
+        pin.x, pin.y = 98.0, 1500.0
+        self.assertEqual(support_under(pin, ELEMENTS), 405.0)
 
 
 class PushTest(unittest.TestCase):

@@ -8,9 +8,9 @@ simulator (`simulation/analysis/simulate_match.py`), not from the robot.
 | Balls in the opponent fortress upper area | p.36, p.53 | Precision Throwing | projection completely inside at scoring time: 10 each | intake, tower, shooter | 18 of 30 shots stay in (match_2026.py) | deep shots bounce out; table top and X mark block paths across the centre |
 | Bonus balls | p.30, p.36 | Bonus Battle | valid bonus cube in own exchange area at 30 s: X3-X12 extra balls in our resource area, that many balls score 20 | pull mode + gripper | X12 valid at 22.7 s | prop card changes the layout: the AI camera must find the X12 |
 | Letter cubes | p.38-40 | Letter Cube Transfer | 30 each in a strategy channel, +50 per MAKE side | gripper | not simulated | R26: no robot part in a channel |
-| Pins | p.44-45 | Pin Transfer | 10 on own side touching the map, 30 in the pin placement area | TBD | not simulated | — |
+| Pins | p.13, p.40-42 | Pin Transfer | 10 on own floor out of the resource areas, 30 partly in the pin placement area | a mechanism reaching 760-1050 mm | simulated (props.pin_points): **0, the v22 robot cannot reach them** | the pins stand on the resource-area side shelves at 758.5 mm; the robot reaches 645 mm (body), 525 (intake head), 515 (gripper, carriage up): up to 120 points for our half need a new mechanism |
 | Cones | p.43 | Cone Transfer | 20 each, hung on own cone post | gripper + carriage | not simulated | carriage max 358 mm: lifting a cone over the 405 mm post is not possible in the model |
-| X mark | p.46 | X Clash | 30, colored face toward us | shooter | not simulated | balls aimed at the fortress across the centre hit it |
+| X mark | p.44-46 | X Clash | 30, colored face toward us | shooter (N3 aims at it) | simulated: 30 from the start (each colour faces its camp); a hit from our side turns it red (model, check on a real field) | shoot it only if the opponent turned it: 2 balls win back 30 |
 | Team flag | p.47 | Team Flag Hanging | 50, final stage | flag system | not simulated | — |
 
 ## Prioritization decision

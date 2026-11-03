@@ -13,8 +13,11 @@ Match score at the end (p.36-50, table p.53-54), per alliance:
   cones               20 each, hung on the alliance's cone posts
   letter cubes        30 each in a strategy channel (+50 per complete MAKE side, not judged)
   team flag           50, hung on an own flagpole in the final stage (flag.py)
+  pins                30 each partly in the own pin placement area, 10 each on the own floor out of
+                      the resource areas (props.pin_points)
+  X mark              30 while its colour faces the alliance (ball_physics: x_mark_state)
   penalties           -20 per R06 violation (body outside the area > 3 s), -20 if moving at 30 s (R19)
-  not simulated       pins (10 / 30), X mark (30)
+  not simulated       the MAKE order bonus of letter cubes (+50)
 
 End of the manual stage (p.53): the robot goes back (partly) into its starting area, is taken out
 for the modification stage (60 s, flag mast installed) and returns to the starting area.
@@ -25,7 +28,7 @@ from typing import Dict, List
 import field_layout as fl
 from ball_physics import R, fortress_regions
 from balls import BALL_D, RELEASE_GAP, Ball
-from props import bonus_state, score_preview
+from props import bonus_state, pin_points, score_preview
 
 MANUAL_START_S = 30.0
 MODIFICATION_START_S = 130.0     # after the manual stage (100 s); the final stage starts at 190 s
@@ -89,6 +92,8 @@ def match_score(sim, alliance: str = "red") -> Dict[str, object]:
     precision = min(n, extra) * 20 + max(0, n - extra) * 10
     prev = score_preview(sim.props, sim.elements, alliance)
     cones, letters = prev["cones"] * 20, prev["letter_cubes"] * 30
+    pins = pin_points(sim.props, sim.elements, alliance)["points"]
+    x_mark = 30 if sim.world and sim.world.x_mark_state in ("both", alliance) else 0
     flag = sim.flag.points if getattr(sim, "flag", None) and alliance == sim.cfg.alliance else 0
     penalties = 0
     monitor = getattr(sim, "monitor", None)
@@ -97,5 +102,6 @@ def match_score(sim, alliance: str = "red") -> Dict[str, object]:
         if monitor.auto_end is not None and not monitor.auto_end["stationary"]:
             penalties += 20                                                      # R19: moving at 30 s
     return {"balls": n, "bonus_balls": extra, "bonus_cubes": bonus["valid"], "precision": precision,
-            "cones": cones, "letter_cubes": letters, "flag": flag, "penalties": penalties,
-            "total": precision + cones + letters + flag - penalties, "not_simulated": "pins, X mark"}
+            "cones": cones, "letter_cubes": letters, "flag": flag, "pins": pins, "x_mark": x_mark,
+            "penalties": penalties, "total": precision + cones + letters + flag + pins + x_mark - penalties,
+            "not_simulated": "MAKE order of letter cubes"}
