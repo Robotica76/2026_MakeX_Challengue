@@ -343,12 +343,39 @@ def pin_points(props: List[Prop], elements, alliance: str) -> Dict[str, int]:
     return {"placement_area": placed, "floor": floor, "points": 30 * placed + 10 * floor}
 
 
+def letter_in_channel(p: Prop, el) -> bool:
+    """Letter cube scoring (p.38): projection partly in the channel, not on the map (on the rails),
+    not held by a robot."""
+    return p.kind == "letter" and not p.held and p.z > 1.0 and _overlaps(p, el)
+
+
+def make_bonus(props: List[Prop], elements, alliance: str) -> Dict[str, object]:
+    """MAKEX Challenge (p.39-40): the four channels of one side of the strategy area hold the
+    alliance's valid letter cubes M, A, K, E from outside (the field wall) to inside: +50 per side."""
+    sides = {}
+    for el in elements:
+        if el.kind == "slot":
+            side = "lower" if el.y < fl.CY else "upper"
+            sides.setdefault(side, []).append(el)
+    done, words = [], {}
+    for side, channels in sides.items():
+        channels.sort(key=lambda el: -abs(el.y - fl.CY))           # outside first
+        word = ""
+        for el in channels:
+            inside = [p for p in props if p.alliance == alliance and letter_in_channel(p, el)]
+            word += inside[0].label if len(inside) == 1 else "_"
+        words[side] = word
+        if word == "MAKE":
+            done.append(side)
+    return {"sides": done, "words": words, "points": 50 * len(done)}
+
+
 def score_preview(props: List[Prop], elements, alliance: str) -> Dict[str, object]:
     cones = sum(1 for p in props if p.kind == "cone" and not p.held and any(
         el.alliance == alliance and el.name.endswith(("cone_post_1", "cone_post_2"))
         and math.hypot(p.x - el.x, p.y - el.y) <= POST_CATCH_MM for el in elements))
-    letters = sum(1 for p in props if p.kind == "letter" and p.alliance == alliance and not p.held and p.z > 1.0
-                  and any(el.kind == "slot" and _overlaps(p, el) for el in elements))
+    letters = sum(1 for p in props if p.alliance == alliance
+                  and any(el.kind == "slot" and letter_in_channel(p, el) for el in elements))
     bonus = bonus_state(props, elements, alliance)
     return {"cones": cones, "letter_cubes": letters, "bonus": bonus,
             "points_now": cones * 20 + letters * 30}

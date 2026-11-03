@@ -112,6 +112,23 @@ class PinTest(unittest.TestCase):
         self.assertEqual(support_under(pin, ELEMENTS), 405.0)
 
 
+class MakeBonusTest(unittest.TestCase):
+    def test_make_in_order_on_the_lower_side(self):
+        from props import make_bonus
+        props = [p for p in field_props(ELEMENTS) if p.kind == "letter" and p.alliance == "red"]
+        by_label = {}
+        for p in props:
+            by_label.setdefault(p.label, p)
+        channels = sorted((e for e in ELEMENTS if e.name.startswith("strategy_lower_channel")), key=lambda e: e.y)
+        for letter, ch in zip("MAKE", channels):                          # outside (wall) to inside
+            cube = by_label[letter]
+            cube.x, cube.y, cube.z = ch.x - 80, ch.y, CHANNEL_RAIL_Z          # partly in, on the rails
+        result = make_bonus(props, ELEMENTS, "red")
+        self.assertEqual((result["sides"], result["points"]), (["lower"], 50))
+        by_label["A"].z = 0.0                                              # on the map: not valid
+        self.assertEqual(make_bonus(props, ELEMENTS, "red")["points"], 0)
+
+
 class PushTest(unittest.TestCase):
     BODY = [(-250.0, -250.0, 0.0, 115.0, 250.0, 260.0)]
 

@@ -202,3 +202,30 @@ class HalfMonitor:
         if not self.events:
             return []
         return [f"partner half: {len(self.events)} crossings, {self.seconds:.1f} s, up to {self.max_mm:.0f} mm"]
+
+
+@dataclass
+class ChannelMonitor:
+    """R26 (p.73): no part of the robot may enter a strategy-area channel. A channel is the gap
+    under the strategy-area top (z < 206 mm) between the dividers; robot parts are the body
+    height bands and the intake head at its lift (robot frame boxes)."""
+    channels: list                          # (name, x0, y0, x1, y1)
+    parts: list
+    top_z: float = 206.0
+    events: List[dict] = field(default_factory=list)
+    _inside: set = field(default_factory=set)
+
+    def update(self, t: float, pose, head_box) -> None:
+        inside = set()
+        for name, cx0, cy0, cx1, cy1 in self.channels:
+            if math.hypot((cx0 + cx1) / 2 - pose.x, (cy0 + cy1) / 2 - pose.y) > 600:
+                continue
+            for x0, y0, z0, x1, y1, z1 in self.parts + [head_box]:
+                if z0 < self.top_z and obb_aabb_depth(pose, (x0, y0, x1, y1), (cx0, cy0, cx1, cy1)) > COLLISION_MIN_MM:
+                    inside.add(name)
+        for name in inside - self._inside:
+            self.events.append({"channel": name, "start": t})
+        self._inside = inside
+
+    def report(self) -> List[str]:
+        return [f"R26 robot inside {e['channel']} at {e['start']:.1f} s" for e in self.events[-2:]]

@@ -21,7 +21,7 @@ from ball_physics import BallWorld, load_ball_path
 from balls import Ball, Intake, field_balls
 from kinematics import DriveTrain, body_velocity, integrate
 from ball_physics import named_colliders
-from match import CollisionMonitor, HalfMonitor, MatchMonitor
+from match import ChannelMonitor, CollisionMonitor, HalfMonitor, MatchMonitor
 from mechanisms import Mechanisms
 from props import Gripper, Prop, field_props, push_props, rake_props
 import referee
@@ -98,6 +98,7 @@ class Simulation:
         self.modification = None                   # referee.modification_stage() at 130 s
         self.flag = load_flag(cfg.alliance, elements=self.elements)
         self.half = self._new_half()
+        self.channels = self._new_channels()
         self.servos = ServoBus()                   # smart servos (angles), mbuild.smartservo
         self._ranging = json.loads(DEFAULT_CONFIG.read_text()).get("ranging_sensors", {})
         self._colliders = [box for _, box in named_colliders(self.elements)]
@@ -140,6 +141,13 @@ class Simulation:
                                                            self.cfg.length_mm / 2, self.cfg.width_mm / 2, 642.0))
         return HalfMonitor(spec.get("half", "lower"), (bx0, by0, bx1, by1))
 
+    def _new_channels(self) -> ChannelMonitor:
+        """R26: robot parts inside a strategy-area channel."""
+        data = self._path_data or {}
+        bands = [tuple(b) for b in data.get("body_bands_mm", [])]
+        slots = [(el.name, *el.bounds()) for el in self.elements if el.kind == "slot"]
+        return ChannelMonitor(slots, bands)
+
     def _new_collisions(self) -> CollisionMonitor:
         """Robot body and intake head against the field structures (match.py)."""
         data = self._path_data or {}
@@ -175,6 +183,7 @@ class Simulation:
         self.modification = None
         self.flag = load_flag(self.cfg.alliance, elements=self.elements)
         self.half = self._new_half()
+        self.channels = self._new_channels()
         self.servos = ServoBus()
         self.dc = DCBus()
         self.mechanisms.reset()
@@ -272,6 +281,9 @@ class Simulation:
                 self.collisions.update(self.clock.now, self.pose, self.mechanisms.position("intake_lift"))
                 if self.half:
                     self.half.update(self.clock.now, dt, self.pose)
+                hx0, hy0, hz0, hx1, hy1, hz1 = (self._path_data or {}).get("head_box_mm", (0, 0, 0, 0, 0, 0))
+                lift = self.mechanisms.position("intake_lift")
+                self.channels.update(self.clock.now, self.pose, (hx0, hy0, hz0 + lift, hx1, hy1, hz1 + lift))
             if self.flag:
                 self.flag.update(self.clock.now, self.pose, self.mechanisms.position("elevator"))
             self.clock.advance(dt)

@@ -118,6 +118,7 @@ def trial(job):
     problems = (len(sim.collisions.collisions) + sim.monitor.r06_penalties
                 + (0 if (sim.monitor.auto_end or {}).get("stationary") else 1)
                 + (1 if sim.half and sim.half.events else 0) + denial["props_on_line"]
+                + len(sim.channels.events)                       # R26: robot inside a channel
                 + (1 if judged.get("on_side", 0) > 2 else 0) + (1 if error and "Time limit" not in str(error) else 0))
     resources = 12 * valid12 + 9 * (x9_ours and valid12) + denial["cones"] - 5 * problems
     try:

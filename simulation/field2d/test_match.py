@@ -11,7 +11,7 @@ import field_layout as fl
 from balls import load_intake
 from kinematics import load_drive_train
 from ball_physics import named_colliders
-from match import STAGES, CollisionMonitor, MatchMonitor, format_clock, obb_aabb_depth, stage_at
+from match import STAGES, ChannelMonitor, CollisionMonitor, MatchMonitor, format_clock, obb_aabb_depth, stage_at
 from mechanisms import load_mechanisms
 from props import denial_count, load_gripper, score_preview
 from robot import RobotPose, load_config, start_pose
@@ -115,6 +115,21 @@ class CollisionMonitorTest(unittest.TestCase):
         pushes = [e for e in self.monitor.events if e["fortress"]]
         self.assertEqual([e["part"] for e in pushes], ["body"])
         self.assertEqual(len(self.monitor.collisions), 1)                        # a push is not a collision
+
+
+class ChannelMonitorTest(unittest.TestCase):
+    def test_r26_robot_part_inside_a_channel(self):
+        slots = [(e.name, *e.bounds()) for e in fl.build_field() if e.kind == "slot"]
+        m = ChannelMonitor(slots, [(-250.0, -250.0, 0.0, 115.0, 250.0, 260.0)])
+        head = (115.0, -190.0, 46.0, 249.0, 202.0, 145.0)
+        m.update(1.0, RobotPose(1900.0, 878.0, 0.0), head)                       # head front 2149: outside
+        self.assertEqual(m.events, [])
+        m.update(2.0, RobotPose(2050.0, 878.0, 0.0), head)                       # head 2299: in channel 3
+        found = {e["channel"] for e in m.events}                                  # the 398 mm head spans 3
+        self.assertIn("strategy_lower_channel_3", found)
+        n = len(m.events)
+        m.update(3.0, RobotPose(2050.0, 878.0, 0.0), (115.0, -190.0, 300.0, 249.0, 202.0, 400.0))
+        self.assertEqual(len(m.events), n)                                       # head over the top: fine
 
 
 class AutomaticRoutineTest(unittest.TestCase):
