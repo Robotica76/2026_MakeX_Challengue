@@ -53,7 +53,12 @@ def play(seconds=280.0, program=PROGRAM, delay_frames=0, every=2, opponent_x_at=
                          "intake_lift_mm": sim.mechanisms.position("intake_lift"),
                          "score": referee.match_score(sim, "red")["total"],
                          "flag": sim.flag.state if sim.flag else None,
-                         "x_mark": sim.world.x_mark_state if sim.world else None}
+                         "x_mark": sim.world.x_mark_state if sim.world else None,
+                         "carriage_mm": sim.mechanisms.position("elevator"),
+                         "jaw_mm": sim.mechanisms.position("gripper_jaw"),
+                         "held": sim.gripper.held.kind if sim.gripper and sim.gripper.held else None,
+                         "cones": [{"x_mm": p.x, "y_mm": p.y, "z_mm": p.z, "post": p.on_post}
+                                   for p in sim.props if p.kind == "cone"]}
                 queue.append(state)
                 if len(queue) > max(1, delay_frames // every):
                     for ev in driver.tick(queue.pop(0)):

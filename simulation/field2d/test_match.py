@@ -106,6 +106,20 @@ class CollisionMonitorTest(unittest.TestCase):
         self.assertEqual(obb_aabb_depth(RobotPose(1000.0, 1000.0, math.pi / 4), (-100, -100, 100, 100),
                                         (1150, 900, 1200, 1100)), 0.0)            # the corner reaches x 1141
 
+    def test_cone_post_inside_the_gripper_slot_is_no_contact(self):
+        slot = (-160.0, -450.0, 0.0, -18.0, -150.0, 160.0)               # robot_config.json gripper slot_mm
+        monitor = CollisionMonitor(self.monitor.colliders, self.monitor.body_boxes, self.monitor.head_box, slot)
+        post = next(b for n, b in monitor.colliders if n == "red_cone_post_2")
+        th = math.radians(250.0)                                          # grab point (-89, -228.5) on the post
+        c, s = math.cos(th), math.sin(th)
+        x, y = (post[0] + post[3]) / 2 - (-89 * c + 228.5 * s), (post[1] + post[4]) / 2 - (-89 * s - 228.5 * c)
+        monitor.update(0.0, RobotPose(x, y, th), 0.0, 300.0)              # carriage 300: jaws over the post top
+        self.assertEqual(monitor.events, [])
+        monitor.update(1.0, RobotPose(x, y, th), 0.0, 100.0)              # jaws below the post top: contact
+        self.assertEqual([e["element"] for e in monitor.events], ["red_cone_post_2"])
+        self.monitor.update(2.0, RobotPose(x, y, th), 0.0)                # no slot: contact
+        self.assertEqual([e["element"] for e in self.monitor.events], ["red_cone_post_2"])
+
     def test_table_leg_and_fortress_push(self):
         self.monitor.update(0.0, RobotPose(1800.0, 1100.0, 0.0), 0.0)
         self.assertEqual(self.monitor.events, [])                                # open floor

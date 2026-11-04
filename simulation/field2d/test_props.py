@@ -5,7 +5,7 @@ import unittest
 
 import field_layout as fl
 from balls import load_intake
-from props import (CHANNEL_RAIL_Z, CUBE, Gripper, Prop, bonus_state, denial_count, field_props, load_gripper,
+from props import (CHANNEL_RAIL_Z, CONE_HANG_DROP, CUBE, Gripper, Prop, bonus_state, denial_count, field_props, load_gripper,
                    rake_props, score_preview, support_under)
 from robot import RobotPose
 
@@ -58,6 +58,46 @@ class GripperTest(unittest.TestCase):
         self.cube.x += 60.0
         self.g.update(self.pose, self.carriage, 30.0, [self.cube], ELEMENTS)
         self.assertIsNone(self.g.held)
+
+
+class ConeHangTest(unittest.TestCase):
+    """A cone hangs on a cone post only when it is lowered onto it from above (405 mm post)."""
+    def setUp(self):
+        self.g = load_gripper()
+        self.post = next(el for el in ELEMENTS if el.name == "red_cone_post_2")
+        self.heading = math.radians(250.0)                                # cone_post_reach.py
+        gx, gy, _ = self.g.grab_point
+        c, s = math.cos(self.heading), math.sin(self.heading)
+        self.at_post = RobotPose(self.post.x - (gx * c - gy * s), self.post.y - (gx * s + gy * c), self.heading)
+        self.away = RobotPose(self.at_post.x + 250 * math.cos(math.radians(340)),
+                              self.at_post.y + 250 * math.sin(math.radians(340)), self.heading)
+        x, y, _ = self.g.grab_field(self.away, 0.0)
+        self.cone = Prop("cone", "cone", "cone", "neutral", x, y, 0.0)
+        self.g.update(self.away, 0.0, 56.0, [self.cone], ELEMENTS)        # taken off the floor
+        self.assertIs(self.g.held, self.cone)
+
+    def carry_to_post(self, carriage):
+        self.g.update(self.away, carriage, 56.0, [self.cone], ELEMENTS)
+        self.g.update(self.at_post, carriage, 56.0, [self.cone], ELEMENTS)
+
+    def test_lifted_over_the_post_lowered_and_released_it_hangs(self):
+        self.carry_to_post(425.0)                                         # bottom 425.5 > 405
+        self.assertEqual(self.cone.on_post, "red_cone_post_2")
+        self.g.update(self.at_post, 200.0, 56.0, [self.cone], ELEMENTS)   # lowered: rests on the post
+        self.assertAlmostEqual(self.cone.z, 405.0 - CONE_HANG_DROP)
+        self.g.update(self.at_post, 300.0, 0.0, [self.cone], ELEMENTS)    # jaws open
+        self.assertIsNone(self.g.held)
+        self.assertAlmostEqual(self.cone.z, 405.0 - CONE_HANG_DROP)
+        self.assertEqual(score_preview([self.cone], ELEMENTS, "red")["cones"], 1)
+        self.assertEqual(score_preview([self.cone], ELEMENTS, "blue")["cones"], 0)
+
+    def test_v22_carriage_cannot_lift_it_over_the_post(self):
+        self.carry_to_post(358.0)                                         # v22 top: bottom 358.5 < 405
+        self.assertEqual(self.cone.on_post, "")
+        self.g.update(self.at_post, 358.0, 0.0, [self.cone], ELEMENTS)
+        self.assertEqual(self.cone.z, 0.0)                                # falls beside the post
+        self.assertGreater(math.hypot(self.cone.x - self.post.x, self.cone.y - self.post.y), 60.0)
+        self.assertEqual(score_preview([self.cone], ELEMENTS, "red")["cones"], 0)
 
 
 class SupportTest(unittest.TestCase):

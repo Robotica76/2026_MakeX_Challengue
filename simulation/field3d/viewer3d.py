@@ -647,6 +647,12 @@ class Viewer3D:
         msg["score"] = match_score(self.sim, self.sim.cfg.alliance)["total"]
         msg["flag"] = self.sim.flag.state if self.sim.flag else None
         msg["x_mark"] = self.sim.world.x_mark_state if self.sim.world else None
+        msg["carriage_mm"] = self.sim.mechanisms.position("elevator") if self.sim.mechanisms else 0.0
+        msg["jaw_mm"] = self.sim.mechanisms.position("gripper_jaw") if self.sim.mechanisms else 0.0
+        g = self.sim.gripper
+        msg["held"] = g.held.kind if g and g.held else None
+        msg["cones"] = [{"x_mm": round(p.x, 1), "y_mm": round(p.y, 1), "z_mm": round(p.z, 1), "post": p.on_post}
+                        for p in (self.sim.props or []) if p.kind == "cone"]
         self.publisher.maybe_send(now, msg)
 
     def _update(self, task):

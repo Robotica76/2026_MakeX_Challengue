@@ -118,24 +118,44 @@ def obb_aabb_depth(pose, rect, box) -> float:
     return depth
 
 
+def inside_plan(pose, box, rect) -> bool:
+    """True if the field box (x0, y0, x1, y1) lies inside the robot-frame rectangle rect."""
+    x0, y0, x1, y1 = box
+    rx0, ry0, rx1, ry1 = rect
+    c, s = math.cos(pose.theta), math.sin(pose.theta)
+    for px in (x0, x1):
+        for py in (y0, y1):
+            dx, dy = px - pose.x, py - pose.y
+            lx, ly = dx * c + dy * s, -dx * s + dy * c
+            if not (rx0 <= lx <= rx1 and ry0 <= ly <= ry1):
+                return False
+    return True
+
+
 @dataclass
 class CollisionMonitor:
     """Robot body and intake head (at its lift) against the field structures (ball_physics
     colliders, props excluded). Contact with the own fortress is reported as a push (allowed,
-    R02: it must not tilt)."""
+    R02: it must not tilt). A structure that lies inside the gripper slot (the free space between
+    the jaws, open to the outside, its top following the carriage), like a cone post a cone is
+    hung on, is no contact."""
     colliders: list
     body_boxes: list                       # robot outline per height band (robot frame)
     head_box: Tuple[float, float, float, float, float, float]
+    slot: Optional[Tuple[float, float, float, float, float, float]] = None   # robot frame, carriage down
     events: List[dict] = field(default_factory=list)
     _active: dict = field(default_factory=dict)
 
-    def update(self, t: float, pose, lift: float) -> None:
+    def update(self, t: float, pose, lift: float, carriage: float = 0.0) -> None:
         hx0, hy0, hz0, hx1, hy1, hz1 = self.head_box
         parts = [("body", b) for b in self.body_boxes] + [("head", (hx0, hy0, hz0 + lift, hx1, hy1, hz1 + lift))]
         now_hit = {}
         for name, (bx0, by0, bz0, bx1, by1, bz1) in self.colliders:
             cx, cy = (bx0 + bx1) / 2, (by0 + by1) / 2
             if math.hypot(cx - pose.x, cy - pose.y) > 450 + max(bx1 - bx0, by1 - by0) / 2:
+                continue
+            if self.slot and bz1 <= self.slot[5] + carriage and inside_plan(
+                    pose, (bx0, by0, bx1, by1), (self.slot[0], self.slot[1], self.slot[3], self.slot[4])):
                 continue
             for part, (x0, y0, z0, x1, y1, z1) in parts:
                 if min(z1, bz1) - max(z0, bz0) <= COLLISION_MIN_MM:

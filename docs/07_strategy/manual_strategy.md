@@ -14,6 +14,32 @@ same plan as moves so the simulator can time and score it.
 
 Result (simulation): 30 shots, 18 in the blue fortress, 300 points with the X12 bonus.
 
+## Two-robot plan with cones (storm_breaker_2026, our half only)
+
+`simulation/control/ai_driver.py` plays the gamepad of `storm_breaker_2026.py` ("≡" intake front:
+Up/Down head; "+" gripper front: Up/Down carriage, Right/Left jaw). Headless:
+`simulation/analysis/simulate_driver.py [delay_frames]`.
+
+| Step | Simulated time | What the driver does | Why |
+| --- | --- | --- | --- |
+| 1 | 30-54 s | Head up to 250 (over the strategy-area top, R26); cone a (left at (2029, 535) by the automatic lane a pull, `PULL_A_DY` 200) taken from the north at heading 35, lifted to 425, hung on red cone post 2 from heading 250 | the sweep would push it against the shelf legs, where the gripper cannot take it; heading 35 touches none of the released balls |
+| 2 | 55-90 s | Sweep resource area 1 twice, shoot from (1600, 900) after each | bonus balls score 20 |
+| 3 | 90-108 s | Cone b (pushed to (2160, 1080) by the sweep) taken at heading 90 and hung on post 2 | 20 points |
+| 4 | 108-130 s | Back into Red Start 1 (modification stage) | flag mast |
+| 5 | 190-221 s | N4 hangs the flag, last sweep and shot | 50 points |
+
+Hanging needs the **430 mm elevator** (v22: 358 mm; the cone bottom must clear the 405 mm post:
+`simulation/analysis/cone_post_reach.py`). The program tracks the carriage height in "+" mode, so
+the flag routine starts from where the driver left it.
+
+| Driver | Delay frames (1/60 s) 0 / 2 / 4 / 6 / 8 / 10 | Mean |
+| --- | --- | --- |
+| previous plan (no cones, commit cfb339f) | 300 / 340 / 350 / 380 / 330 / 330 | 338 |
+| with the two cones | 400 / 400 / 410 / 360 / 390 / 370 | 388 |
+
+Both cones hang in every run; no collisions, no penalties, flag hung. The ball count varies run to
+run (balls bouncing in the fortress), not the cones.
+
 ## Practice evaluation
 
 | Configuration / driver | Setup / procedure | Measured outcome / units | Driver feedback | Failure / corrective action | Retest / evidence |

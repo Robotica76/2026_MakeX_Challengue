@@ -28,6 +28,10 @@ What the search found and fixed:
   the X12 drop to y 360 (cube still 18 mm inside exchange area 1).
 - A faster profile saves 0.2 s but loses accuracy: the head lift (53 mm/s) sets the pace, not the chassis.
 
+Lane a cone: the last lane a floor pull also moves 200 mm toward the field centre (`PULL_A_DY`),
+so the cone ends near (2029, 535), clear of the shelf legs, where the gripper takes it in the
+manual stage to hang it (manual_strategy.md).
+
 Alliance note: with DENY_X9 our side holds two bonus cubes (X12 in the area, X9 on the floor), the
 rules' maximum (p.30 d): the partner must not bring a third one to our side.
 

@@ -41,7 +41,7 @@ class MechanismModelTest(unittest.TestCase):
     def test_config(self):
         mech = load_mechanisms()
         self.assertEqual(set(mech.linear), {"elevator", "intake_lift", "gripper_jaw"})
-        self.assertEqual(mech.linear["elevator"].travel_mm, 358.0)      # v22 CAD
+        self.assertEqual(mech.linear["elevator"].travel_mm, 430.0)      # v22 CAD 358 + 72 (cone posts)
         self.assertEqual(mech.linear["elevator"].port, "DC3")
         self.assertEqual(set(mech.spinners), {"intake_rollers", "intake_head", "tower", "feeder", "shooter"})
         self.assertEqual(mech.spinners["intake_rollers"].port, load_intake().port)
@@ -79,7 +79,7 @@ class MechanismSimulationTest(unittest.TestCase):
                 if not sim.running or sim._runner.finished:
                     break
         self.assertIn("done", out.getvalue(), sim.state.message)
-        self.assertAlmostEqual(peaks["elevator"], 358.0, delta=0.5)        # reached the top
+        self.assertAlmostEqual(peaks["elevator"], 375.0, delta=0.5)        # 2.5 s at 150 mm/s
         self.assertAlmostEqual(peaks["intake_lift"], 212.0, delta=3.0)     # 4 s at 53 mm/s
         self.assertEqual(sim.mechanisms.position("elevator"), 0.0)        # and back down
         self.assertEqual(sim.mechanisms.position("intake_lift"), 0.0)

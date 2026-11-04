@@ -155,7 +155,8 @@ class Simulation:
             "body_box_mm", (-self.cfg.length_mm / 2, -self.cfg.width_mm / 2, 0.0,
                             self.cfg.length_mm / 2, self.cfg.width_mm / 2, 642.0))])]
         head = tuple(data.get("head_box_mm", (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)))
-        return CollisionMonitor(named_colliders(self.elements), body, head)
+        slot = json.loads(DEFAULT_CONFIG.read_text()).get("gripper", {}).get("slot_mm")
+        return CollisionMonitor(named_colliders(self.elements), body, head, tuple(slot) if slot else None)
 
     def _new_world(self) -> Optional[BallWorld]:
         """Ball dynamics and the ball path through the robot (ball_physics.py), when
@@ -278,7 +279,8 @@ class Simulation:
             self.monitor.update(self.clock.now, dt, self.pose, (vx, vy, omega), mech_moving)
             in_play = not (referee.MODIFICATION_START_S <= self.clock.now < referee.FINAL_START_S)
             if in_play:
-                self.collisions.update(self.clock.now, self.pose, self.mechanisms.position("intake_lift"))
+                self.collisions.update(self.clock.now, self.pose, self.mechanisms.position("intake_lift"),
+                                       self.mechanisms.position("elevator"))
                 if self.half:
                     self.half.update(self.clock.now, dt, self.pose)
                 hx0, hy0, hz0, hx1, hy1, hz1 = (self._path_data or {}).get("head_box_mm", (0, 0, 0, 0, 0, 0))

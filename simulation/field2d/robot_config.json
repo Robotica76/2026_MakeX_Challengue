@@ -77,10 +77,11 @@
     "linear": {
       "elevator": {
         "port": "DC3",
-        "travel_mm": 358.0,
+        "travel_mm": 430.0,
+        "travel_v22_mm": 358.0,
         "speed_mm_s": 150.0,
         "direction": 1,
-        "note": "carriage travel from the two v22 STEP files; DC37 50 rpm x 90T GT2 pulley (180 mm/rev) = 150 mm/s"
+        "note": "carriage travel 358 mm from the two v22 STEP files; 430 mm is a design proposal (+72 mm rails) so a gripped cone clears the 405 mm cone post (simulation/analysis/cone_post_reach.py); DC37 50 rpm x 90T GT2 pulley (180 mm/rev) = 150 mm/s"
       },
       "intake_lift": {
         "port": "DC2",

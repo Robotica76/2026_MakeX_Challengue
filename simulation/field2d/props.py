@@ -32,6 +32,8 @@ CONE_H, CONE_BASE, CONE_GRIP_W = 170.0, 120.0, 90.0   # grip the cone body (100 
 CHANNEL_RAIL_Z = 25.0                                  # strategy channel bottom rail, estimate
 FORTRESS_CUBE_Z = 171.0
 POST_CATCH_MM = 20.0                                   # cone hole centre this close to a post: hung
+CONE_POST_TOP = 405.0                                  # cone posts are 405 mm tall (p.17)
+CONE_HANG_DROP = CONE_H - 40.0                         # a hung cone bottom: post top - 130 (estimate)
 PIN_H, PIN_D = 290.0, 100.0                            # p.24: 290 mm tall, base 70, widest 100 mm
 RES_SHELF_Z = 758.5                                    # own resource area side shelves (p.13 Fig 4.2-6)
 RES_PIN_EDGE, RES_PIN_PITCH = 127.0, 120.0             # pins from the frame end and apart (Fig 4.2-6)
@@ -49,6 +51,7 @@ class Prop:
     z: float               # bottom, mm
     held: bool = False
     dragged: bool = False  # being pulled under the intake head (pull mode)
+    on_post: str = ""      # cone threaded on this cone post (lowered onto it from above)
 
     @property
     def height(self) -> float:
@@ -115,13 +118,19 @@ class Gripper:
         gap = self.gap(closure)
         if self.held is not None:
             p = self.held
+            p.x, p.y, p.z = gx, gy, gz - p.height / 2
+            if p.kind == "cone":
+                thread_cone(p, elements)
             if gap > p.width + 4.0:                    # jaws opened: release
                 p.held = False
                 self.held = None
-                p.x, p.y = gx, gy
+                if p.kind == "cone" and not p.on_post:
+                    post = cone_post_near(p, elements)
+                    if post is not None:               # hit the post top from beside/below: falls off
+                        d = math.hypot(p.x - post.x, p.y - post.y) or 1.0
+                        k = (CONE_BASE / 2 + 25.0) / d
+                        p.x, p.y = post.x + (p.x - post.x) * k, post.y + (p.y - post.y) * k
                 p.z = support_under(p, elements)
-            else:
-                p.x, p.y, p.z = gx, gy, gz - p.height / 2
             return
         for p in props:
             if p.held:
@@ -218,7 +227,7 @@ def push_props(pose, parts, props: List[Prop], elements, colliders, openings=())
     jammed = []
     c, s = math.cos(pose.theta), math.sin(pose.theta)
     for p in props:
-        if p.held or p.dragged or abs(p.x - pose.x) > REACH_MM or abs(p.y - pose.y) > REACH_MM:
+        if p.held or p.dragged or p.on_post or abs(p.x - pose.x) > REACH_MM or abs(p.y - pose.y) > REACH_MM:
             continue                              # far props cannot touch the robot (broad phase)
         lx = (p.x - pose.x) * c + (p.y - pose.y) * s
         ly = -(p.x - pose.x) * s + (p.y - pose.y) * c
@@ -264,6 +273,28 @@ def denial_count(props: List[Prop], balls, alliance: str) -> Dict[str, int]:
     }
 
 
+def cone_post_near(p: Prop, elements):
+    """The cone post whose top the cone's hole is over (within POST_CATCH_MM), or None."""
+    for el in elements:
+        if el.name.endswith(("cone_post_1", "cone_post_2")) and math.hypot(p.x - el.x, p.y - el.y) <= POST_CATCH_MM:
+            return el
+    return None
+
+
+def thread_cone(p: Prop, elements) -> None:
+    """A held cone gets onto a post only from above: its bottom must be over the post top when the
+    hole comes over the post; lowered further, the post goes into the hole and the cone rests on it
+    (it cannot go below the hanging height). Moved away from the post, it is off again."""
+    post = cone_post_near(p, elements)
+    if post is None:
+        p.on_post = ""
+        return
+    if not p.on_post and p.z >= post.z - 1.0:
+        p.on_post = post.name
+    if p.on_post:
+        p.z = max(p.z, post.z - CONE_HANG_DROP)
+
+
 def support_under(p: Prop, elements) -> float:
     """Height of the bottom of a released prop (drops straight down)."""
     if p.kind == "pin":
@@ -276,8 +307,8 @@ def support_under(p: Prop, elements) -> float:
         return 0.0
     if p.kind == "cone":
         for el in elements:
-            if el.name.endswith(("cone_post_1", "cone_post_2")) and math.hypot(p.x - el.x, p.y - el.y) <= POST_CATCH_MM:
-                return el.z - CONE_H + 40.0               # hanging on the post (estimate)
+            if p.on_post == el.name:
+                return el.z - CONE_HANG_DROP              # hanging on the post (estimate)
     for el in elements:
         if el.kind == "slot" and el.contains(p.x, p.y):
             return CHANNEL_RAIL_Z
@@ -371,9 +402,8 @@ def make_bonus(props: List[Prop], elements, alliance: str) -> Dict[str, object]:
 
 
 def score_preview(props: List[Prop], elements, alliance: str) -> Dict[str, object]:
-    cones = sum(1 for p in props if p.kind == "cone" and not p.held and any(
-        el.alliance == alliance and el.name.endswith(("cone_post_1", "cone_post_2"))
-        and math.hypot(p.x - el.x, p.y - el.y) <= POST_CATCH_MM for el in elements))
+    posts = {el.name for el in elements if el.alliance == alliance and el.name.endswith(("cone_post_1", "cone_post_2"))}
+    cones = sum(1 for p in props if p.kind == "cone" and not p.held and p.on_post in posts)
     letters = sum(1 for p in props if p.alliance == alliance
                   and any(el.kind == "slot" and letter_in_channel(p, el) for el in elements))
     bonus = bonus_state(props, elements, alliance)

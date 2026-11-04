@@ -575,6 +575,7 @@ class ProgramRunner:
 
         sim_builtins = dict(vars(builtins), __import__=sim_import)
         program_globals = {"__name__": "__main__", "__file__": str(self.path), "__builtins__": sim_builtins}
+        self.program_globals = program_globals       # inspection (tests, analysis)
 
         def run():
             try:
