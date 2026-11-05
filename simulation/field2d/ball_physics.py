@@ -176,7 +176,10 @@ X_HIT_SPEED = 1200.0          # mm/s: a ball at least this fast turns the X mark
 
 class BallWorld:
     def __init__(self, elements: List[fl.Element], balls: List[Ball], intake: Optional[Intake],
-                 path: Optional[BallPath], body_box: Box, head_box: Box):
+                 path: Optional[BallPath], body_box: Box, head_box: Box, field_physics: bool = True):
+        """field_physics=False: only this robot's part (drag, capture, carried balls, contact with
+        its body), for a second robot on the same balls (another world moves the balls)."""
+        self.field_physics = field_physics
         self.balls = balls
         self.intake, self.path = intake, path
         self.body_box, self.head_box = body_box, head_box    # robot frame (x fwd, y left, z), head at lift 0
@@ -192,7 +195,7 @@ class BallWorld:
         self.x_mark_box = next((box for name, box in named_colliders(elements) if name == "x_mark"), None)
         self.x_mark_state = "both"
         self.x_mark_hits: List[str] = []
-        for b in balls:
+        for b in balls if field_physics else ():
             b.vx = b.vy = b.vz = 0.0
             b.asleep, b.state, b.rest = True, "field", 0.0
 
@@ -220,6 +223,11 @@ class BallWorld:
         self._drag(dt, pose, velocity, lift, dc)
         self._capture(pose, lift, dc)
         self._move_carried(dt, pose, velocity, dc)
+        if not self.field_physics:
+            for b in self.balls:
+                if b.state == "field":
+                    self._robot_contact(b, pose, velocity, lift)
+            return
         awake = [b for b in self.balls if b.state == "field" and not b.asleep]
         if self.x_mark_box:
             for b in awake:
@@ -252,7 +260,8 @@ class BallWorld:
             if b.state == "field" and pulling and intake.reaches(b, lift) and intake.contains(pose, b):
                 b.state, b.asleep = "dragged", True
                 b.local = self._to_robot(pose, b)
-            if b.state != "dragged":
+                b.owner = id(self)                     # another robot's world leaves it alone
+            if b.state != "dragged" or getattr(b, "owner", id(self)) != id(self):
                 continue
             lx, ly, lz = b.local
             lx -= intake.pull_speed * dt if pulling else 0.0

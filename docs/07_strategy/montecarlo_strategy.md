@@ -37,3 +37,35 @@ rules' maximum (p.30 d): the partner must not bring a third one to our side.
 
 Remaining failures (4 %): a gripper miss or a leg touch when errors add up. On the robot, the AI
 camera can locate the X12 before the grab (Bonus Battle expects vision, p.28).
+
+## Route search: every order of the automatic missions (2026-11-05)
+
+`simulation/analysis/montecarlo_routes.py`: the program runs the missions in the order of the
+digits of `ORDER` (1 X12 into exchange area 1, 2 X9 + cone a to our side, 3 / 4 central table
+balls lower / upper level, taken in and shot from (1600, 900); a mission that does not fit before
+29 s is left out). Stage 1: the 65 orders (every subset in every order) x 6 sampled robots, automatic
+stage only. Stage 2: the best 6 as whole matches with the scripted driver (delays 0, 4, 8 frames).
+Figures: `simulation/analysis/reports/routes_montecarlo/`.
+
+| ORDER | Route | Stage 1 value (min) | Match mean (min) | Notes |
+| --- | --- | --- | --- | --- |
+| 13 | X12, lower table balls | 180 (130) | **443** (420) | precision 323, but no cone hung and a 20 point penalty in every match; 4 s in the partner half |
+| 124 / 123 / 1234 | X12, deny (3/4 do not fit in time) | 182 (175) | 423-427 (420) | same automatic stage as 12 |
+| 12 | X12, deny (current) | 182 (175) | 410 (380) | |
+| 1 | X12 only | 130 | - | |
+| 34 | both table levels, no cube | 110 | - | 18 balls taken, 11 scored in the stage, no bonus |
+
+Orders without the X12 first lose its 12 bonus balls (every 1-free route ranks below every route
+that starts with 1). The ball-first routes (3/4 before 1) run out of time for the X12. The
+differences between 12, 123, 124 (the same automatic stage) are the run-to-run noise of the
+match (~±15).
+
+**Two identical robots** (`simulation/analysis/two_robots.py`): our robot and its blue twin
+(same program and driver, started from Blue Start 2: the field turned 180 deg) on one field,
+sharing balls, props, X mark and fortresses.
+
+| Red ORDER | Blue ORDER | Red | Blue | Interaction |
+| --- | --- | --- | --- | --- |
+| 12 | 12 | 420 | 310 | none; the twin's X12 spot holds the X6 (6 bonus balls) |
+| 12 | 13 | 420 | 290 | none |
+| 34 | 34 | 270 | 350 | the robots touch twice over the central table (4.8 s, 12.5 s); the twin takes more balls |

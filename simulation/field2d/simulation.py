@@ -111,6 +111,8 @@ class Simulation:
         self._velocity = (0.0, 0.0, 0.0)   # robot frame vx, vy (mm/s), omega (rad/s)
         self._accel = (0.0, 0.0)           # low-passed, m/s^2
         self._runner: Optional[ProgramRunner] = None
+        self.referee_balls = True                  # False: a second robot; the host's referee releases the balls
+        self.linked: List["Simulation"] = []       # robots on the same field (analysis/two_robots.py)
 
     @property
     def running(self) -> bool:
@@ -264,7 +266,7 @@ class Simulation:
             if self.props and self.intake:
                 head = (self._path_data or {}).get("head_box_mm", (0, 0, 46.0, 0, 0, 145.0))
                 rake_props(self.pose, self.mechanisms.position("intake_lift"), self.intake.pulling(self.dc),
-                           self.props, self.elements, dt, self.intake, (head[2], head[5]))
+                           self.props, self.elements, dt, self.intake, (head[2], head[5]), owner=id(self))
             if self._path_data:
                 lift = self.mechanisms.position("intake_lift")
                 hx0, hy0, hz0, hx1, hy1, hz1 = self._path_data.get("head_box_mm", (0, 0, 0, 0, 0, 0))
@@ -369,7 +371,12 @@ class Simulation:
         self.marks.append({"label": label, "t": self.clock.now, "x": p.x, "y": p.y, "theta": p.theta, **info})
 
     def _fortress_moved(self) -> None:
-        """A fortress moved (fortress.py): the structure boxes every model uses follow it."""
+        """A fortress moved (fortress.py): the structure boxes every model uses follow it (also in
+        the robots on the same field)."""
+        for sim in [self] + self.linked:
+            sim._refresh_structures()
+
+    def _refresh_structures(self) -> None:
         named = named_colliders(self.elements)
         self._colliders = [box for _, box in named]
         self.collisions.colliders = named
@@ -379,7 +386,7 @@ class Simulation:
     def _referee(self) -> None:
         """Manual stage start (30 s) in runs that go past the automatic stage: bonus exchange,
         own resource balls released (referee.py)."""
-        if (self.bonus_judged is None and self.world and self.ball_scenario == "initial"
+        if (self.bonus_judged is None and self.referee_balls and self.world and self.ball_scenario == "initial"
                 and (not self.time_limit or self.time_limit > referee.MANUAL_START_S)
                 and self.clock.now >= referee.MANUAL_START_S - 1e-9):
             self.bonus_judged = referee.manual_stage_start(self)

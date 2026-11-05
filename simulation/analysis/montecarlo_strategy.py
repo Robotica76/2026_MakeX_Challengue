@@ -160,12 +160,12 @@ def evaluate(candidates, trials, workers, seed0=1000):
 
 
 def grid():
-    strategies = [{"DENY_X9": 0}, {"DENY_X9": 1}]
+    strategies = [{"ORDER": 1}, {"ORDER": 12}]
     motion = [{"V_MAX": 700, "A_MAX": 1200, "D_MAX": 1400},
               {"V_MAX": 900, "A_MAX": 1600, "D_MAX": 1800},
               {"V_MAX": 1100, "A_MAX": 2200, "D_MAX": 2400}]
     approach = [{"V_APPROACH": 350, "V_PULL": 260}, {"V_APPROACH": 500, "V_PULL": 400}]
-    # (first search, 16 robots each: DENY_X9 1 / 700 / 1200 / 1400 / 500 / 400 ranked first)
+    # (first search, 16 robots each: ORDER 12 (DENY_X9 1) / 700 / 1200 / 1400 / 500 / 400 ranked first)
     for s, m, a in itertools.product(strategies, motion, approach):
         yield {**s, **m, **a}
 

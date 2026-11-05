@@ -38,7 +38,7 @@ import montecarlo_strategy as mc  # noqa: E402
 OUT = HERE / "reports" / "strategy_montecarlo"
 CANDIDATES = [
     ("Winner: X12 + X9 denied", {}),
-    ("X12 only", {"DENY_X9": 0}),
+    ("X12 only", {"ORDER": 1}),
     ("Grab 7 mm short", {"GRAB_SHORT": 7}),
     ("Faster profile", {"V_MAX": 900, "A_MAX": 1600, "D_MAX": 1800}),
 ]

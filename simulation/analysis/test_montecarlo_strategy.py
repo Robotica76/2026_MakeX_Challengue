@@ -7,9 +7,9 @@ from montecarlo_strategy import program_text, summarize, trial
 
 class MonteCarloStrategyTest(unittest.TestCase):
     def test_constants_are_replaced_inside_the_constants_block(self):
-        text = program_text({"V_MAX": 555, "DENY_X9": 0})
+        text = program_text({"V_MAX": 555, "ORDER": 1})
         self.assertIn("    V_MAX = 555", text)
-        self.assertIn("    DENY_X9 = 0", text)
+        self.assertIn("    ORDER = 1", text)
         with self.assertRaises(KeyError):
             program_text({"pos_x": 1})                    # a state variable, not a constant
 

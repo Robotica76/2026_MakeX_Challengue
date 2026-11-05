@@ -170,16 +170,17 @@ class Gripper:
 
 
 def rake_props(pose, lift: float, pulling: bool, props: List[Prop], elements, dt: float, intake,
-               head_z: Tuple[float, float]) -> None:
+               head_z: Tuple[float, float], owner=None) -> None:
     """Pull mode for props: a prop the intake head touches (front band, width, height overlap) is
     pulled against the head and rides with the robot (no closer than the body front). When the
     robot backs away the prop is dragged off the strategy area and drops onto the floor; if the
-    pull stops, it drops onto whatever is below."""
+    pull stops, it drops onto whatever is below. `owner`: the robot (two robots on one field each
+    handle only the props they drag)."""
     pinned = intake.body_front_mm + CUBE / 2 + 2.0
     c, s = math.cos(pose.theta), math.sin(pose.theta)
     hz0, hz1 = head_z[0] + lift, head_z[1] + lift
     for p in props:
-        if p.held:
+        if p.held or (p.dragged and getattr(p, "drag_owner", owner) != owner):
             continue
         dx, dy = p.x - pose.x, p.y - pose.y
         fwd, lat = dx * c + dy * s, -dx * s + dy * c
@@ -190,6 +191,7 @@ def rake_props(pose, lift: float, pulling: bool, props: List[Prop], elements, dt
             if not (pulling and touching):
                 continue
             p.dragged = True
+            p.drag_owner = owner
             p.local = (fwd, lat)
         fwd, lat = p.local
         if not pulling:
