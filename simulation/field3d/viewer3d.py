@@ -150,6 +150,11 @@ class Viewer3D:
         self._sync_balls()
         self.robot = RobotModel(load_model_spec(self.args.model))
         self.robot.root.reparent_to(render)
+        self.twin, self.twin_model, self._twin_t, self._twin_k, self._twin_log = None, None, 0.0, 0, 0
+        if self.args.twin is not None:              # blue twin: same robot, program and driver (two_robots.py)
+            self.twin_model = RobotModel(load_model_spec(self.args.model))
+            self.twin_model.root.reparent_to(render)
+            self.twin_model.root.set_color_scale(0.55, 0.7, 1.35, 1.0)
         self.robot.show_mast(self.args.mast)
         self.xray = False
         if self.args.xray:
@@ -336,6 +341,54 @@ class Viewer3D:
         self.robot.set_gripper_jaw(mech.position("gripper_jaw"))
         self.robot.set_spinner_angles(self._spin_display(dt))
 
+    def _step_twin(self, dt):
+        """The blue twin (--twin ORDER) starts with each run of our robot and steps with it on the
+        same balls, props and fortresses; its scripted driver runs in this process."""
+        if self.args.twin is None:
+            return
+        if self.sim.running and (self.twin is None or self.sim.time < self._twin_t):
+            from types import SimpleNamespace
+            for sub in ("analysis", "control"):
+                path = str(HERE.parent / sub)
+                if path not in sys.path:
+                    sys.path.insert(0, path)
+            from two_robots import Robot, share
+            self.twin = Robot("blue", self.args.twin, 0)
+            self.twin.sim.run()
+            share(SimpleNamespace(sim=self.sim), self.twin)
+            self._twin_k, self._twin_log = 0, 0
+            print(f"[twin] blue twin, ORDER {self.args.twin}")
+        self._twin_t = self.sim.time
+        twin = self.twin
+        if twin is None or not twin.sim.running or not self.sim.running:
+            return
+        twin.sim.step(dt)
+        if twin.sim.bonus_judged is None and self.sim.bonus_judged is not None:
+            twin.sim.bonus_judged = self.sim.bonus_judged
+        self._twin_k += 1
+        twin.drive(self._twin_k)
+        for line in twin.driver.log[self._twin_log:]:
+            print("[twin]" + line)
+        self._twin_log = len(twin.driver.log)
+
+    def _place_twin(self):
+        if self.twin_model is None:
+            return
+        sim = self.twin.sim if self.twin else None
+        if sim is None:
+            import field_layout as fl
+            from two_robots import turned
+            x, y, deg = turned(325.0, 325.0, 0.0)
+            self.twin_model.set_pose(x, y, math.radians(deg))
+            return
+        self.twin_model.set_pose(sim.pose.x, sim.pose.y, sim.pose.theta)
+        self.twin_model.set_wheel_angles({w: a for w, (_, a) in wheel_state(sim).items()})
+        mech = sim.mechanisms
+        self.twin_model.set_carriage(mech.position("elevator"))
+        self.twin_model.set_intake_lift(mech.position("intake_lift"))
+        self.twin_model.set_gripper_jaw(mech.position("gripper_jaw"))
+        self.twin_model.show_mast(bool(sim.flag and sim.flag.state != "stowed"))
+
     def _spin_display(self, dt):
         """Displayed spinner angles: follow the simulation, but never faster than
         SPIN_DISPLAY_CAP_DPS so fast rollers do not strobe."""
@@ -491,7 +544,12 @@ class Viewer3D:
                 parts.append(f"{label} {score[key]}")
         if score["penalties"]:
             parts.append(f"penalties -{score['penalties']}")
-        self.score_detail.setText("   ".join(parts) + f"\n(not simulated: {score['not_simulated']})")
+        twin = ""
+        if self.twin is not None:
+            b = match_score(self.twin.sim, "blue")
+            twin = (f"\nBLUE twin  {b['total']}:  balls {b['precision']}  flag {b['flag']}  cones {b['cones']}  "
+                    f"letters {b['letter_cubes']}" + (f"  penalties -{b['penalties']}" if b["penalties"] else ""))
+        self.score_detail.setText("   ".join(parts) + twin + f"\n(not simulated: {score['not_simulated']})")
         if self._last_total is not None and total != self._last_total and sim.running:
             change = total - self._last_total
             self.score_flash.setText(f"{change:+d}")
@@ -680,6 +738,7 @@ class Viewer3D:
         self._speed_meter(clock.get_real_time(), dt)
         self.programs.watch(clock.get_frame_time())   # reload when the file is saved again
         self.sim.step(dt)
+        self._step_twin(dt)
         self._refresh_buttons()
         mech = self.sim.mechanisms
         if self._keys["e"] != self._keys["q"]:
@@ -691,6 +750,7 @@ class Viewer3D:
         if self._keys["t"] != self._keys["g"] and "intake_lift" in mech.linear:
             mech.linear["intake_lift"].nudge((1 if self._keys["t"] else -1) * INTAKE_LIFT_KEY_MM_S * dt)
         self._place_robot(dt)
+        self._place_twin()
         self._sync_balls()
         self._sync_props()
         self._sync_fortresses()
@@ -733,10 +793,12 @@ class Viewer3D:
             t = 0.0
             while t < seconds and self.sim.running:
                 self.sim.step(frame_s)
+                self._step_twin(frame_s)
                 t += frame_s
                 if seconds - t < 0.3:          # settle the displayed acceleration
                     self._update_vectors(frame_s)
         self._place_robot()
+        self._place_twin()
         self._sync_balls()
         self._sync_props()
         self._sync_fortresses()
@@ -777,6 +839,8 @@ def parse_args(argv=None):
     parser.add_argument("--driver", type=Path, help="driver program instead of the gamepad window: it reads the "
                                                     "state stream and prints gamepad events (gamepad.py protocol)")
     parser.add_argument("--autorun", action="store_true", help="press Run when the viewer opens")
+    parser.add_argument("--twin", type=int, help="add the blue twin robot (same program and driver, field turned "
+                                                 "180 deg) running this automatic ORDER, e.g. 12")
     parser.add_argument("--screenshot", type=Path, help="render once (offscreen) to this PNG and exit")
     parser.add_argument("--run-for", type=float, default=0, help="with --screenshot: simulate this many seconds first")
     return parser.parse_args(argv)
