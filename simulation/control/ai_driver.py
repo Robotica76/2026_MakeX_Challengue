@@ -67,6 +67,7 @@ class Driver:
         self.moves = []              # (label, seconds, reached / close / timeout)
         self.side = 0                # program front: 0 intake (mode ≡), 90 gripper (mode +)
         self.evade_mm = EVADE_MM     # push our fortress this far north at the start of the manual stage
+        self.x_fire_at = X_FIRE_AT   # first ball at the X mark at the end
 
     # -- gamepad -------------------------------------------------------------------------
     def press(self, key):
@@ -531,7 +532,7 @@ class Driver:
             return
         self.deadline = 279.6
         yield from self.go(1000, 880, None, tol=40, timeout=3, label="X mark spot")   # clear of the fortress
-        yield from self.wait_until(X_FIRE_AT)
+        yield from self.wait_until(self.x_fire_at)
         # every kept ball in one burst (one every ~0.6 s): the last one lands just before the end,
         # after an opponent's answer to the first (an answer to a hit at 279 s cannot be made in time)
         n = self.state.get("stored", 0)
@@ -549,7 +550,10 @@ class Driver:
         self.say(f"manual stage, score {self.state.get('score')}")
         px, py, _ = self.pose
         if px > 1900:                                       # parked next to the strategy area
-            yield from self.go(1940, 950, 0, label="off the park spot")   # head front 2189, still high
+            # west first: straight north the body would push the cone left next to the strategy
+            # area (x ~2070, y ~1064) out of the gripper's reach
+            yield from self.go(1700, 745, 0, tol=40, label="off the park spot")
+            yield from self.go(1700, 950, 0, label="north of the park spot")
         else:                                               # parked west of the released balls
             yield from self.go(1300, 830, 0, tol=40, label="east of the fortress")
             yield from self.go(1300, 1100, 0, label="north of the balls")
