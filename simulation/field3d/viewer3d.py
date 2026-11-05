@@ -129,14 +129,18 @@ class Viewer3D:
     # --- scene -------------------------------------------------------------------
     def _setup_scene(self):
         from panda3d.core import AmbientLight, DirectionalLight, LineSegs, TextNode
-        from field_model import build_field_node, fortress_node
+        from field_model import build_field_node, fortress_node, x_mark_node
         from robot_model import RobotModel, load_model_spec
         base = self.base
         base.set_background_color(0.86, 0.88, 0.91, 1)
         base.disable_mouse()
         render = base.render
-        self.field = build_field_node(self.elements, include_props=not self.sim.props, include_movable=False)
+        self.field = build_field_node(self.elements, include_props=not self.sim.props, include_movable=False,
+                                      include_x_mark=False)
         self.field.reparent_to(render)
+        self._x_el = next((el for el in self.elements if el.name == "x_mark"), None)
+        self._x_state, self._x_node, self._x_yaw, self._x_from, self._x_t0 = None, None, 0.0, 0.0, 0.0
+        self._sync_x_mark()
         self.fortress_nodes = {}                 # moved with the simulation's fortress offsets (fortress.py)
         for el in self.elements:
             if el.kind == "movable":
@@ -209,6 +213,28 @@ class Viewer3D:
         for node in self.prop_nodes:
             p = node.get_python_tag("prop")
             node.set_pos(p.x * MM, p.y * MM, p.z * MM)
+
+    def _sync_x_mark(self):
+        """The X mark turns on its pivot when a hit changes it (0.5 s): red face toward the red
+        camp and all red, or toward the blue camp and all blue; both colours at the start."""
+        from field_model import x_mark_node
+        if self._x_el is None:
+            return
+        state = self.sim.world.x_mark_state if self.sim.world else "both"
+        now = self.sim.time
+        if state != self._x_state:
+            current = self._x_node.get_h() if self._x_node else 0.0
+            if self._x_node:
+                self._x_node.remove_node()
+            self._x_node, self._x_yaw = x_mark_node(self._x_el, state)
+            self._x_node.reparent_to(self.base.render)
+            self._x_from, self._x_t0 = current, now
+            if self._x_state is not None and state != "both":
+                self._x_from = current + 180.0          # spins round, as a hit turns it
+            self._x_state = state
+        k = min(1.0, max(0.0, (now - self._x_t0) / 0.5))
+        k = k * k * (3 - 2 * k)
+        self._x_node.set_h(self._x_from + (self._x_yaw - self._x_from) * k)
 
     def _sync_fortresses(self):
         offsets = self.sim.fortresses.offsets
@@ -756,6 +782,7 @@ class Viewer3D:
         self._sync_balls()
         self._sync_props()
         self._sync_fortresses()
+        self._sync_x_mark()
         self._update_vectors(dt)
         self._update_trail()
         self._drag_camera()
@@ -804,6 +831,7 @@ class Viewer3D:
         self._sync_balls()
         self._sync_props()
         self._sync_fortresses()
+        self._sync_x_mark()
         self._update_vectors(frame_s)
         self._update_trail()
         self._apply_camera()

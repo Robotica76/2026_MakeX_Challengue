@@ -280,12 +280,14 @@ def central_resource(el) -> List[Part]:
     return parts
 
 
-def x_mark(el) -> List[Part]:
-    """X mark: red chevron on the red side, blue on the blue side, 654-947 mm (p.21)."""
+def x_mark(el, colors=None) -> List[Part]:
+    """X mark: red chevron on the red side, blue on the blue side, 654-947 mm (p.21, p.44-46).
+    `colors`: (red-side chevron, blue-side chevron) rgba, e.g. both red once the X is turned to red."""
+    left, right = colors or (X_RED, X_BLUE)
     zc = (X_BOTTOM + el.z) / 2
     parts = [box(f"{el.name}:pivot", el.x, el.y, 20, 20, X_BOTTOM - 0.1, zc, METAL_RGBA)]
     half = el.w / 2
-    for side, rgba in ((-1, X_RED), (1, X_BLUE)):
+    for side, rgba in ((-1, left), (1, right)):
         outer = el.x + side * half
         apex = el.x + side * 40
         for zs in (-1, 1):
@@ -401,7 +403,7 @@ def ball_part(b) -> Part:
 
 
 def field_parts(elements: List[fl.Element], ball_scenario: str = "initial", include_props: bool = True,
-                include_movable: bool = True) -> List[Part]:
+                include_movable: bool = True, include_x_mark: bool = True) -> List[Part]:
     """Static field. ball_scenario (balls.py) adds balls as static parts; the viewer
     passes "none" and draws the simulation's balls itself so they can be collected.
     include_props=False leaves out the cones, bonus cubes and letter cubes (the viewer
@@ -410,7 +412,7 @@ def field_parts(elements: List[fl.Element], ball_scenario: str = "initial", incl
     parts = [box("floor", fl.CX, fl.CY, fl.FIELD_W, fl.FIELD_H, -10, 0, FLOOR_RGBA)]
     parts += frame_parts()
     for el in elements:
-        if include_movable or el.kind != "movable":
+        if (include_movable or el.kind != "movable") and (include_x_mark or el.name != "x_mark"):
             parts += element_parts(el, elements)
     parts += [ball_part(b) for b in field_balls(elements, ball_scenario)]
     if not include_props:
@@ -433,10 +435,27 @@ def prop_parts(prop) -> List[Part]:
 
 
 def build_field_node(elements: List[fl.Element], ball_scenario: str = "none", include_props: bool = True,
-                     include_movable: bool = True):
+                     include_movable: bool = True, include_x_mark: bool = True):
     """Panda3D NodePath with the whole field. Opaque parts are merged into a few
     batches so the field renders fast; transparent parts stay separate."""
-    return _parts_node("field", field_parts(elements, ball_scenario, include_props, include_movable))
+    return _parts_node("field", field_parts(elements, ball_scenario, include_props, include_movable, include_x_mark))
+
+
+X_STATE_LOOK = {"both": (0.0, None), "red": (90.0, (X_RED, X_RED)), "blue": (-90.0, (X_BLUE, X_BLUE))}
+
+
+def x_mark_node(el: fl.Element, state: str = "both"):
+    """The X mark as its own NodePath turning about its vertical pivot (the viewer turns it when a
+    hit changes its state): a pivot node at (el.x, el.y) and the X built around it. Returns
+    (pivot NodePath, yaw in degrees for the state)."""
+    from panda3d.core import NodePath
+    yaw, colors = X_STATE_LOOK.get(state, X_STATE_LOOK["both"])
+    pivot = NodePath("x_mark_pivot")
+    pivot.set_pos(el.x * MM, el.y * MM, 0.0)
+    body = _parts_node("x_mark", x_mark(el, colors))
+    body.reparent_to(pivot)
+    body.set_pos(-el.x * MM, -el.y * MM, 0.0)
+    return pivot, yaw
 
 
 def fortress_node(el: fl.Element, include_cubes: bool = True):
