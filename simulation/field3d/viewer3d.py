@@ -721,7 +721,9 @@ class Viewer3D:
         msg["jaw_mm"] = self.sim.mechanisms.position("gripper_jaw") if self.sim.mechanisms else 0.0
         g = self.sim.gripper
         msg["held"] = g.held.kind if g and g.held else None
-        msg["cones"] = [{"x_mm": round(p.x, 1), "y_mm": round(p.y, 1), "z_mm": round(p.z, 1), "post": p.on_post}
+        own = self.sim.cfg.alliance
+        msg["cones"] = [{"x_mm": round(p.x, 1), "y_mm": round(p.y, 1), "z_mm": round(p.z, 1),
+                         "post": p.on_post if p.on_post.startswith(own) else ""}
                         for p in (self.sim.props or []) if p.kind == "cone"]
         msg["letters"] = [{"label": p.label, "x_mm": round(p.x, 1), "y_mm": round(p.y, 1), "z_mm": round(p.z, 1),
                            "held": p.held} for p in (self.sim.props or [])

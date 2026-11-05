@@ -57,7 +57,7 @@ def play(seconds=280.0, program=PROGRAM, delay_frames=0, every=2, opponent_x_at=
                          "carriage_mm": sim.mechanisms.position("elevator"),
                          "jaw_mm": sim.mechanisms.position("gripper_jaw"),
                          "held": sim.gripper.held.kind if sim.gripper and sim.gripper.held else None,
-                         "cones": [{"x_mm": p.x, "y_mm": p.y, "z_mm": p.z, "post": p.on_post}
+                         "cones": [{"x_mm": p.x, "y_mm": p.y, "z_mm": p.z, "post": p.on_post if p.on_post.startswith("red") else ""}
                                    for p in sim.props if p.kind == "cone"],
                          "letters": [{"label": p.label, "x_mm": p.x, "y_mm": p.y, "z_mm": p.z, "held": p.held}
                                      for p in sim.props if p.kind == "letter" and p.alliance == "red"],
