@@ -164,9 +164,10 @@ def share(host, guest):
     h.linked, g.linked = [g], [h]
 
 
-def play(red_order=12, blue_order=12, delay=0, seconds=280.0, trace_every=0.5):
+def play(red_order=12, blue_order=12, delay=0, seconds=280.0, trace_every=0.5, red_evade=0, blue_evade=0):
     import referee
     red, blue = Robot("red", red_order, delay), Robot("blue", blue_order, delay)
+    red.driver.evade_mm, blue.driver.evade_mm = red_evade, blue_evade
     contacts, trace = [], []
     touching = False
     with contextlib.redirect_stdout(io.StringIO()):
@@ -209,8 +210,10 @@ def main():
     ap.add_argument("--blue", type=int, default=12, help="ORDER of the blue twin")
     ap.add_argument("--delay", type=int, default=0, help="driver delay, frames")
     ap.add_argument("--json", type=Path, help="write the result here")
+    ap.add_argument("--red-evade", type=int, default=0, help="mm the red robot pushes its fortress north at 30 s")
+    ap.add_argument("--blue-evade", type=int, default=0, help="the same for the blue twin")
     args = ap.parse_args()
-    out = play(args.red, args.blue, args.delay)
+    out = play(args.red, args.blue, args.delay, red_evade=args.red_evade, blue_evade=args.blue_evade)
     for a in ("red", "blue"):
         r = out[a]
         print(f"\n== {a} (ORDER {r.order})")

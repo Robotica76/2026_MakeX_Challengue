@@ -45,7 +45,9 @@ CHANNEL_RAIL_X = 2220.0     # strategy area west face: the channel rails start h
 CHANNELS = {"M": 437.5, "A": 657.5, "K": 877.5, "E": 1097.5}   # lower side, outside to inside (MAKE)
 FORTRESS_START = (662.0, 1527.5)
 X_RESERVE = 2               # balls kept from the manual stage for the X mark at the end
-X_FIRE_AT = 276.8           # first ball at the X (aim ~1 s, feed 0.5 s, flight 0.3 s): the last hit wins
+EVADE_MM = int(__import__("os").environ.get("EVADE_MM", "0"))   # push our fortress north this far at 30 s
+                            # (an opponent aiming at fixed coordinates misses from 150 mm: rl_strategy.py)
+X_FIRE_AT = 277.3           # first ball at the X: the burst ends ~279.9 s, after a twin firing at 276.8 (last hit wins)
 CONE_HEADING = 250.0       # at the post: gripper to the west-north-west, robot inside the field (cone_post_reach.py)
 
 
@@ -64,6 +66,7 @@ class Driver:
         self.timed = []              # (release time, key): keys held while the robot does other things
         self.moves = []              # (label, seconds, reached / close / timeout)
         self.side = 0                # program front: 0 intake (mode ≡), 90 gripper (mode +)
+        self.evade_mm = EVADE_MM     # push our fortress this far north at the start of the manual stage
 
     # -- gamepad -------------------------------------------------------------------------
     def press(self, key):
@@ -500,13 +503,26 @@ class Driver:
                                          [(self.pose[0], 950), (1250, 1080), (east, 1080)])
         yield from self.mode(0)
 
+    # -- our fortress ------------------------------------------------------------------------
+    def evade(self, mm):
+        """Push our fortress `mm` north on its casters (p.25), rear first and slowly (R02: it must not
+        tilt), staying in our half: shots aimed at its old place (fixed coordinates, odometry)
+        land 110-150 mm from its far edge, so 150+ mm makes them miss (fortress tests)."""
+        fx, fy = self.fortress_xy()
+        south = fy - 320.0
+        yield from self.go(fx, south - 330.0, 270, tol=20, label="behind our fortress", htol=2.0)
+        yield from self.go(fx, south - 249.0, 270, vmax=150, tol=10, label="touch it")
+        yield from self.go(fx, south - 249.0 + mm, 270, vmax=120, tol=8, timeout=4, label="push it north")
+        yield from self.go(fx, south - 330.0 + mm - 120.0, 270, tol=30, label="away from it")
+        self.say(f"fortress moved to {self.state.get('fortress')}")
+
     # -- X mark ----------------------------------------------------------------------------
     def x_mark_at_the_end(self):
         """The balls kept since the manual stage at the X mark after the flag (N3: the program
         aims at its red face): whatever it shows, a hit turns the red face toward us at scoring
         time (30 points; an X showing both colours scores for both alliances, red for us only).
-        The last hit before the end wins, so the first ball goes as late as it can (X_FIRE_AT)
-        and the other one answers if the X is not red after it."""
+        The last hit before the end wins: the balls go as late as they can (X_FIRE_AT), all of
+        them in one burst, the last one landing just before the end."""
         end = self.t + 6.0                                  # the flag routine drives back to (700, 1204)
         while self.t < end and (self.pose[0] < 650 or self.predicted()[3] > 30):
             yield
@@ -516,13 +532,11 @@ class Driver:
         self.deadline = 279.6
         yield from self.go(1000, 880, None, tol=40, timeout=3, label="X mark spot")   # clear of the fortress
         yield from self.wait_until(X_FIRE_AT)
-        while self.state.get("stored", 0) > 0 and self.t < self.deadline - 1.2:
-            n = self.state.get("stored", 0)
-            yield from self.shoot("X mark (end)", max_s=self.deadline - self.t, keep=n - 1, key="button_3")
-            yield from self.wait(0.5)                       # the ball reaches the X
-            self.say(f"X mark: {self.state.get('x_mark')}, score {self.state.get('score')}")
-            if self.state.get("x_mark") == "red":
-                break
+        # every kept ball in one burst (one every ~0.6 s): the last one lands just before the end,
+        # after an opponent's answer to the first (an answer to a hit at 279 s cannot be made in time)
+        n = self.state.get("stored", 0)
+        yield from self.shoot("X mark (end)", max_s=self.deadline - self.t, key="button_3")
+        self.say(f"X mark: {self.state.get('x_mark')} after {n} ball(s), score {self.state.get('score')}")
 
     # -- the match -----------------------------------------------------------------------
     def plan(self):
@@ -540,6 +554,8 @@ class Driver:
             yield from self.go(1300, 830, 0, tol=40, label="east of the fortress")
             yield from self.go(1300, 1100, 0, label="north of the balls")
         self.deadline = 117.0                               # then: to the starting area
+        if self.evade_mm:
+            yield from self.evade(self.evade_mm)
         south = [c for c in self.free_cones() if c["y_mm"] < 750]
         if south:
             # the lane a cone (next to the strategy area, y ~535) is where the sweep pushes it
