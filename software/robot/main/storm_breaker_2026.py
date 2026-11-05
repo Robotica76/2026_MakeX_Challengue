@@ -635,14 +635,19 @@ def aim_and_shoot_N_N_N_N(tx, ty, rise, short):
 def hang_flag():
     global STRATEGY, DENY_X9, V_MAX, V_APPROACH, V_PULL, A_MAX, D_MAX, V_MIN, W_MAX, K_HEADING, POS_TOL, HEAD_TOL, PASS_RADIUS, FACE_DIST, GO_TIMEOUT, PERIOD, MAX_RPM, RPM_TO_MM_S, WHEEL_MM_PER_DEG, TURN_MM_PER_DEG, ODOM_OFFSET, STRAFE_SLIP, LANE_B, LANE_A, X_LANE, X_PROPS_IN, X_FLOOR_IN, PROP_HEAD, FLOOR_HEAD, CONE_CLEAR_HEAD, X12_Y, GRAB_RIGHT, GRAB_BACK, GRAB_SHORT, PINNED, EXCHANGE_X, EXCHANGE_Y, PARK_X, PARK_Y, PARK_HEAD, END_BY, pos_x, pos_y, heading, wheel_x, wheel_y, enc_fl, enc_fr, enc_rl, enc_rr, gyro_bias, rot_start, t_cal, v_now, t_prev, go_done, go_end, dx, dy, dist, herr, v_des, v_dec, ux, uy, fwd, right, turn_rate, w_cw, w_fl, w_fr, w_rl, w_rr, w_big, w_k, d_fl, d_fr, d_rl, d_rr, a_fl, a_fr, a_rl, a_rr, yaw, step_f, step_r, mid_h, dt, head_mm, head_from, head_t0, head_t1, head_moving, carriage_mm, carriage_from, carriage_t0, carriage_t1, carriage_moving, jaw_t1, jaw_moving, estimate, cube_x, mode, front, stick_f, stick_r, stick_w, cmd_f, cmd_r, cmd_w, hold_heading, k, total, samples, in_auto, face, angle, h_goal, SHOT_SPEED_FULL, HOOD_DEG, EXIT_LEFT, AIM_SHORT, SHOT_RISE, FORT_X, FORT_Y, aim_d, aim_v, shot_power, t_feed, t_loop, X_LANE_A, PARK2_X, PARK2_Y, x_far, X_MARK_X, X_MARK_Y, X_MARK_RISE, PULL_A_DY
     # final stage, N4 with the robot in Red Start 1 (where the team puts it after the modification
-    # stage): flag rod on the left side, facing the back wall over flagpole 2 (y 1010)
+    # stage): flag rod on the left side, facing the back wall over flagpole 2 (y 1010); x 322: the
+    # rod tip 47 mm over the pole (30 needed), the front 12 mm off the pin area
     set_pose_N_N_N(325, 325, 0)
     head_to_N(370)
     carriage_to_N(230)
     go_N_N_N_N_N(700, 600, 0, V_MAX, 300)
-    go_N_N_N_N_N(700, 1204, 180, V_MAX, 0)
+    # the body ends 230 mm inside where the fortress stands: it is pushed north on its casters,
+    # slowly (R02: it must not tilt); the turn is done before (the corners reach 353 mm)
+    go_N_N_N_N_N(700, 800, 180, V_MAX, 0)
+    go_N_N_N_N_N(700, 950, 180, V_MAX, 0)
+    go_N_N_N_N_N(700, 1204, 180, 150, 0)
     wait_jobs()
-    go_N_N_N_N_N(330, 1204, 180, 200, 0)
+    go_N_N_N_N_N(322, 1204, 180, 200, 0)
     carriage_to_N(160)
     wait_jobs()
     go_N_N_N_N_N(700, 1204, 180, 400, 0)
@@ -732,6 +737,9 @@ def manual_loop():
                         head_mm = 0
                 else:
                     power_expand_board.stop("DC2")
+            # the gripper mode motors stop here (a key still held when the mode changed)
+            power_expand_board.stop("DC3")
+            power_expand_board.stop("DC6")
             if gamepad.is_key_pressed("R1"):
                 power_expand_board.set_power("BL1", 70)
                 power_expand_board.set_power("DC5", 80)
@@ -740,6 +748,7 @@ def manual_loop():
                 power_expand_board.stop("DC5")
         else:
             drive_joystick_N(90)
+            power_expand_board.stop("DC2")
             # the carriage height is tracked too, so the flag routine starts from where it is
             if gamepad.is_key_pressed("Up"):
                 power_expand_board.set_power("DC3", 100)
@@ -761,19 +770,26 @@ def manual_loop():
                     power_expand_board.set_power("DC6", -60)
                 else:
                     power_expand_board.stop("DC6")
-        if gamepad.is_key_pressed("L1"):
-            power_expand_board.set_power("DC1", 80)
-            power_expand_board.set_power("DC7", 80)
-            power_expand_board.set_power("DC4", 80)
+        if gamepad.is_key_pressed("N2"):
+            # pull mode: only the head roller turns, the throat is off: a prop (letter cube on the
+            # fortress cube level, bonus cube) is pulled off and dropped in front of the robot
+            power_expand_board.set_power("DC7", 100)
+            power_expand_board.stop("DC1")
+            power_expand_board.stop("DC4")
         else:
-            if gamepad.is_key_pressed("L2"):
-                power_expand_board.set_power("DC1", -80)
-                power_expand_board.set_power("DC7", -80)
-                power_expand_board.set_power("DC4", -80)
+            if gamepad.is_key_pressed("L1"):
+                power_expand_board.set_power("DC1", 80)
+                power_expand_board.set_power("DC7", 80)
+                power_expand_board.set_power("DC4", 80)
             else:
-                power_expand_board.stop("DC1")
-                power_expand_board.stop("DC7")
-                power_expand_board.stop("DC4")
+                if gamepad.is_key_pressed("L2"):
+                    power_expand_board.set_power("DC1", -80)
+                    power_expand_board.set_power("DC7", -80)
+                    power_expand_board.set_power("DC4", -80)
+                else:
+                    power_expand_board.stop("DC1")
+                    power_expand_board.stop("DC7")
+                    power_expand_board.stop("DC4")
         time.sleep(PERIOD)
 
 

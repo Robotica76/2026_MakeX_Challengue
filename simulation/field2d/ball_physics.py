@@ -180,12 +180,7 @@ class BallWorld:
         self.balls = balls
         self.intake, self.path = intake, path
         self.body_box, self.head_box = body_box, head_box    # robot frame (x fwd, y left, z), head at lift 0
-        self.colliders = field_colliders(elements)
-        self.fortress = fortress_regions(elements)
-        self.grid: Dict[Tuple[int, int], List[int]] = {}
-        for i, b in enumerate(self.colliders):
-            for key in self._cells(b[0], b[1], b[3], b[4]):
-                self.grid.setdefault(key, []).append(i)
+        self.set_elements(elements)
         self.carried: List[Carry] = []
         self.captured = 0
         self.dropped = 0
@@ -200,6 +195,15 @@ class BallWorld:
         for b in balls:
             b.vx = b.vy = b.vz = 0.0
             b.asleep, b.state, b.rest = True, "field", 0.0
+
+    def set_elements(self, elements: List[fl.Element]) -> None:
+        """Structure boxes and fortress regions (again after a fortress moved, fortress.py)."""
+        self.colliders = field_colliders(elements)
+        self.fortress = fortress_regions(elements)
+        self.grid: Dict[Tuple[int, int], List[int]] = {}
+        for i, b in enumerate(self.colliders):
+            for key in self._cells(b[0], b[1], b[3], b[4]):
+                self.grid.setdefault(key, []).append(i)
 
     @staticmethod
     def _cells(x0, y0, x1, y1):

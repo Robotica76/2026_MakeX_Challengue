@@ -129,14 +129,20 @@ class Viewer3D:
     # --- scene -------------------------------------------------------------------
     def _setup_scene(self):
         from panda3d.core import AmbientLight, DirectionalLight, LineSegs, TextNode
-        from field_model import build_field_node
+        from field_model import build_field_node, fortress_node
         from robot_model import RobotModel, load_model_spec
         base = self.base
         base.set_background_color(0.86, 0.88, 0.91, 1)
         base.disable_mouse()
         render = base.render
-        self.field = build_field_node(self.elements, include_props=not self.sim.props)
+        self.field = build_field_node(self.elements, include_props=not self.sim.props, include_movable=False)
         self.field.reparent_to(render)
+        self.fortress_nodes = {}                 # moved with the simulation's fortress offsets (fortress.py)
+        for el in self.elements:
+            if el.kind == "movable":
+                node = fortress_node(el, include_cubes=not self.sim.props)
+                node.reparent_to(render)
+                self.fortress_nodes[el.name] = node
         self.prop_root = render.attach_new_node("props")
         self.prop_nodes = []
         self.ball_root = render.attach_new_node("balls")
@@ -198,6 +204,12 @@ class Viewer3D:
         for node in self.prop_nodes:
             p = node.get_python_tag("prop")
             node.set_pos(p.x * MM, p.y * MM, p.z * MM)
+
+    def _sync_fortresses(self):
+        offsets = self.sim.fortresses.offsets
+        for name, node in self.fortress_nodes.items():
+            dx, dy = offsets.get(name, (0.0, 0.0))
+            node.set_pos(dx * MM, dy * MM, 0.0)
 
     def _sync_balls(self):
         """One node per simulated ball; collected balls are hidden. Rebuilt when the
@@ -653,6 +665,10 @@ class Viewer3D:
         msg["held"] = g.held.kind if g and g.held else None
         msg["cones"] = [{"x_mm": round(p.x, 1), "y_mm": round(p.y, 1), "z_mm": round(p.z, 1), "post": p.on_post}
                         for p in (self.sim.props or []) if p.kind == "cone"]
+        msg["letters"] = [{"label": p.label, "x_mm": round(p.x, 1), "y_mm": round(p.y, 1), "z_mm": round(p.z, 1),
+                           "held": p.held} for p in (self.sim.props or [])
+                          if p.kind == "letter" and p.alliance == self.sim.cfg.alliance]
+        msg["fortress"] = {k: [round(v, 1) for v in o] for k, o in self.sim.fortresses.offsets.items()}
         self.publisher.maybe_send(now, msg)
 
     def _update(self, task):
@@ -677,6 +693,7 @@ class Viewer3D:
         self._place_robot(dt)
         self._sync_balls()
         self._sync_props()
+        self._sync_fortresses()
         self._update_vectors(dt)
         self._update_trail()
         self._drag_camera()
@@ -722,6 +739,7 @@ class Viewer3D:
         self._place_robot()
         self._sync_balls()
         self._sync_props()
+        self._sync_fortresses()
         self._update_vectors(frame_s)
         self._update_trail()
         self._apply_camera()

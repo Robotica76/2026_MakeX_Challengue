@@ -103,7 +103,11 @@ class Gripper:
     tol_forward: float = 25.0                  # prop centre to grab point, mm
     tol_lateral: float = 40.0
     tol_z: float = 45.0
+    jaw_depth: float = 43.0                    # jaw plates along robot y (v22 CAD: y -207..-250 mm)
+    min_grip: float = 30.0                     # a prop is held if it overlaps the plates this much
+    slot_inner: float = -150.0                 # robot y of the slot end (the prop cannot go deeper)
     held: Optional[Prop] = None
+    held_lat: float = 0.0                      # held prop centre beside the grab point (robot y), mm
 
     def gap(self, closure: float) -> float:
         return self.open_gap - closure
@@ -113,12 +117,28 @@ class Gripper:
         x, y = pose.to_field(gx, gy)
         return x, y, gz + carriage
 
+    def lateral_ok(self, lat: float, width: float) -> bool:
+        """The prop (centre `lat` beside the grab point, robot y) overlaps the jaw plates by
+        min_grip and does not reach past the slot end."""
+        half, plate = width / 2, self.jaw_depth / 2
+        overlap = min(lat + half, plate) - max(lat - half, -plate)
+        inner = self.grab_point[1] + lat + half <= self.slot_inner + 1e-6
+        return overlap >= min(self.min_grip, self.jaw_depth) and inner
+
+    def held_field(self, pose, carriage: float) -> Tuple[float, float, float]:
+        """Centre of the held prop: the jaws centre it along their closing axis (robot x); across
+        it (robot y, how deep it sits between the jaws) it keeps where it was taken."""
+        gx, gy, gz = self.grab_point
+        x, y = pose.to_field(gx, gy + self.held_lat)
+        return x, y, gz + carriage
+
     def update(self, pose, carriage: float, closure: float, props: List[Prop], elements) -> None:
         gx, gy, gz = self.grab_field(pose, carriage)
         gap = self.gap(closure)
         if self.held is not None:
             p = self.held
-            p.x, p.y, p.z = gx, gy, gz - p.height / 2
+            hx, hy, _ = self.held_field(pose, carriage)
+            p.x, p.y, p.z = hx, hy, gz - p.height / 2
             if p.kind == "cone":
                 thread_cone(p, elements)
             if gap > p.width + 4.0:                    # jaws opened: release
@@ -130,6 +150,7 @@ class Gripper:
                         d = math.hypot(p.x - post.x, p.y - post.y) or 1.0
                         k = (CONE_BASE / 2 + 25.0) / d
                         p.x, p.y = post.x + (p.x - post.x) * k, post.y + (p.y - post.y) * k
+                channel_drop(p, elements)
                 p.z = support_under(p, elements)
             return
         for p in props:
@@ -139,11 +160,12 @@ class Gripper:
             c, s = math.cos(pose.theta), math.sin(pose.theta)
             fwd, lat = dx * c + dy * s, -dx * s + dy * c
             centre_z = p.z + p.height / 2
-            if (abs(fwd) <= self.tol_forward and abs(lat) <= self.tol_lateral and abs(centre_z - gz) <= self.tol_z
+            if (abs(fwd) <= self.tol_forward and self.lateral_ok(lat, p.width) and abs(centre_z - gz) <= self.tol_z
                     and gap <= p.width):                 # jaws closed onto it
                 p.held = True
                 self.held = p
-                p.x, p.y, p.z = gx, gy, gz - p.height / 2
+                self.held_lat = lat
+                p.x, p.y, p.z = *self.held_field(pose, carriage)[:2], gz - p.height / 2
                 return
 
 
@@ -273,6 +295,22 @@ def denial_count(props: List[Prop], balls, alliance: str) -> Dict[str, int]:
     }
 
 
+CHANNEL_FIT_MM = 12.0                                  # cube centre to window centre: 140 mm window, 120 cube
+
+
+def channel_drop(p: Prop, elements) -> None:
+    """A cube released with its centre in a channel window rests on the channel rail only if it
+    fits the window (it went in between the dividers); otherwise it was stopped at the entrance
+    and drops onto the floor in front of the strategy area."""
+    if p.kind not in ("letter", "bonus"):
+        return
+    for el in elements:
+        if el.kind == "slot" and el.contains(p.x, p.y) and abs(p.y - el.y) > CHANNEL_FIT_MM:
+            x0, _, x1, _ = el.bounds()
+            p.x = x0 - CUBE / 2 - 1.0 if p.x < el.x else x1 + CUBE / 2 + 1.0
+            return
+
+
 def cone_post_near(p: Prop, elements):
     """The cone post whose top the cone's hole is over (within POST_CATCH_MM), or None."""
     for el in elements:
@@ -327,8 +365,10 @@ def load_gripper(path: Path = DEFAULT_CONFIG) -> Optional[Gripper]:
         return None
     cx, cy, cz = data["grab_point_cad_mm"]
     tol = data.get("tolerance_mm", {})
+    slot = data.get("slot_mm")
     return Gripper((cy, -cx, cz), float(data.get("open_gap_mm", 138.0)), float(tol.get("forward", 25.0)),
-                   float(tol.get("lateral", 40.0)), float(tol.get("z", 45.0)))
+                   float(tol.get("lateral", 40.0)), float(tol.get("z", 45.0)), float(data.get("jaw_depth_mm", 43.0)),
+                   float(data.get("min_grip_mm", 30.0)), float(slot[4]) if slot else -150.0)
 
 
 # --- automatic-stage score preview ----------------------------------------------------------

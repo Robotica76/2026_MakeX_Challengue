@@ -60,6 +60,44 @@ class GripperTest(unittest.TestCase):
         self.assertIsNone(self.g.held)
 
 
+class LetterChannelTest(unittest.TestCase):
+    """A letter cube held 40 mm outward of the grab point sticks out past the jaws: its centre gets
+    over the channel rail (x 2220) with the robot body outside the strategy area."""
+    def setUp(self):
+        self.g = load_gripper()
+        self.window = fl.get(ELEMENTS, "strategy_lower_channel_3")          # y 877.5 (K)
+        self.pose = RobotPose(1100.0, 700.0, math.pi / 2)
+        gx, gy, _ = self.g.grab_field(self.pose, 0.0)
+        self.cube = Prop("k", "letter", "K", "red", gx + 40.0, gy, 0.0)    # 40 mm outward (+x at heading 90)
+
+    def test_grip_overlap_limits(self):
+        self.assertTrue(self.g.lateral_ok(-40.0, CUBE))                     # 41.5 mm on the 43 mm plates
+        self.assertFalse(self.g.lateral_ok(-55.0, CUBE))                    # 26.5 mm: slips out
+        self.assertFalse(self.g.lateral_ok(30.0, CUBE))                     # deeper than the slot end
+        self.assertFalse(self.g.lateral_ok(-40.0, 90.0))                    # a cone (90 mm) that far out
+
+    def held_at(self, robot_x, robot_y):
+        self.g.update(self.pose, 0.0, 28.0, [self.cube], ELEMENTS)
+        self.assertIs(self.g.held, self.cube)
+        pose = RobotPose(robot_x, robot_y, math.pi / 2)
+        self.g.update(pose, 10.0, 28.0, [self.cube], ELEMENTS)
+        return pose
+
+    def test_released_over_the_rail_it_scores(self):
+        pose = self.held_at(2220.0 - 250.0 - 8.0, self.window.y + 89.0)    # body 8 mm off the strategy area
+        self.assertGreater(self.cube.x, 2220.0)
+        self.g.update(pose, 10.0, 0.0, [self.cube], ELEMENTS)               # open
+        self.assertEqual(self.cube.z, CHANNEL_RAIL_Z)
+        self.assertEqual(score_preview([self.cube], ELEMENTS, "red")["letter_cubes"], 1)
+
+    def test_off_the_window_it_drops_in_front(self):
+        pose = self.held_at(2220.0 - 250.0 - 8.0, self.window.y + 89.0 + 20.0)   # 20 mm off the window centre
+        self.g.update(pose, 10.0, 0.0, [self.cube], ELEMENTS)
+        self.assertEqual(self.cube.z, 0.0)
+        self.assertLess(self.cube.x, 2220.0)
+        self.assertEqual(score_preview([self.cube], ELEMENTS, "red")["letter_cubes"], 0)
+
+
 class ConeHangTest(unittest.TestCase):
     """A cone hangs on a cone post only when it is lowered onto it from above (405 mm post)."""
     def setUp(self):
@@ -128,6 +166,18 @@ class RakeTest(unittest.TestCase):
         self.assertEqual(x12.z, 0.0)
         self.assertGreater(x12.x, 2220.0 - CUBE / 2)                       # fell at the line
         self.assertEqual(denial_count(props, [], "red")["props_on_line"], 3)   # the head spans X9, X12 and a cone
+
+    def test_head_pulls_letter_cubes_off_the_fortress_cube_level(self):
+        intake = load_intake()
+        props = field_props(ELEMENTS)
+        k, e = [p for p in props if p.alliance == "red" and p.label in "KE" and p.y < fl.CY - 150]
+        pose = RobotPose((k.x + e.x) / 2, k.y - 300.0, math.pi / 2)          # facing north, head over the level
+        for _ in range(30):
+            rake_props(pose, 150.0, True, props, ELEMENTS, 1 / 60, intake, (46.0, 145.0))
+        fort = fl.get(ELEMENTS, "red_fortress")
+        for cube in (k, e):
+            self.assertEqual(cube.z, 0.0)                                   # off the 171 mm level, on the floor
+            self.assertLess(cube.y, fort.y - fort.h / 2)                     # centre out of the fortress
 
     def test_not_pulling_leaves_props_alone(self):
         props = field_props(ELEMENTS)

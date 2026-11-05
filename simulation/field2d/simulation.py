@@ -21,6 +21,7 @@ from ball_physics import BallWorld, load_ball_path
 from balls import Ball, Intake, field_balls
 from kinematics import DriveTrain, body_velocity, integrate
 from ball_physics import named_colliders
+from fortress import FortressMotion
 from match import ChannelMonitor, CollisionMonitor, HalfMonitor, MatchMonitor
 from mechanisms import Mechanisms
 from props import Gripper, Prop, field_props, push_props, rake_props
@@ -103,6 +104,7 @@ class Simulation:
         self._ranging = json.loads(DEFAULT_CONFIG.read_text()).get("ranging_sensors", {})
         self._colliders = [box for _, box in named_colliders(self.elements)]
         self.prop_jams: List[str] = []             # props the robot presses against a structure
+        self.fortresses = FortressMotion.for_elements(self.elements)   # fortress.py: pushed on its casters
         self._gripper_slot = tuple(json.loads(DEFAULT_CONFIG.read_text()).get("gripper", {}).get(
             "slot_mm", (0, 0, 0, 0, 0, 0)))          # free space between the jaws (robot frame)
         self._gyro_drift = 0.0
@@ -167,7 +169,7 @@ class Simulation:
         body = tuple(data.get("body_box_mm", (-self.cfg.length_mm / 2, -self.cfg.width_mm / 2, 0.0,
                                               self.cfg.length_mm / 2, self.cfg.width_mm / 2, 642.0)))
         head = tuple(data.get("head_box_mm", (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)))
-        return BallWorld(fl.build_field(), self.balls, self.intake, load_ball_path(data), body, head)
+        return BallWorld(self.elements, self.balls, self.intake, load_ball_path(data), body, head)
 
     def reset(self, cfg: Optional[RobotConfig] = None, start: Optional[RobotPose] = None) -> None:
         """Stop any run and put the robot back on its start pose."""
@@ -178,6 +180,9 @@ class Simulation:
             self.start_pose = start
         self.pose = self.start_pose
         self.clock = SimClock()
+        self.elements = fl.build_field()                 # fortresses back where they start
+        self._colliders = [box for _, box in named_colliders(self.elements)]
+        self.fortresses = FortressMotion.for_elements(self.elements)
         self.motors = self._new_motors()
         self.sensors = Sensors()
         self.bonus_judged = None
@@ -260,6 +265,14 @@ class Simulation:
                 head = (self._path_data or {}).get("head_box_mm", (0, 0, 46.0, 0, 0, 145.0))
                 rake_props(self.pose, self.mechanisms.position("intake_lift"), self.intake.pulling(self.dc),
                            self.props, self.elements, dt, self.intake, (head[2], head[5]))
+            if self._path_data:
+                lift = self.mechanisms.position("intake_lift")
+                hx0, hy0, hz0, hx1, hy1, hz1 = self._path_data.get("head_box_mm", (0, 0, 0, 0, 0, 0))
+                parts = [tuple(b) for b in self._path_data.get("body_bands_mm", [])] + \
+                        [(hx0, hy0, hz0 + lift, hx1, hy1, hz1 + lift)]
+                if self.fortresses.update(self.clock.now, dt, self.pose, parts, self.elements, self.props,
+                                          self.balls):
+                    self._fortress_moved()
             if self.props and self._path_data:
                 lift = self.mechanisms.position("intake_lift")
                 hx0, hy0, hz0, hx1, hy1, hz1 = self._path_data.get("head_box_mm", (0, 0, 0, 0, 0, 0))
@@ -354,6 +367,14 @@ class Simulation:
         """simtrace.mark() from the program thread; the sim is paused meanwhile (lockstep)."""
         p = self.pose
         self.marks.append({"label": label, "t": self.clock.now, "x": p.x, "y": p.y, "theta": p.theta, **info})
+
+    def _fortress_moved(self) -> None:
+        """A fortress moved (fortress.py): the structure boxes every model uses follow it."""
+        named = named_colliders(self.elements)
+        self._colliders = [box for _, box in named]
+        self.collisions.colliders = named
+        if self.world:
+            self.world.set_elements(self.elements)
 
     def _referee(self) -> None:
         """Manual stage start (30 s) in runs that go past the automatic stage: bonus exchange,

@@ -366,6 +366,9 @@
       85.5
     ],
     "open_gap_mm": 138.0,
+    "jaw_depth_mm": 43.0,
+    "min_grip_mm": 30.0,
+    "jaw_note": "jaw plates are 43 mm deep along robot y (CAD x 207-250); a prop is held if it overlaps them by 30 mm (estimate) and does not reach past the slot end (y -150): a 120 mm cube may sit up to 51 mm outward, so it sticks out past the jaws",
     "tolerance_mm": {
       "forward": 25.0,
       "lateral": 40.0,
