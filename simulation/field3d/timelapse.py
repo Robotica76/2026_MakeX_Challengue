@@ -47,7 +47,7 @@ def main():
     red = Robot.__new__(Robot)                  # our robot's driver on the viewer's simulation
     red.sim, red.alliance, red.delay, red.driver, red.queue = viewer.sim, "red", 0, Driver(), []
     frames, folder = [], Path(tempfile.mkdtemp())
-    frame_s, k, next_shot, logged = 1 / 60, 0, 0.0, 0
+    frame_s, k, next_shot, logged, twin_logged = 1 / 60, 0, 0.0, 0, 0
     with contextlib.redirect_stdout(io.StringIO()):
         viewer.sim.run()
     while viewer.sim.running and viewer.sim.time < args.seconds:
@@ -59,6 +59,10 @@ def main():
         for line in red.driver.log[logged:]:
             print(line, flush=True)
         logged = len(red.driver.log)
+        if viewer.twin is not None:
+            for line in viewer.twin.driver.log[twin_logged:]:
+                print("[twin]" + line, flush=True)
+            twin_logged = len(viewer.twin.driver.log)
         if viewer.sim.time >= next_shot:
             next_shot += args.every
             viewer._place_robot()
