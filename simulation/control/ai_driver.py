@@ -44,6 +44,8 @@ LETTER_LAT = -40.0          # a letter cube is taken 40 mm outward of the grab p
 CHANNEL_RAIL_X = 2220.0     # strategy area west face: the channel rails start here
 CHANNELS = {"M": 437.5, "A": 657.5, "K": 877.5, "E": 1097.5}   # lower side, outside to inside (MAKE)
 FORTRESS_START = (662.0, 1527.5)
+X_RESERVE = 2               # balls kept from the manual stage for the X mark at the end
+X_FIRE_AT = 276.8           # first ball at the X (aim ~1 s, feed 0.5 s, flight 0.3 s): the last hit wins
 CONE_HEADING = 250.0       # at the post: gripper to the west-north-west, robot inside the field (cone_post_reach.py)
 
 
@@ -207,7 +209,7 @@ class Driver:
         self.say(f"{label}: {key} with {n} balls inside")
         self.press(key)
         end = min(self.t + max_s, self.deadline)
-        while self.t < end and (self.state.get("stored", 0) > keep or self.t < start + 2.5):
+        while self.t < end and (self.state.get("stored", 0) > keep or (not keep and self.t < start + 2.5)):
             yield
         if not keep:
             yield from self.wait(0.8)
@@ -498,6 +500,30 @@ class Driver:
                                          [(self.pose[0], 950), (1250, 1080), (east, 1080)])
         yield from self.mode(0)
 
+    # -- X mark ----------------------------------------------------------------------------
+    def x_mark_at_the_end(self):
+        """The balls kept since the manual stage at the X mark after the flag (N3: the program
+        aims at its red face): whatever it shows, a hit turns the red face toward us at scoring
+        time (30 points; an X showing both colours scores for both alliances, red for us only).
+        The last hit before the end wins, so the first ball goes as late as it can (X_FIRE_AT)
+        and the other one answers if the X is not red after it."""
+        end = self.t + 6.0                                  # the flag routine drives back to (700, 1204)
+        while self.t < end and (self.pose[0] < 650 or self.predicted()[3] > 30):
+            yield
+        if not self.state.get("stored"):
+            self.say("X mark: no ball left")
+            return
+        self.deadline = 279.6
+        yield from self.go(1000, 880, None, tol=40, timeout=3, label="X mark spot")   # clear of the fortress
+        yield from self.wait_until(X_FIRE_AT)
+        while self.state.get("stored", 0) > 0 and self.t < self.deadline - 1.2:
+            n = self.state.get("stored", 0)
+            yield from self.shoot("X mark (end)", max_s=self.deadline - self.t, keep=n - 1, key="button_3")
+            yield from self.wait(0.5)                       # the ball reaches the X
+            self.say(f"X mark: {self.state.get('x_mark')}, score {self.state.get('score')}")
+            if self.state.get("x_mark") == "red":
+                break
+
     # -- the match -----------------------------------------------------------------------
     def plan(self):
         while self.state is None:
@@ -534,16 +560,17 @@ class Driver:
         self.head_to(80)                                    # just over the balls while driving
         yield from self.sweep_area_1(1460, "area 1")
         yield from self.go(1600, 900, None, label="shooting spot")
-        yield from self.shoot("shot 1")
-        if self.t < 95:                                     # a second sweep fits
+        second = self.t < 95                                # a second sweep fits
+        yield from self.shoot("shot 1", keep=0 if second else X_RESERVE)
+        if second:
             self.head_to(80)                                # head over the balls again
             yield from self.sweep_area_1(1380, "area 1 again")
             yield from self.go(1600, 900, None, label="shooting spot")
-            flipped = self.state.get("x_mark") == "blue"   # the opponent turned it: win it back
-            yield from self.shoot("shot 2", max_s=14.0, keep=2 if flipped else 0)
-            if flipped and self.state.get("stored", 0) > 0:
-                yield from self.shoot("X mark", max_s=6.0, key="button_3")
-                self.say(f"X mark: {self.state.get('x_mark')}")
+            yield from self.shoot("shot 2", max_s=14.0, keep=X_RESERVE)   # X_RESERVE balls kept for the X mark
+        if self.state.get("x_mark") == "blue" and self.state.get("stored", 0) > 1:
+            # the opponent turned it: one ball wins it back now, the other waits for the end
+            yield from self.shoot("X mark", max_s=4.0, keep=self.state.get("stored", 0) - 1, key="button_3")
+            self.say(f"X mark: {self.state.get('x_mark')}")
         self.release("L1")
         self.release("R2")
         self.deadline = 124.0
@@ -584,6 +611,7 @@ class Driver:
         while self.t < end and self.state.get("flag") != "hung":
             yield
         self.say(f"flag {self.state.get('flag')}, score {self.state.get('score')}")
+        yield from self.x_mark_at_the_end()
         self.release("L1")
         self.release("R2")
         self.say(f"end, score {self.state.get('score')}")

@@ -154,6 +154,7 @@ def share(host, guest):
     body = tuple(data.get("body_box_mm"))
     head = tuple(data.get("head_box_mm"))
     g.world = BallWorld(h.elements, h.balls, g.intake, load_ball_path(data), body, head, field_physics=False)
+    g.world.x_mark_host = h.world                         # one X mark
     g.collisions = g._new_collisions()
     g.channels = g._new_channels()
     g.flag = load_flag("blue", elements=h.elements)

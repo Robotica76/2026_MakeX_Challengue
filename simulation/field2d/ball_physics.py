@@ -180,6 +180,7 @@ class BallWorld:
         """field_physics=False: only this robot's part (drag, capture, carried balls, contact with
         its body), for a second robot on the same balls (another world moves the balls)."""
         self.field_physics = field_physics
+        self.x_mark_host: Optional["BallWorld"] = None   # a second robot's world: the field world's X mark
         self.balls = balls
         self.intake, self.path = intake, path
         self.body_box, self.head_box = body_box, head_box    # robot frame (x fwd, y left, z), head at lift 0
@@ -198,6 +199,17 @@ class BallWorld:
         for b in balls if field_physics else ():
             b.vx = b.vy = b.vz = 0.0
             b.asleep, b.state, b.rest = True, "field", 0.0
+
+    @property
+    def x_mark_state(self) -> str:
+        return self.x_mark_host.x_mark_state if self.x_mark_host else self._x_mark_state
+
+    @x_mark_state.setter
+    def x_mark_state(self, value: str) -> None:
+        if self.x_mark_host:
+            self.x_mark_host.x_mark_state = value
+        else:
+            self._x_mark_state = value
 
     def set_elements(self, elements: List[fl.Element]) -> None:
         """Structure boxes and fortress regions (again after a fortress moved, fortress.py)."""
