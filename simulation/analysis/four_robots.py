@@ -38,7 +38,7 @@ from two_robots import Robot, obb_overlap, turned  # noqa: E402
 class Agent(Robot):
     """A robot of the 2 vs 2 match: `role` main (lower in its own frame) or partner (upper)."""
 
-    def __init__(self, alliance, role, order, delay, constants=None, driver_options=None):
+    def __init__(self, alliance, role, order, delay, constants=None, driver_options=None, seed=None):
         import field_layout as fl
         from ai_driver import Driver
         from balls import load_intake
@@ -58,7 +58,17 @@ class Agent(Robot):
                     and el.contains(x, y))
         cfg = replace(cfg, alliance=alliance, start_area=area, heading_deg=deg)
         self.alliance, self.role, self.order, self.delay = alliance, role, order, delay
-        self.sim = Simulation(cfg, RobotPose(x, y, math.radians(deg)), load_drive_train(), 280.0, load_gyro_sign(),
+        drive = load_drive_train()
+        var = None
+        if seed is not None:                 # a sampled robot (montecarlo_config_competition.json)
+            from montecarlo_strategy import CONFIG
+            from uncertainty import sample_variation
+            var = sample_variation(json.loads(CONFIG.read_text())["ranges"], seed, tuple(drive.motors))
+            c, s = math.cos(math.radians(deg)), math.sin(math.radians(deg))
+            x += var.start_dx_mm * c - var.start_dy_mm * s
+            y += var.start_dx_mm * s + var.start_dy_mm * c
+            deg += var.start_dtheta_deg
+        self.sim = Simulation(cfg, RobotPose(x, y, math.radians(deg)), drive, 280.0, load_gyro_sign(), variation=var,
                               ball_scenario="initial", intake=load_intake(), mechanisms=load_mechanisms(),
                               gripper=load_gripper())
         consts = {"ORDER": order if role == "main" else 0, "START_Y": 325 if role == "main" else 2730}
@@ -120,19 +130,24 @@ def alliance_score(robots, alliance):
 
 
 def play(red_order=12, blue_order=12, delay=0, seconds=280.0, red_options=None, blue_options=None,
-         trace_every=0.5, on_frame=None):
-    """red_options / blue_options: {"main": {driver attributes}, "partner": {...}, "constants": {...}}."""
+         trace_every=0.5, on_frame=None, seed=None):
+    """red_options / blue_options: {"main": {driver attributes}, "partner": {...}, "constants": {...}}.
+    seed: four sampled robots and props within the rules' +-5 mm (None: ideal robots)."""
     red_options, blue_options = red_options or {}, blue_options or {}
     robots = []
     for alliance, order, opts in (("red", red_order, red_options), ("blue", blue_order, blue_options)):
         for role in ("main", "partner"):
-            robots.append(Agent(alliance, role, order, delay, opts.get("constants"), opts.get(role)))
+            robots.append(Agent(alliance, role, order, delay, opts.get("constants"), opts.get(role),
+                                None if seed is None else seed * 10 + len(robots)))
     host, guests = robots[0], robots[1:]
     contacts, trace, touching = [], [], {}
     with contextlib.redirect_stdout(io.StringIO()):
         for r in robots:
             r.sim.run()
         share_all(host, guests)
+        if seed is not None:
+            from montecarlo_strategy import jitter_props
+            jitter_props(host.sim, seed)
         k, last = 0, -1.0
         while host.sim.running and host.sim.time < seconds:
             for r in robots:

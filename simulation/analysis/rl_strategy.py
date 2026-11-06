@@ -210,13 +210,15 @@ def main():
     ap.add_argument("--opp-aim", default="mix", choices=("mix", "fixed", "adaptive"),
                     help="opponents' aim during training")
     ap.add_argument("--tag", default="", help="suffix for the report and figure folder")
+    ap.add_argument("--seed", type=int, default=1)
     args = ap.parse_args()
     global OUT, REPORT
     if args.tag:
         OUT = OUT.with_name(OUT.name + "_" + args.tag)
         REPORT = REPORT.with_name(REPORT.stem + "_" + args.tag + ".json")
     opp_aims = ("fixed", "adaptive") if args.opp_aim == "mix" else (args.opp_aim,)
-    pol, curve = train(args.iterations, args.batch, args.lr, args.entropy, args.our_aim, opp_aims=opp_aims)
+    pol, curve = train(args.iterations, args.batch, args.lr, args.entropy, args.our_aim, seed=args.seed,
+                       opp_aims=opp_aims)
     best = pol.greedy()
     learned = plans(best)
     print("\n== learned alliance plan")

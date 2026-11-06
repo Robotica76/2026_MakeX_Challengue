@@ -55,6 +55,17 @@ def program_text(constants: dict) -> str:
     return head + "def constants():" + body + "\n\n\n" + tail
 
 
+def jitter_props(sim, seed):
+    """Rules: props within +-5 mm. After sim.run(), which rebuilds the props."""
+    if seed < 0:
+        return
+    rng = random.Random(seed + 7)
+    for p in sim.props:
+        if p.kind != "letter":
+            p.x += rng.uniform(-5, 5)
+            p.y += rng.uniform(-5, 5)
+
+
 def trial(job):
     """job = (constants, seed) or (constants, seed, True) to also return the path (every 0.1 s)."""
     constants, seed = job[0], job[1]
@@ -81,11 +92,6 @@ def trial(job):
     start = RobotPose(s0.x + var.start_dx_mm, s0.y + var.start_dy_mm, s0.theta + math.radians(var.start_dtheta_deg))
     sim = Simulation(cfg, start, drive, SECONDS, load_gyro_sign(), variation=var, ball_scenario="initial",
                      intake=load_intake(), mechanisms=load_mechanisms(), gripper=load_gripper())
-    rng = random.Random(seed + 7)
-    for p in sim.props if seed >= 0 else []:               # rules: props within +-5 mm
-        if p.kind != "letter":
-            p.x += rng.uniform(-5, 5)
-            p.y += rng.uniform(-5, 5)
     folder = Path(tempfile.mkdtemp())
     program = folder / "storm_breaker_mc.py"
     program.write_text(program_text(constants), encoding="utf-8")
@@ -95,6 +101,7 @@ def trial(job):
     ex0, ey0, ex1, ey1 = exchange.bounds()
     with contextlib.redirect_stdout(io.StringIO()):
         sim.run()
+        jitter_props(sim, seed)
         sim.gamepad.apply_event({"event": "press", "control": "button_1"})
         k = 0
         while sim.running:

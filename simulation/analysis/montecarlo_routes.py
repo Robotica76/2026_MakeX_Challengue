@@ -41,7 +41,7 @@ ROOT = HERE.parents[1]
 FIELD2D = ROOT / "simulation" / "field2d"
 CONTROL = ROOT / "simulation" / "control"
 sys.path.insert(0, str(HERE))
-from montecarlo_strategy import CONFIG, program_text  # noqa: E402
+from montecarlo_strategy import CONFIG, jitter_props, program_text  # noqa: E402
 
 REPORT = HERE / "results" / "montecarlo_routes.json"
 NAMES = {1: "bonus X12", 2: "deny X9+cone", 3: "balls low", 4: "balls high"}
@@ -81,11 +81,6 @@ def _sim(seed, seconds, program):
     start = RobotPose(s0.x + var.start_dx_mm, s0.y + var.start_dy_mm, s0.theta + math.radians(var.start_dtheta_deg))
     sim = Simulation(cfg, start, drive, seconds, load_gyro_sign(), variation=var, ball_scenario="initial",
                      intake=load_intake(), mechanisms=load_mechanisms(), gripper=load_gripper())
-    rng = random.Random(seed + 7)
-    for p in sim.props if seed >= 0 else []:              # rules: props within +-5 mm
-        if p.kind != "letter":
-            p.x += rng.uniform(-5, 5)
-            p.y += rng.uniform(-5, 5)
     sim.program = program
     return sim
 
@@ -101,6 +96,7 @@ def auto_trial(job):
     from props import denial_count
     with contextlib.redirect_stdout(io.StringIO()):
         sim.run()
+        jitter_props(sim, seed)
         sim.gamepad.apply_event({"event": "press", "control": "button_1"})
         k = 0
         while sim.running:
@@ -170,7 +166,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--trials", type=int, default=6, help="sampled robots per order (stage 1)")
     ap.add_argument("--matches", type=int, default=6, help="best orders played as whole matches (stage 2)")
-    ap.add_argument("--delays", default="0,4,8", help="driver delays (frames) for the matches")
+    ap.add_argument("--delays", default="0,4,8", help="driver delays (frames, 2 or less are the same)")
     ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 1))
     args = ap.parse_args()
     jobs = [(o, 1000 + i) for o in orders() for i in range(args.trials)]
