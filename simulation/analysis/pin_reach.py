@@ -84,6 +84,8 @@ def tool_reach(pin, boxes, chassis=(-250.0, -250.0, 115.0, 250.0), claw=30.0):
                 margin = HALF - max(abs(lx), abs(ly))
                 if margin < claw or lx <= chassis[2]:
                     continue                                  # in the square, ahead of the chassis front
+                if max(cx for cx, _ in corners(p)) > 2220.0:
+                    continue                                  # R06: the square stays in our area
                 if all(obb_aabb_depth(p, chassis, b) <= 0.0 for b in boxes):
                     tower = p.to_field(chassis[2], max(-200.0, min(200.0, ly)))   # on the chassis front
                     if best is None or margin > best[0]:

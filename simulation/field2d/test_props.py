@@ -5,7 +5,7 @@ import unittest
 
 import field_layout as fl
 from balls import load_intake
-from props import (CHANNEL_RAIL_Z, CONE_HANG_DROP, CUBE, Gripper, Prop, bonus_state, denial_count, field_props, load_gripper,
+from props import (CHANNEL_RAIL_Z, CONE_HANG_DROP, CUBE, PinTool, pin_points, Gripper, Prop, bonus_state, denial_count, field_props, load_gripper,
                    rake_props, score_preview, support_under)
 from robot import RobotPose
 
@@ -96,6 +96,27 @@ class LetterChannelTest(unittest.TestCase):
         self.assertEqual(self.cube.z, 0.0)
         self.assertLess(self.cube.x, 2220.0)
         self.assertEqual(score_preview([self.cube], ELEMENTS, "red")["letter_cubes"], 0)
+
+
+class PinToolTest(unittest.TestCase):
+    def test_claw_takes_a_pin_off_the_shelf_and_leaves_it_on_the_placement_area(self):
+        tool = PinTool((195.0, 198.0, 743.0))
+        props = field_props(ELEMENTS)
+        pin = next(p for p in props if p.kind == "pin" and p.alliance == "red" and p.x < 1200 and p.y < 500)
+        th = math.radians(235.0)
+        c, s = math.cos(th), math.sin(th)
+        pose = RobotPose(pin.x - (195 * c - 198 * s), pin.y - (195 * s + 198 * c), th)
+        tool.update(pose, 160.0, 42.0, props, ELEMENTS)
+        self.assertIs(tool.held, pin)
+        tool.update(pose, 195.0, 42.0, props, ELEMENTS)
+        self.assertGreater(pin.z, 758.5)                                   # lifted off the shelf
+        th = math.radians(135.0)
+        c, s = math.cos(th), math.sin(th)
+        over = RobotPose(150.0 - (195 * c - 198 * s), 1100.0 - (195 * s + 198 * c), th)
+        tool.update(over, 195.0, 0.0, props, ELEMENTS)                     # open over the area
+        self.assertIsNone(tool.held)
+        self.assertEqual(pin.z, 405.0)
+        self.assertEqual(pin_points(props, ELEMENTS, "red")["points"], 30)
 
 
 class ConeHangTest(unittest.TestCase):

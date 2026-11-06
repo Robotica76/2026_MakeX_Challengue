@@ -19,7 +19,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 PROGRAM = ROOT / "software" / "robot" / "main" / "storm_breaker_2026.py"
 
 
-def play(seconds=280.0, program=PROGRAM, delay_frames=0, every=2, opponent_x_at=None):
+def play(seconds=280.0, program=PROGRAM, delay_frames=0, every=2, opponent_x_at=None, pin_module=False):
     """delay_frames: the driver sees the state this many 1/60 s frames late (the viewer's stream);
     opponent_x_at: match time when a (simulated) opponent shot turns the X mark blue."""
     import field_layout as fl
@@ -35,7 +35,9 @@ def play(seconds=280.0, program=PROGRAM, delay_frames=0, every=2, opponent_x_at=
     sim = Simulation(cfg, start_pose(cfg, fl.build_field()), load_drive_train(), seconds, load_gyro_sign(),
                      ball_scenario="initial", intake=load_intake(), mechanisms=load_mechanisms(), gripper=load_gripper())
     sim.program = Path(program)
+    sim.pin_module = pin_module              # pin claws from the modification stage (proposal)
     driver = Driver()
+    driver.pin_module = pin_module
     k, queue = 0, []
     with contextlib.redirect_stdout(io.StringIO()):
         sim.run()
@@ -61,7 +63,8 @@ def play(seconds=280.0, program=PROGRAM, delay_frames=0, every=2, opponent_x_at=
                                    for p in sim.props if p.kind == "cone"],
                          "letters": [{"label": p.label, "x_mm": p.x, "y_mm": p.y, "z_mm": p.z, "held": p.held}
                                      for p in sim.props if p.kind == "letter" and p.alliance == "red"],
-                         "fortress": dict(sim.fortresses.offsets)}
+                         "fortress": dict(sim.fortresses.offsets),
+                         "pin_held": next(((p.x, p.y) for p in sim.props if p.kind == "pin" and p.held), None)}
                 queue.append(state)
                 if len(queue) > max(1, delay_frames // every):
                     for ev in driver.tick(queue.pop(0)):
@@ -71,8 +74,8 @@ def play(seconds=280.0, program=PROGRAM, delay_frames=0, every=2, opponent_x_at=
 
 def main():
     delay = int(sys.argv[1]) if len(sys.argv) > 1 else 0
-    opponent = float(sys.argv[2]) if len(sys.argv) > 2 else None    # e.g. 50: opponent turns the X at 50 s
-    sim, driver, score = play(delay_frames=delay, opponent_x_at=opponent)
+    opponent = float(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2] != "pins" else None   # e.g. 50: opponent turns the X at 50 s
+    sim, driver, score = play(delay_frames=delay, opponent_x_at=opponent, pin_module="pins" in sys.argv)
     print("\n".join(driver.log))
     print("\nend:", sim.state.status, sim.state.message)
     print("collisions:", [(e["element"], e["part"], round(e["start"], 1)) for e in sim.collisions.collisions] or "none")

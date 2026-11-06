@@ -68,6 +68,7 @@ class Driver:
         self.side = 0                # program front: 0 intake (mode ≡), 90 gripper (mode +)
         self.evade_mm = EVADE_MM     # push our fortress this far north at the start of the manual stage
         self.x_fire_at = X_FIRE_AT   # first ball at the X mark at the end
+        self.pin_module = False      # final stage with the pin claws (Simulation.pin_module) instead of letters
 
     # -- gamepad -------------------------------------------------------------------------
     def press(self, key):
@@ -517,6 +518,57 @@ class Driver:
         yield from self.go(fx, south - 330.0 + mm - 120.0, 270, tol=30, label="away from it")
         self.say(f"fortress moved to {self.state.get('fortress')}")
 
+    # -- pins (proposal: claws in the free front of the square, pin_reach.py) --------------------
+    @staticmethod
+    def grab_at(x, y, heading, tool):
+        """Robot centre with the claw `tool` (robot frame) over field (x, y) at `heading`."""
+        c, s = math.cos(math.radians(heading)), math.sin(math.radians(heading))
+        return x - (tool[0] * c - tool[1] * s), y - (tool[0] * s + tool[1] * c)
+
+    def pin_routine(self):
+        """Each pin from the corner-first pose of pin_reach.py (chassis clear of the shelf legs), over
+        the shelf to the pin placement area (from x 335, y 1250, heading 180; the flag routine
+        pushed the fortress north), 30 points each."""
+        left, right = (195.0, 198.0), (194.0, -182.0)
+        spots = [(1127, 235.0, left), (1247, 310.0, right), (1793, 230.0, left), (1913, 250.0, left)]
+        # where each pin goes (x, y in the placement area) and the heading: the left claw points west
+        # at heading 135, the right one at 180; the front stays off the area
+        drops = {1127: (178.0, 1060.0, 135.0), 1793: (178.0, 1180.0, 135.0), 1913: (178.0, 1300.0, 135.0),
+                 1247: (150.0, 1420.0, 180.0)}
+        yield from self.mode(90)
+        for k, (px, heading, tool) in enumerate(spots):
+            if self.t > self.deadline - 16:
+                self.say(f"pins: no time for pin {px}")
+                break
+            start = self.t
+            c, s = math.cos(math.radians(heading)), math.sin(math.radians(heading))
+            tx = px - (tool[0] * c - tool[1] * s)
+            ty = 159.0 - (tool[0] * s + tool[1] * c)
+            if self.state.get("carriage_mm", 0) < 150 or self.state.get("carriage_mm", 0) > 170:
+                self.carriage_to(160)
+            if self.state.get("jaw_mm", 0.0) > 1:
+                self.press_for("left", self.state["jaw_mm"] / JAW_MM_S + 0.2)
+            yield from self.go(tx, ty + 260.0, heading, tol=15, label=f"pin {px} line up", htol=2.0)
+            yield from self.go(tx, ty, heading, vmax=200, tol=6, timeout=4, label=f"pin {px} in", htol=2.0)
+            yield from self.jaw(True, 42.0 / JAW_MM_S)
+            self.carriage_to(195)
+            yield from self.wait(0.35)
+            yield from self.go(tx, ty + 260.0, heading, vmax=350, tol=25, label=f"pin {px} out")
+            gx, gy, dh = drops[px]
+            dx, dy = self.grab_at(gx, gy, dh, tool)
+            yield from self.go(800, 1000, dh, tol=50, label=f"pin {px} carry")
+            yield from self.go(dx + 130, dy, dh, tol=30, label=f"pin {px} to the area")
+            yield from self.go(dx, dy, dh, vmax=200, tol=10, timeout=3, label=f"pin {px} over the area", htol=1.5)
+            for _ in range(3):                              # the pin itself over its spot
+                held = self.state.get("pin_held")
+                if not held or math.hypot(held[0] - gx, held[1] - gy) < 15.0:
+                    break
+                dx, dy = self.pose[0] + gx - held[0], self.pose[1] + gy - held[1]
+                yield from self.go(dx, dy, None, vmax=150, tol=6, timeout=2.5, label=f"pin {px} spot")
+            yield from self.jaw(False, 1.9)
+            yield from self.go(dx + 200, dy, dh, tol=30, label=f"pin {px} back")
+            self.say(f"pin {px}: {self.t - start:.1f} s, score {self.state.get('score')}")
+
     # -- X mark ----------------------------------------------------------------------------
     def x_mark_at_the_end(self):
         """The balls kept since the manual stage at the X mark after the flag (N3: the program
@@ -611,6 +663,24 @@ class Driver:
         yield from self.wait_until(190.6)
         # letter cubes first: the flag routine drives along y 1204, 3 mm from the fortress, and
         # shoves it ~290 mm north (fortress.py), with K and E on it
+        if self.pin_module:
+            self.say("final stage: flag, then pins")
+            self.deadline = 278.0
+            yield from self.tap("button_4")
+            yield from self.wait(1.0)
+            end = self.t + 18
+            while self.t < end and self.state.get("flag") != "hung":
+                yield
+            self.say(f"flag {self.state.get('flag')}, score {self.state.get('score')}")
+            while self.t < end + 4 and (self.pose[0] < 650 or self.predicted()[3] > 30):
+                yield
+            yield from self.pin_routine()
+            yield from self.mode(0)
+            yield from self.x_mark_at_the_end()
+            self.say(f"end, score {self.state.get('score')}")
+            while True:
+                self.sticks(0, 0, 0)
+                yield
         self.say("final stage: letter cubes, then the flag")
         self.deadline = 263.0                               # leaves the return and the flag routine (~13 s)
         self.head_to(150)

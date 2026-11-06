@@ -24,7 +24,7 @@ from ball_physics import named_colliders
 from fortress import FortressMotion
 from match import ChannelMonitor, CollisionMonitor, HalfMonitor, MatchMonitor
 from mechanisms import Mechanisms
-from props import Gripper, Prop, field_props, push_props, rake_props
+from props import PinTool, Gripper, Prop, field_props, push_props, rake_props
 import referee
 from flag import load_flag
 from mblock_runtime import DCBus, GamepadInput, MotorBus, ProgramRunner, Sensors, ServoBus, SimClock
@@ -111,6 +111,8 @@ class Simulation:
         self._velocity = (0.0, 0.0, 0.0)   # robot frame vx, vy (mm/s), omega (rad/s)
         self._accel = (0.0, 0.0)           # low-passed, m/s^2
         self._runner: Optional[ProgramRunner] = None
+        self.pin_module = False                    # mount the pin claws in the modification stage (proposal)
+        self.pin_tools: List[PinTool] = []
         self.referee_balls = True                  # False: a second robot; the host's referee releases the balls
         self.linked: List["Simulation"] = []       # robots on the same field (analysis/two_robots.py)
 
@@ -189,6 +191,7 @@ class Simulation:
         self.sensors = Sensors()
         self.bonus_judged = None
         self.modification = None
+        self.pin_tools = []
         self.flag = load_flag(self.cfg.alliance, elements=self.elements)
         self.half = self._new_half()
         self.channels = self._new_channels()
@@ -290,6 +293,9 @@ class Simulation:
             if self.gripper and self.props:
                 self.gripper.update(self.pose, self.mechanisms.position("elevator"),
                                     self.mechanisms.position("gripper_jaw"), self.props, self.elements)
+            for tool in self.pin_tools:
+                tool.update(self.pose, self.mechanisms.position("elevator"),
+                            self.mechanisms.position("gripper_jaw"), self.props, self.elements)
             mech_moving = any(abs(self.dc.power(m.port)) >= 5 for m in self.mechanisms.linear.values())
             self.monitor.update(self.clock.now, dt, self.pose, (vx, vy, omega), mech_moving)
             in_play = not (referee.MODIFICATION_START_S <= self.clock.now < referee.FINAL_START_S)
@@ -393,6 +399,10 @@ class Simulation:
         if (self.modification is None and (not self.time_limit or self.time_limit > referee.MODIFICATION_START_S)
                 and self.clock.now >= referee.MODIFICATION_START_S - 1e-9):
             self.modification = referee.modification_stage(self)
+            if self.pin_module:                    # claws on, intake head off
+                self.pin_tools = [PinTool((195.0, 198.0, 743.0)), PinTool((194.0, -182.0, 743.0))]
+                self._path_data = dict(self._path_data, head_box_mm=[0.0] * 6)
+                self.collisions.head_box = (0.0,) * 6
 
     def _check(self) -> None:
         if out_of_bounds(self.cfg, self.pose):

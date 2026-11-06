@@ -169,6 +169,22 @@ class Gripper:
                 return
 
 
+@dataclass
+class PinTool(Gripper):
+    """Design proposal (simulation/analysis/pin_reach.py): a slim claw on the flag mast, mounted in the
+    modification stage in the free front of the 500 mm square (the intake head comes off). It takes
+    pins only, by the neck; the height follows the carriage, the claw the jaw channel (a servo on
+    the robot)."""
+    tol_forward: float = 25.0
+    tol_z: float = 45.0
+
+    def lateral_ok(self, lat: float, width: float) -> bool:
+        return abs(lat) <= 25.0
+
+    def update(self, pose, carriage, closure, props, elements) -> None:
+        super().update(pose, carriage, closure, [p for p in props if p.kind == "pin"], elements)
+
+
 def rake_props(pose, lift: float, pulling: bool, props: List[Prop], elements, dt: float, intake,
                head_z: Tuple[float, float], owner=None) -> None:
     """Pull mode for props: a prop the intake head touches (front band, width, height overlap) is
