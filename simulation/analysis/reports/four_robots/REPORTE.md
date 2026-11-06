@@ -1,6 +1,66 @@
 # Reporte: partido 2 contra 2 con 4 robots y aprendizaje por refuerzo
 
-ROBOTICA 76 · makeX 2026 Storm Breaker · simulación (5 de noviembre de 2026)
+ROBOTICA 76 · makeX 2026 Storm Breaker · simulación
+
+> **Actualización (6 de noviembre de 2026): leer primero.** Las secciones 1 y 3 son la versión inicial,
+> con robots ideales. El Monte Carlo extenso de la sección 0 las reemplaza: el "450 – 360" fue un
+> partido favorable con robots ideales, no un resultado típico.
+
+## 0. Monte Carlo extenso (resultados vigentes)
+
+80 partidos de 4 robots (5 enfrentamientos × 16 semillas): cada robot muestreado (motores, deslizamiento,
+giroscopio, colocación), objetos a ±5 mm, retardo de piloto 0, 4, 6 u 8 cuadros
+(`simulation/analysis/mc_four.py`, figura `../mc_four/mc_four.png`).
+
+| Rojo vs azul | Margen rojo − azul (IC 95 %) | Gana rojo | Rojo | Azul |
+| --- | --- | --- | --- | --- |
+| 12 vs 12 | +31 ± 75 | 56 % | 329 | 299 |
+| 13 vs 12 | +53 ± 65 | 50 % | 371 | 319 |
+| **13, X 277.8 vs 12** | **+64 ± 71** | 56 % | 383 | 319 |
+| 12 vs 13 | −33 ± 80 | 38 % | 318 | 350 |
+| 13, X 277.8 vs 13 | +9 ± 63 | 44 % | 368 | 359 |
+
+Comparaciones pareadas (misma semilla):
+
+| Cambio | Efecto en el margen (IC 95 %) | ¿Se distingue de cero? |
+| --- | --- | --- |
+| ORDER 13 en vez de 12, azul con 12 (X 277.3) | +22 ± 41 | No |
+| ORDER 13 y X 277.8 en vez de 12, azul con 12 | +33 ± 46 | No |
+| ORDER 13 y X 277.8 en vez de 12, azul con 13 | +42 ± 37 | Sí, por poco |
+| X 277.8 en vez de 277.3 | +11 ± 11 | Apenas |
+
+Lectura: 13 sube la precisión (~213 contra ~131 puntos) y pierde un cono (20 contra 39). Con 16 semillas
+el margen no separa las opciones con claridad; 13 con X 277.8 sigue siendo la mejor estimación. El azul
+de la tabla usa siempre el mismo plan, y la alianza roja tiene ventaja por el X12 (el azul usa X6 con la
+tarjeta de objetos simulada).
+
+Lo que revelaron los robots muestreados:
+
+- **La bandera de nuestro robot falla ~1 de cada 3 veces** (colgada 55 de 80; el gemelo azul 51 de 80):
+  la rutina depende de la odometría. La del compañero, guiada por la pose real, cuelga 80 de 80.
+- **Precisión muy por debajo de los robots ideales** (7–12 pelotas contra 13–15).
+- 13 de 80 partidos tuvieron un robot fuera del campo: 10 del compañero azul a los 191 s, al iniciar la
+  etapa final, y 3 de nuestro robot en la rutina de la bandera (x ≈ 277, y ≈ 1170).
+- Las fortalezas aún terminan hasta 846 mm desplazadas: los robots con error de posición las empujan más.
+- Una semilla no reproduce exactamente un partido (hilos no deterministas).
+
+Fallas corregidas en este Monte Carlo: los retardos 0 y 2 eran el mismo experimento; los partidos
+completos usaban robots ideales; el ruido de ±5 mm de los objetos nunca se aplicaba; los robots seguían
+activos durante la etapa de modificación y salían del campo por deriva del giroscopio; la fortaleza podía
+teletransportarse si un robot entraba a fondo en ella (ahora se mueve a 800 mm/s como máximo). Los
+promedios anteriores (388, 410, 415, el bandido y la "confirmación") se obtuvieron sin estas correcciones.
+
+Otros estudios de la tanda:
+
+- **Rutas (65 órdenes × 12 robots, ±5 mm):** X12 válido en todas las que empiezan con él. Mejor en partido
+  completo: 143 (447 puntos, robots ideales, 3 corridas), no probada aún con 4 robots. 12 es la más
+  segura en el automático (182, peor robot 165); 13 baja a 172 (peor 110).
+- **Aprendizaje por refuerzo, 5 semillas:** todas coinciden en bonus + mesa en el automático y dos barridos
+  + cono; explotabilidad +14 a +21. No convergen la hora del X ni quién hace las letras.
+
+Timelapse con robots muestreados: `partido_representativo_4_robots.gif`.
+
+## Versión inicial (robots ideales)
 
 Archivos de esta carpeta:
 

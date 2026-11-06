@@ -108,3 +108,13 @@ aim any alliance that moves its fortress 150 mm wins by ~350 points; (2) in the 
 bonus cube then the central table balls (ORDER 13) beats bonus then deny (also the best whole-match
 order of the detailed route Monte Carlo, 443); (3) both robots of the alliance should take a bonus
 cube (one per half: at most two on our side); (4) last shots at the X at ~277.8 s.
+
+## Extended Monte Carlo with sampled robots (2026-11-06)
+
+`simulation/analysis/mc_four.py`: 80 whole 4-robot matches, sampled robots, props within +-5 mm. The
+figures above from whole matches (388, 410, 415 points, the bandit) came from ideal robots, with
+delays 0 and 2 being the same run; the +-5 mm prop jitter was never applied before this date (it ran
+before `run()` rebuilt the props). Margin red - blue (95 % CI): 12 vs 12 +31 +- 75; 13 vs 12 +53 +- 65;
+13 with X 277.8 vs 12 +64 +- 71; paired 13/X 277.8 over 12: +33 +- 46 (blue 12), +42 +- 37 (blue 13). Our
+flag routine hangs in only 55 of 80 matches (odometry); details in
+`simulation/analysis/reports/four_robots/REPORTE.md`.

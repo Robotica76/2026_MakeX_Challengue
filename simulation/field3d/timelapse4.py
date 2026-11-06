@@ -29,6 +29,7 @@ def main():
     ap.add_argument("--blue-options", default="{}")
     ap.add_argument("--delay", type=int, default=0)
     ap.add_argument("--seconds", type=float, default=280.0)
+    ap.add_argument("--seed", type=int, help="sampled robots and props (mc_four.py); default ideal robots")
     ap.add_argument("--every", type=float, default=1.0)
     ap.add_argument("--fps", type=int, default=14)
     ap.add_argument("--size", default="960x600")
@@ -91,7 +92,7 @@ def main():
         viewer.base.win.save_screenshot(Filename.from_os_specific(str(path)))
         frames.append(path)
 
-    out = four_robots.play(args.red, args.blue, args.delay, seconds=args.seconds, red_options=json.loads(args.red_options),
+    out = four_robots.play(args.red, args.blue, args.delay, seconds=args.seconds, seed=args.seed, red_options=json.loads(args.red_options),
                            blue_options=json.loads(args.blue_options), on_frame=on_frame)
     text = four_robots.report(out)
     print(text)

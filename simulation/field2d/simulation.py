@@ -258,6 +258,8 @@ class Simulation:
             vx, vy, omega = body_velocity(self.cfg, self.drive.wheel_rpms(rpms), var.wheel_scale)
             vx, vy, omega = vx * var.slip_forward, vy * var.slip_strafe, omega * var.slip_turn
             self.pose = integrate(self.pose, vx, vy, omega, dt)
+            if self.modification is not None and self.clock.now < referee.FINAL_START_S:
+                self.pose = self.start_pose        # off the field until the final stage (p.53)
             self.mechanisms.step(self.dc, dt)
             self.servos.integrate(dt)
             if self.world:

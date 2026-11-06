@@ -45,7 +45,10 @@ def match(job):
             "red": {k: out["scores"]["red"][k] for k in keep}, "blue": {k: out["scores"]["blue"][k] for k in keep},
             "x": out["x_mark"], "contacts": len(out["contacts"]),
             "collisions": sum(len(r.sim.collisions.collisions) for r in rs),
-            "errors": [r.sim.state.status for r in rs if r.sim.state.status not in ("done", "running")]}
+            "errors": [f"{r.alliance} {r.role}: {r.sim.state.message[:50]}" for r in rs
+                       if r.sim.state.status not in ("done", "running")],
+            "flags": {f"{r.alliance} {r.role}": r.sim.flag.state for r in rs if r.sim.flag},
+            "fortress": {k: [round(v) for v in o] for k, o in out["fortress_offsets"].items()}}
 
 
 def summary(rows):
@@ -84,7 +87,7 @@ def figures(rows, table):
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
     ax = axes[0]
     ax.boxplot([[r["red"]["total"] - r["blue"]["total"] for r in rows if r["matchup"] == n] for n in names],
-               labels=[f"{n}\n(n={table[n]['n']})" for n in names])
+               tick_labels=[f"{n}\n(n={table[n]['n']})" for n in names])
     ax.axhline(0, color="k", lw=0.6)
     ax.set_ylabel("margin red - blue (points)")
     ax.set_title("4-robot matches: margin over sampled robots")

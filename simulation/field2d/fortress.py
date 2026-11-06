@@ -20,6 +20,7 @@ from ball_physics import _element_boxes, named_colliders
 Box = Tuple[float, float, float, float, float, float]
 CONTACT_MIN_MM = 0.5
 MIN_GAP_MM = 1.0               # clearance kept to the other structures
+MAX_PUSH_MM_S = 800.0          # the robot's top speed
 
 
 def mtv_box(pose, rect, box) -> Optional[Tuple[float, float]]:
@@ -97,6 +98,10 @@ class FortressMotion:
             if push is None:
                 self._active.pop(el.name, None)
                 continue
+            n = math.hypot(*push)
+            cap = MAX_PUSH_MM_S * dt                         # no faster than the robot pushing it: a body
+            if n > cap > 0.0:                                # deep inside would otherwise make it jump
+                push = (push[0] * cap / n, push[1] * cap / n)
             dx, dy = self._allowed(el, push, elements)
             if (dx, dy) == (0.0, 0.0):
                 self.jams.append(el.name)
