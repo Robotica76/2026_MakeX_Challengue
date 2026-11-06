@@ -82,7 +82,7 @@ def margin(red, blue, seed, aims):
     return m["red"]["total"] - m["blue"]["total"], m
 
 
-def train(iterations, batch, lr, entropy, our_aim, seed=1, opp_aims=("fixed", "adaptive")):
+def train(iterations, batch, lr, entropy, our_aim, seed=1, opp_aims=("fixed", "adaptive"), on_snapshot=None):
     rng = random.Random(seed)
     pol = Policy()
     pool, curve = [], []
@@ -119,6 +119,8 @@ def train(iterations, batch, lr, entropy, our_aim, seed=1, opp_aims=("fixed", "a
             ev = [margin(g, a, 10_000 + k, (our_aim, "fixed"))[0] for a in arche for k in range(40)]
             curve.append((it + 1, sum(ev) / len(ev), base * 100))
             print(f"iteration {it + 1:5d}: mean margin vs styles {curve[-1][1]:7.1f}, batch {base * 100:7.1f}", flush=True)
+            if on_snapshot:
+                on_snapshot(it + 1, pol)
     return pol, curve
 
 
