@@ -6,6 +6,7 @@ Usage:
     python viewer.py --screenshot field.png   # render once and exit (headless OK)
 
     python viewer.py --program programs/all_motors_forward.py  # preload an mBlock program
+    python viewer.py --program ../../software/legacy/challenge_2025/Challenge_2025.n2.mblock   # block project
 
 Side panel: pick start, orientation and length/width, then Apply (or Enter).
 Reset reloads robot_config.json, Save writes the applied values to it.
@@ -19,13 +20,16 @@ Hover shows the cursor position in field mm and the elements under it.
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
 from dataclasses import replace
 from pathlib import Path
+from typing import Optional
 
 import field_layout as fl
+from mblock_project import MblockError, mblock_to_python
 from panel import PANEL_W, RobotPanel
 from kinematics import load_drive_train
 from robot import DEFAULT_CONFIG, load_config, mecanum_wheels, start_pose
@@ -290,8 +294,8 @@ PROGRAMS_DIR = Path(__file__).resolve().parent.parent / "control"  # simulation/
 _TK_DIALOG = """
 import sys, tkinter, tkinter.filedialog
 root = tkinter.Tk(); root.withdraw()
-print(tkinter.filedialog.askopenfilename(initialdir=sys.argv[1], title="Select an mBlock Python program",
-                                         filetypes=[("Python", "*.py")]) or "")
+print(tkinter.filedialog.askopenfilename(initialdir=sys.argv[1], title="Select an mBlock program",
+                                         filetypes=[("mBlock program", "*.py *.mblock")]) or "")
 """
 
 
@@ -299,7 +303,7 @@ def choose_python_file(initial_dir: Path):
     """Native file picker in a separate process (keeps it out of the pygame event loop)."""
     try:
         if sys.platform == "darwin":
-            script = (f'POSIX path of (choose file with prompt "Select an mBlock Python program" '
+            script = (f'POSIX path of (choose file with prompt "Select an mBlock program (.py or .mblock)" '
                       f'default location (POSIX file "{initial_dir}"))')
             out = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
         else:
@@ -351,24 +355,83 @@ class GamepadLauncher:
             self.proc.terminate()
 
 
+GENERATED_DIR = Path(__file__).resolve().parent / "generated"   # .mblock translations (not committed)
+
+
 class ProgramController:
-    """Glue between the panel's Load / Run / Stop buttons and the simulation."""
+    """Glue between the Load / Run / Stop buttons (2D panel, 3D viewer) and the simulation.
+
+    Loads an mBlock Python program (.py) or an mBlock block project (.mblock, translated to the
+    Python mBlock generates, mblock_project.py). The loaded file is watched: when it is saved
+    again (from mBlock or an editor) the program is reloaded, so a change is tried with Run.
+    """
+
+    WATCH_PERIOD_S = 0.5
 
     def __init__(self, sim: Simulation, say):
         self.sim, self.say = sim, say
+        self.source: Optional[Path] = sim.program   # the file the user picked
+        self._mtime = self._stat()
+        self._next_check = 0.0
+
+    def _stat(self):
+        try:
+            return self.source.stat().st_mtime if self.source else None
+        except OSError:
+            return None
 
     def load(self):
+        start = self.source.parent if self.source else PROGRAMS_DIR
+        path = choose_python_file(start)
+        if path is not None:
+            self.open(path)
+
+    def open(self, path: Path) -> bool:
+        """Load `path` (.py or .mblock); False with a message if it cannot be used."""
+        path = Path(path)
+        if path.suffix not in (".py", ".mblock"):
+            self.say(f"{path.name}: choose a .py or .mblock file", True)
+            return False
         if self.sim.running:
             self.sim.stop()
-        path = choose_python_file(self.sim.program.parent if self.sim.program else PROGRAMS_DIR)
-        if path is None:
-            return
-        if path.suffix != ".py":
-            self.say(f"{path.name} is not a .py file", True)
-            return
-        self.sim.program = path
+        program = path
+        if path.suffix == ".mblock":
+            try:
+                code = mblock_to_python(path)
+            except (MblockError, OSError) as exc:
+                self.say(f"{path.name}: {exc}", True)
+                return False
+            GENERATED_DIR.mkdir(exist_ok=True)
+            program = GENERATED_DIR / (re.sub(r"[^0-9A-Za-z_]", "_", path.stem) + ".py")
+            program.write_text(code, encoding="utf-8")
+        self.source = path
+        self._mtime = self._stat()
+        self.sim.program = program
         self.sim.reset()
-        self.say(f"Loaded {path.name}, press Run")
+        extra = f" (Python: generated/{program.name})" if program != path else ""
+        self.say(f"Loaded {path.name}{extra}, press Run")
+        return True
+
+    def reload(self):
+        if self.source is None:
+            self.say("Load a program first", True)
+            return
+        self.open(self.source)
+
+    def watch(self, now: float) -> bool:
+        """Call every frame: reloads the program when its file changed on disk. True if it did."""
+        if self.source is None or now < self._next_check:
+            return False
+        self._next_check = now + self.WATCH_PERIOD_S
+        mtime = self._stat()
+        if mtime is None or mtime == self._mtime:
+            return False
+        was_running = self.sim.running
+        if self.open(self.source):
+            self.say(f"{self.source.name} changed: reloaded" + (", run stopped" if was_running else "") + ", press Run")
+            return True
+        self._mtime = mtime                              # broken save: wait for the next one
+        return False
 
     def run(self):
         self.sim.run()
@@ -385,7 +448,7 @@ class ProgramController:
         self.stop() if self.sim.running else self.run()
 
     def status(self):
-        name = self.sim.program.name if self.sim.program else None
+        name = self.source.name if self.source else None
         st = self.sim.state
         return name, self.sim.time, self.sim.time_limit, st.status, st.message
 
@@ -422,10 +485,8 @@ def main(argv=None):
         robot_cfg = replace(robot_cfg, heading_deg=args.heading)
     sim = Simulation(robot_cfg, start_pose(robot_cfg, elements), load_drive_train(args.config),
                      args.time_limit, load_gyro_sign(args.config))
-    if args.program:
-        if not args.program.is_file():
-            parser.error(f"--program {args.program} not found")
-        sim.program = args.program
+    if args.program and not args.program.is_file():
+        parser.error(f"--program {args.program} not found")
 
     pygame.init()
     screen = pygame.display.set_mode((width, height))
@@ -444,6 +505,8 @@ def main(argv=None):
     gamepad = GamepadLauncher(sim.gamepad, say=None)
     panel = RobotPanel(width - PANEL_W, height, robot_cfg, args.config, apply_config, controller, gamepad)
     controller.say = gamepad.say = panel.say
+    if args.program and not controller.open(args.program):
+        parser.error(f"--program {args.program}: {panel.message}")
     note = footprint_warning(robot_cfg, sim.pose, elements)
 
     def render(hover=None):
@@ -499,6 +562,7 @@ def main(argv=None):
                     show_labels = not show_labels
                 elif event.key == pygame.K_s:
                     pygame.image.save(screen, "field_screenshot.png")
+        controller.watch(pygame.time.get_ticks() / 1000.0)   # reload when the file is saved again
         was_running = sim.running
         sim.step(frame_s)
         if was_running and not sim.running:

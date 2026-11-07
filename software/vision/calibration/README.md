@@ -1,5 +1,4 @@
 # Vision calibration
 
-Reserved for production vision calibration configuration and procedures.
-Record sensor identity, geometry, coordinate transforms, units, conditions,
-revision, and validation evidence. Support utilities belong in `tools/calibration/`.
+Planned: camera pose on the elevator lid (v22 part 5.7), field-of-view to field coordinates,
+lighting checks. Not implemented; see [tools/calibration](../../../tools/calibration/README.md).

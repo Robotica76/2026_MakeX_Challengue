@@ -1,24 +1,403 @@
 {
-  "name": "robot_mecanum",
+  "name": "storm_breaker_v22",
   "drive": "mecanum",
-  "length_mm": 450,
-  "width_mm": 450,
+  "length_mm": 499.0,
+  "width_mm": 499.5,
   "wheel_diameter_mm": 80,
-  "wheel_width_mm": 40,
+  "wheel_width_mm": 38,
+  "wheel_centers_mm": {
+    "front_left": [
+      45.0,
+      221.2
+    ],
+    "front_right": [
+      45.0,
+      -221.2
+    ],
+    "rear_left": [
+      -203.0,
+      221.2
+    ],
+    "rear_right": [
+      -203.0,
+      -221.2
+    ]
+  },
+  "cad_source": "mechanical/assemblies/full_robot/v22 (STEP frame +y forward, +x right; robot frame here x forward, y left)",
   "alliance": "red",
   "start_area": "red_start_1",
   "heading_deg": 0,
   "drive_train": {
     "motors": {
-      "M4": {"wheel": "front_left", "direction": -1},
-      "M1": {"wheel": "front_right", "direction": 1},
-      "M3": {"wheel": "rear_left", "direction": -1},
-      "M2": {"wheel": "rear_right", "direction": 1}
+      "M4": {
+        "wheel": "front_left",
+        "direction": -1
+      },
+      "M1": {
+        "wheel": "front_right",
+        "direction": 1
+      },
+      "M3": {
+        "wheel": "rear_left",
+        "direction": -1
+      },
+      "M2": {
+        "wheel": "rear_right",
+        "direction": 1
+      }
     },
     "gear_ratio": 1.0,
     "max_rpm": 580
   },
   "sensors": {
     "gyro_z_positive": "clockwise"
+  },
+  "intake": {
+    "port": "DC1",
+    "direction": 1,
+    "min_power": 30,
+    "zone_mm": {
+      "x_min": 200.0,
+      "x_max": 285.0,
+      "y_min": -190.0,
+      "y_max": 208.0
+    },
+    "ball_center_z_mm": {
+      "min": 0.0,
+      "max": 60.0
+    },
+    "capacity": 18,
+    "body_front_mm": 115.0,
+    "source": "v22 CAD: INT_ parts span y_left -190..208 mm and reach the front edge (x 249 mm); reach 0-60 mm ball centre height above the head lift (head roller at 95 mm, head down); body front without the head 115 mm (INT_centrador); capacity = 6 basket + 12 tower REF balls. Port DC1 is an assumption (TBD).",
+    "pull_port": "DC7",
+    "pull_speed_mm_s": 500.0
+  },
+  "mechanisms": {
+    "source": "v22 CAD parts and motors. Ports are assumptions (TBD with the electrical team); speeds marked estimate.",
+    "linear": {
+      "elevator": {
+        "port": "DC3",
+        "travel_mm": 430.0,
+        "travel_v22_mm": 358.0,
+        "speed_mm_s": 150.0,
+        "direction": 1,
+        "note": "carriage travel 358 mm from the two v22 STEP files; 430 mm is a design proposal (+72 mm rails) so a gripped cone clears the 405 mm cone post (simulation/analysis/cone_post_reach.py); DC37 50 rpm x 90T GT2 pulley (180 mm/rev) = 150 mm/s"
+      },
+      "intake_lift": {
+        "port": "DC2",
+        "travel_mm": 380.0,
+        "speed_mm_s": 53.0,
+        "direction": 1,
+        "note": "INT_UR head on 428 mm rails (z 102-530 mm, 40 mm slides): ~380 mm travel; DC25 ~200 rpm x 16 mm lead (T8x16) = 53 mm/s, estimate"
+      },
+      "gripper_jaw": {
+        "port": "DC6",
+        "travel_mm": 60.0,
+        "speed_mm_s": 40.0,
+        "direction": 1,
+        "note": "GR_ lead-screw jaw: closure from the 138 mm open gap (v22 CAD); positive power closes. Port and speed are assumptions"
+      }
+    },
+    "spinners": {
+      "intake_rollers": {
+        "port": "DC1",
+        "rpm": 200.0,
+        "direction": 1,
+        "note": "INT_motor_DC37_200rpm (same port as the intake model)"
+      },
+      "tower": {
+        "port": "DC4",
+        "rpm": 200.0,
+        "direction": 1,
+        "note": "TW_motor_DC37_200rpm"
+      },
+      "feeder": {
+        "port": "DC5",
+        "rpm": 200.0,
+        "direction": 1,
+        "note": "CN_motor_DC25_200rpm"
+      },
+      "shooter": {
+        "port": "BL1",
+        "rpm": 3000.0,
+        "direction": 1,
+        "note": "brushless friction wheels, estimate; the 3D view caps the displayed speed"
+      },
+      "intake_head": {
+        "port": "DC7",
+        "rpm": 200.0,
+        "direction": 1,
+        "note": "INT_UR_motor_DC25_giro_interno: head fingered roller on its own motor (port assumed). With DC1 off it drags balls / props out (pull mode)"
+      }
+    }
+  },
+  "ball_path": {
+    "source": "v22 CAD reference balls (REF_pelota_canasta / _torre) as storage slots; waypoints read off the intake, tower (TW_), elbow and basket (CN_) parts; speeds and launch values are estimates",
+    "basket_slots_cad_mm": [
+      [
+        -48.0,
+        6.0,
+        359.3
+      ],
+      [
+        -40.0,
+        75.0,
+        363.5
+      ],
+      [
+        23.0,
+        6.0,
+        366.4
+      ],
+      [
+        31.0,
+        75.0,
+        370.6
+      ],
+      [
+        94.0,
+        6.0,
+        373.5
+      ],
+      [
+        102.0,
+        75.0,
+        377.7
+      ]
+    ],
+    "tower_slots_cad_mm": [
+      [
+        -75.7,
+        -100.1,
+        401.0
+      ],
+      [
+        0.0,
+        -100.1,
+        401.0
+      ],
+      [
+        75.7,
+        -100.1,
+        401.0
+      ],
+      [
+        -75.7,
+        -81.7,
+        332.4
+      ],
+      [
+        0.0,
+        -81.7,
+        332.4
+      ],
+      [
+        75.7,
+        -81.7,
+        332.4
+      ],
+      [
+        -75.7,
+        -63.4,
+        263.9
+      ],
+      [
+        0.0,
+        -63.4,
+        263.9
+      ],
+      [
+        75.7,
+        -63.4,
+        263.9
+      ],
+      [
+        -75.7,
+        -45.0,
+        195.3
+      ],
+      [
+        0.0,
+        -45.0,
+        195.3
+      ],
+      [
+        75.7,
+        -45.0,
+        195.3
+      ]
+    ],
+    "low_entry_cad_mm": [
+      [
+        0.0,
+        150.0,
+        60.0
+      ],
+      [
+        0.0,
+        40.0,
+        75.0
+      ],
+      [
+        0.0,
+        -45.0,
+        150.0
+      ]
+    ],
+    "high_entry_cad_mm": [
+      [
+        0.0,
+        130.0,
+        262.0
+      ],
+      [
+        0.0,
+        40.0,
+        252.0
+      ],
+      [
+        0.0,
+        -60.0,
+        250.0
+      ]
+    ],
+    "high_entry_min_z_mm": 150.0,
+    "tower_cad_mm": [
+      [
+        0.0,
+        -105.0,
+        440.0
+      ],
+      [
+        0.0,
+        -40.0,
+        490.0
+      ],
+      [
+        0.0,
+        38.0,
+        452.0
+      ],
+      [
+        40.0,
+        40.0,
+        405.0
+      ]
+    ],
+    "shooter_cad_mm": [
+      -163.0,
+      4.0,
+      388.0
+    ],
+    "exit_cad_mm": [
+      -290.0,
+      4.0,
+      402.0
+    ],
+    "intake_speed": 600.0,
+    "tower_speed": 500.0,
+    "feeder_speed": 400.0,
+    "shift_speed": 300.0,
+    "launch_speed": 8000.0,
+    "hood_deg": 40.0,
+    "ports": {
+      "intake": "DC1",
+      "tower": "DC4",
+      "feeder": "DC5",
+      "shooter": "BL1"
+    },
+    "body_box_mm": [
+      -249.5,
+      -250.0,
+      0.0,
+      115.0,
+      250.0,
+      642.0
+    ],
+    "head_box_mm": [
+      115.0,
+      -190.0,
+      46.0,
+      249.0,
+      202.0,
+      145.0
+    ],
+    "body_bands_mm": [
+      [
+        -250.0,
+        -250.0,
+        0.0,
+        97.4,
+        249.5,
+        110.0
+      ],
+      [
+        -249.0,
+        -250.0,
+        110.0,
+        114.8,
+        221.0,
+        260.0
+      ],
+      [
+        -175.2,
+        -168.0,
+        260.0,
+        111.0,
+        248.0,
+        420.0
+      ],
+      [
+        -171.0,
+        -206.0,
+        420.0,
+        93.9,
+        208.0,
+        645.0
+      ]
+    ],
+    "body_bands_note": "robot outline (without the intake head) per height band from the v22 CAD, carriage down; used for collisions with field structures"
+  },
+  "gripper": {
+    "source": "v22 CAD: jaws GR_mordaza_fija / _movil at CAD x 207-250 mm, y -158..-20 mm (138 mm gap), z 14-157 mm with the carriage down",
+    "grab_point_cad_mm": [
+      228.5,
+      -89.0,
+      85.5
+    ],
+    "open_gap_mm": 138.0,
+    "jaw_depth_mm": 43.0,
+    "min_grip_mm": 30.0,
+    "jaw_note": "jaw plates are 43 mm deep along robot y (CAD x 207-250); a prop is held if it overlaps them by 30 mm (estimate) and does not reach past the slot end (y -150): a 120 mm cube may sit up to 51 mm outward, so it sticks out past the jaws",
+    "tolerance_mm": {
+      "forward": 25.0,
+      "lateral": 40.0,
+      "z": 45.0
+    },
+    "slot_mm": [
+      -160.0,
+      -450.0,
+      0.0,
+      -18.0,
+      -150.0,
+      160.0
+    ],
+    "slot_note": "free space between the jaws (robot frame x fwd, y left, z with the carriage down; the top follows the carriage): the CAD height bands are bounding boxes and would cover it, so a prop centred here is not pushed; open to the outside (y down to -450) so a prop can enter between the jaws"
+  },
+  "own_half": {
+    "half": "lower",
+    "note": "two robots per alliance: this robot (Red Start 1) plays y <= 1527.5 mm, the partner the upper half (team decision 2026-10-31)"
+  },
+  "team_flag": {
+    "source": "v22 CAD con_mastil_y_bandera_carro_arriba: REF_bandera spans CAD y -214..86 mm (robot x), CAD x 190-198 mm (robot y -194), top 1128 mm with the carriage up 358 mm -> 770 mm with it down; FLAG_mastil at robot (x -64, y -64..-68 CAD x 181)",
+    "rod_front_mm": 86.0,
+    "rod_back_mm": -214.0,
+    "rod_y_mm": -194.0,
+    "rod_z_mm": 770.0,
+    "rod_front_override_mm": 249.0,
+    "override_note": "design proposal (simulated): flag rod on the LEFT side (launcher side, y +194 mm) reaching the front edge of the projection (249 mm). Facing the back wall, the chassis front must stay at x >= 312 mm (pin area x < 195 mm, 405 mm high) while the rod reaches the pole (x 0-120 mm, 961 mm high): a 37 mm window, intake head up (>= 364 mm) over the pin area. With the CAD mast (right side, front 86 mm) the cone post (x 180-220, y 868-908) keeps the rod >= 150 mm short. Set both overrides to null for the CAD mast",
+    "min_overlap_mm": 20.0,
+    "y_tolerance_mm": 15.0,
+    "rod_y_override_mm": 194.0
   }
 }

@@ -83,3 +83,44 @@ gyro reading over 10 full turns, gyro drift at rest) and replace the ranges.
 | `test_montecarlo.py` | Statistics, error model, move measurement, ideal and override trials |
 | `../field2d/uncertainty.py` | The error model (`Variation`); ideal by default |
 
+
+## Automatic-stage route search
+
+[`optimize_auto_route.py`](optimize_auto_route.py) runs
+[`auto_pull_central.py`](../../software/autonomous/task_execution/auto_pull_central.py) headless in
+the 2D simulator for each candidate plan (task order, speeds, lane depth, arrival tolerance, head
+heights; passed to the program through `simtrace.options()`), and ranks them: central elements
+left on our side, minus collisions with field structures, R06 and R19 penalties and elements fed
+to the opponent. About 2.5 min for 128 candidates on 5 cores; results in `results/`.
+
+```bash
+.venv/bin/python simulation/analysis/optimize_auto_route.py           # full search
+.venv/bin/python simulation/analysis/optimize_auto_route.py --quick   # two candidates
+```
+
+## Automatic-stage Monte Carlo
+
+[`montecarlo_strategy.py`](montecarlo_strategy.py) runs `storm_breaker_2026.py` on sampled robots
+(default `montecarlo_config_competition.json`) and ranks strategies by resources, then points, then
+time. Results: [docs/07_strategy/montecarlo_strategy.md](../../docs/07_strategy/montecarlo_strategy.md).
+
+```bash
+.venv/bin/python simulation/analysis/montecarlo_strategy.py --trials 16 --refine   # ~15 min on 5 cores
+```
+
+## Script index
+
+| Script | Question | Output |
+| --- | --- | --- |
+| `montecarlo_chassis.py`, `mc_routine_chassis.py`, `make_chassis_report.py` | Is `chassis.py` accurate on imperfect robots? | [reports/chassis_montecarlo](reports/chassis_montecarlo/README.md) |
+| `optimize_auto_route.py` | Best automatic-stage route for `auto_pull_central.py` | `results/` |
+| `montecarlo_strategy.py`, `montecarlo_routes.py` | Best automatic strategy / mission order for `storm_breaker_2026.py` | [montecarlo_strategy.md](../../docs/07_strategy/montecarlo_strategy.md) |
+| `simulate_match.py`, `simulate_driver.py` | Whole match headless (scripted moves / scripted driver) | timeline and score |
+| `two_robots.py`, `four_robots.py`, `mc_four.py` | Our robot with its twin; 2 vs 2 matches; 80-match Monte Carlo | [reports/four_robots](reports/four_robots/REPORTE.md) |
+| `strategy_game.py`, `rl_strategy.py`, `rl_four.py`, `rl_animation.py` | 2 vs 2 at mission level, reinforcement learning, bandit on detailed matches | `reports/rl_*` |
+| `pin_reach.py`, `pin_shots.py`, `cone_post_reach.py`, `letter_cube_reach.py` | Can the v22 robot reach pins / hang cones / take letter cubes? | printed verdicts (pins: no; cones: needs 430 mm elevator) |
+| `plot_*.py` | Figures | [reports](reports/README.md) |
+| `test_*.py` | Unit tests of the above | `python -m unittest discover simulation/analysis` |
+
+Decisions taken from these studies: DEC-X02, DEC-S05, DEC-S06, DEC-T01…T03
+([DL-SYS-001](../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md)).

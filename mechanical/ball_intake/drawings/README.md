@@ -1,3 +1,13 @@
 # Ball Intake Drawings
 
-Future drawings should identify the corresponding [CAD](../cad/README.md) revision, acquisition surfaces, mounting interfaces, and inspection criteria. Geometry and fabrication tolerances remain TBD.
+Drawings reference the local [CAD](../cad/README.md) revision. Released fabrication drawings (dimensions, tolerances, inspection datums) are **not** produced yet; the sheets below are assembly/identification drawings generated from the v22 CAD.
+
+## v22
+
+| File | Content |
+| --- | --- |
+| [`v22_4_ball_intake_and_ur_arm_exploded.pdf`](v22/v22_4_ball_intake_and_ur_arm_exploded.pdf) · [PNG](v22/v22_4_ball_intake_and_ur_arm_exploded.png) | Exploded view of subsystem 4 (Ball intake and UR arm) with every part numbered and the parts list (sheet 6 of the manual) |
+
+Full manual (all subsystems, assembly sequence, complete parts list): [Ensamble_StormBreaker_v22.pdf](../../assemblies/full_robot/v22/docs/Ensamble_StormBreaker_v22.pdf).
+
+**Pending for release:** fabrication drawings with dimensions and tolerances for the custom parts (CF plates, PC sheets, prints), hole patterns, and inspection datums.

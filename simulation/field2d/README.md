@@ -59,9 +59,18 @@ Outside the text boxes, `Up`/`Down` change the length and `Right`/`Left` the wid
 by 10 mm (`Shift`: 1 mm), applied immediately. `--length`, `--width` and `--heading`
 set the starting values from the command line.
 
-Wheels (`wheel_diameter_mm` 80, `wheel_width_mm` 40) sit in the footprint corners;
-their top rollers are drawn in the standard "X" layout (front-left/rear-right
-parallel, front-right/rear-left parallel).
+Wheels (`wheel_diameter_mm` 80) sit in the footprint corners unless
+`robot_config.json` gives `wheel_centers_mm` (robot frame, x forward, y left, mm).
+The committed config is the [v22 CAD](../../mechanical/assemblies/full_robot/v22/README.md):
+499.0 x 499.5 mm footprint and the measured wheel centres, with the wheel rectangle
+79 mm behind the footprint centre, so the robot turns about that point and its
+corners sweep a larger circle than a centred robot (spinning inside a start area
+next to the walls leaves the field). The kinematics solve the four wheel speeds by
+least squares for any wheel layout. Resizing the footprint in the panel puts the
+wheels back in the corners (CAD wheel centres only fit the CAD footprint).
+Top rollers are drawn in the standard "X" layout (front-left/rear-right parallel,
+front-right/rear-left parallel). A 3D view of the same simulation is in
+[field3d](../field3d/README.md).
 
 ## Running mBlock programs
 
@@ -94,6 +103,7 @@ for simulator stand-ins (`mblock_runtime.py`). Supported so far:
 | `novapi.get_acceleration(axis)` | m/s², robot frame (`x` forward, `y` left, `z` = 9.81), low-passed 20 ms |
 | `mbuild.gamepad.get_joystick(name)` | `Lx`, `Ly`, `Rx`, `Ry` in -100..100 (+y up) from the gamepad window |
 | `mbuild.gamepad.is_key_pressed(name)` | `Up` `Down` `Left` `Right` `N1`..`N4` `L1` `L2` `R1` `R2` `≡` `+` `Bluetooth` |
+| `mbuild.power_expand_board.set_power(port, pct)`, `.stop(port)` | Power per port (`DC1`..`DC8`, `BL1`, `BL2`), clamped to ±100 %; read by the intake model (the DC motors themselves are not modelled) |
 | `time.sleep`, `time.time`, `time.ticks_ms`, `novapi.timer`, `novapi.reset_timer` | Simulated time |
 | `import x` (project module) | `x.py` beside the program, else the one `x.py` under `software/` |
 
@@ -105,6 +115,49 @@ simulated API or catches every exception; only a single long call into C code
 could outlive it, and the run message then says so. Commanded speeds are clamped to
 `max_rpm` for every port, so `get_value("speed")` matches the simulated motion.
 An unreadable or non-UTF-8 program file is reported as an error.
+
+### Balls and intake ([`balls.py`](balls.py))
+
+`Simulation(..., ball_scenario=..., intake=load_intake())` adds the 70 balls of the rules
+(p.26): 10 in each own resource box (shelf at 758.5 mm) and 15 on each level of the central
+resource area. Scenario `released` puts the own resource balls on the floor in front of their
+box, as after the observer removes the barrier in the manual stage (p.32; resting positions
+are an estimate). The default `none` keeps earlier studies unchanged.
+
+The intake (`robot_config.json` "intake") collects every floor ball whose centre enters a box
+at the robot front (v22 CAD: 200–285 mm ahead, 190 mm right to 208 mm left) while its port
+(`DC1`, an assumption) has at least 30 % power, up to 18 balls (the v22 basket and tower hold
+6 + 12). The reach in height follows the intake head lift ([mechanisms](#mechanisms-mechanismspy)):
+ball centres 0–60 mm above the lift, so floor balls with the head down and the central
+resource levels (centres 85 / 285 mm) with the head raised ~50 / ~255 mm; the own resource
+boxes (793 mm) stay out of reach. Structures do not stop the robot: a program must keep the robot body (115 mm
+ahead of its centre, without the head) out of them.
+
+With balls, the simulation runs [`ball_physics.py`](ball_physics.py): gravity, bounces on the floor,
+the frame and the structures (boxes from the rules dimensions: shelves, central levels, strategy
+channels, fortress walls and its ball level at 407 mm), ball-ball collisions, rolling resistance and
+pushes from the robot body and intake head; resting balls sleep, so 70 balls run faster than real
+time. Captured balls follow the ball path through the robot ("ball_path": 18 slots from the CAD
+reference balls) and the shooter launches them as free balls; `sim.world` counts captures, shots and
+balls landing in each fortress. `sim.balls_collected` and the [3D viewer](../field3d/README.md) show the count.
+
+### Props and gripper ([`props.py`](props.py)) and match clock ([`match.py`](match.py))
+
+With balls, the simulation also has the props: 4 bonus cubes and 4 cones on the strategy areas
+(default prop card) and 8 letter cubes per alliance in the fortresses. The gripper
+(`robot_config.json` "gripper", jaw slide `DC6`, grab point on the carriage) holds a prop once the
+jaws close on it and drops it on the support below when they open; `score_preview` applies the
+bonus-cube rules (p.30) and counts cones and letter cubes. `sim.monitor` (match.py) checks R19 at
+30 s and R06 for the robot body.
+
+### Mechanisms ([`mechanisms.py`](mechanisms.py))
+
+`Simulation(..., mechanisms=load_mechanisms())` moves the mechanism motors from the
+`power_expand_board` ports, kinematically (no load, no inertia): the elevator carriage
+(`DC3`, 0–358 mm, 150 mm/s), the intake head lift (`DC2`, 0–380 mm, 53 mm/s, estimate) and the
+spinning roller sets (intake `DC1`, tower `DC4`, feeder `DC5`, shooter `BL1`). Ports are
+assumptions until the wiring is fixed. The [3D viewer](../field3d/README.md#mechanisms) animates
+the CAD parts with these values.
 
 ### Motor mapping and sensors (`robot_config.json`)
 

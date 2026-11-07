@@ -16,6 +16,32 @@ unchanged:
   prints whether each arrived and the odometry pose.
 - `test_chassis_control_manual.py`: `joystick_drive` driven from the emulated
   gamepad (Open gamepad in the viewer).
+- `test_mechanisms.py`: moves every simulated mechanism (intake rollers and head,
+  tower, feeder, shooter, elevator carriage) through the `power_expand_board` ports
+  (menu option 5 of the 3D launcher).
+- `test_full_intake.py`: the whole ball system: collects 10 released balls with the
+  intake and tower, drives to a shooting spot, aims the launcher at the blue fortress,
+  computes the shooter power and fires until empty (menu option 7). In simulation the
+  10 shots land in the fortress.
+- `test_intake_shelf.py`: raises the intake head ~254 mm and takes the 15 balls of
+  the central resource upper level in two passes while the body stays out of the table
+  (menu option 6). It takes 34 s in simulation, more than the 30 s automatic stage.
+- `test_ball_collection.py`: collects the balls released from both red own resource
+  areas with the intake on `DC1` (`viewer3d.py --balls released`, menu option 4 of the
+  3D launcher). In simulation it fills the intake (18 balls) in about 19 s. It shows how
+  tight the route is: to clear the resource-area legs and still reach both ball rows, the
+  robot centre must stay within a 15 mm (area 1) and 33 mm (area 2) corridor.
 
 Simulated results check the control logic with ideal wheels (no slip, no motor
 dynamics, no collisions); they do not replace calibration on the robot.
+
+## Scripted drivers and match plans
+
+| File | Content |
+| --- | --- |
+| [`ai_driver.py`](ai_driver.py) | Scripted driver for `storm_breaker_2026.py`: plays the gamepad like the driver, closing the loop on the robot pose from the state stream (headless: `simulation/analysis/simulate_driver.py`) |
+| [`partner_driver.py`](partner_driver.py) | The alliance partner (same robot and program, upper half of the red area) |
+| [`match_2026.py`](match_2026.py) | The whole-match plan (280 s) as moves, used to time and score strategies (`simulate_match.py`) |
+
+Design decisions behind these programs: DEC-S04…S06, DEC-T01…T03 in
+[DL-SYS-001](../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md).

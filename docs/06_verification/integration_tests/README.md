@@ -1,14 +1,10 @@
-# Integration Test Records
+# Integration Test Planning
 
-Plan checks for subsystem boundaries, combined behavior, and control authority. Expected outcomes remain TBD until contracts are agreed.
+| Test | Interfaces | Procedure | Criterion |
+| --- | --- | --- | --- |
+| IT-01 Ball path | Intake → tower → elbow → basket → launcher (IF-B1…B3) | 20 balls from the floor, shoot all | No jam; every ball fired |
+| IT-02 Port map | NovaPi / power board ↔ every motor | Run [`test_mechanisms.py`](../../../simulation/control/test_mechanisms.py) on the robot | Each port moves the expected mechanism and direction |
+| IT-03 Gripper + elevator + flag mast | Receptor, guide notch, camera clearance | Full stroke with the mast installed | No contact, mast top 1062 mm |
+| IT-04 Odometry + mechanisms while driving | `on_cycle` jobs during moves | Automatic routine on the field | Timing within the simulated values |
 
-| Test ID | Interface / requirement IDs | Configuration / participants | Scenario | Expected outcome / source | Safety / stop condition | Procedure / notebook / result | Status |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| TBD | TBD | TBD | Fit / transfer review | TBD | TBD | TBD | Not executed |
-| TBD | TBD | TBD | Power / signal boundary review | TBD | TBD | TBD | Not executed |
-| TBD | TBD | TBD | Mode transition / command handoff | TBD | TBD | TBD | Not executed |
-| TBD | TBD | TBD | Fault / stale command / stop handling | TBD | TBD | TBD | Not executed |
-
-For mode scenarios, review the proposed chain and exceptional paths in [stateflow](../../04_controls/stateflow/README.md); do not invent permitted phase behavior.
-
-Use the [verification plan](../verification_plan.md), [interface matrix](../../05_integration/interface_matrix.md), and [integration plan](../../05_integration/integration_plan.md). Record issues and retests in [notebook results](../../08_engineering_notebook/test_results/README.md).
+Reports: [`tests/integration`](../../../tests/integration/README.md).

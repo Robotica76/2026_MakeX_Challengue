@@ -1,11 +1,12 @@
-# Development and Support Tools
+# Development and support tools
 
-This workspace is for future development/support utilities only, **not production robot software**, firmware, or runtime control.
+Utilities that support development; **not** robot code.
 
-| Directory | Intended support scope |
+| Directory | Content |
 | --- | --- |
-| [scripts](scripts/README.md) | Future repeatable development workflow helpers |
-| [calibration](calibration/README.md) | Future calibration procedures and development-side records |
-| [data_analysis](data_analysis/README.md) | Future experiment and simulation data processing support |
+| [scripts](scripts/README.md) | `bundle_for_mblock.py` (one-file upload), `python_to_mblock.py` (Python → mBlock blocks), `step_to_glb.py` (CAD → 3D simulator mesh), `mass_properties.py` (mass / CG / inertia estimate) |
+| [calibration](calibration/README.md) | Calibration procedures and the constants they set |
+| [data_analysis](data_analysis/README.md) | Robot-data analysis (none yet; simulation analysis is in `simulation/analysis`) |
 
-TBD: tool need, owner, inputs/outputs, dependencies, operating assumptions, and validation. No scripts, helper files, calibration executables, or tooling framework are added by this scaffold. Support outputs should reference reviewed [mechanical](../mechanical/README.md), [electrical](../electrical/README.md), and [simulation](../simulation/README.md) revisions.
+The CAD scripts that generated the v22 STEP, STL, manual and documentation are kept with the
+assembly: [`mechanical/assemblies/full_robot/v22/source`](../mechanical/assemblies/full_robot/v22/README.md).

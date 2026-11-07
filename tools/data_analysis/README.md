@@ -1,7 +1,7 @@
-# Development Data Analysis
+# Development data analysis
 
-Plan support for inspecting future prototype, calibration, and simulation datasets; do not place production telemetry or robot control implementations here.
-
-TBD: dataset source/revision, collection conditions, schema, units/frames, missing-data handling, transformations, metrics, uncertainty, and reproducibility requirements. Link to [simulation analysis](../../simulation/analysis/README.md) and relevant mechanical prototype records.
-
-No datasets, scripts, packages, or analysis framework are selected or included.
+Analysis of simulation data lives with the simulations ([`simulation/analysis`](../../simulation/analysis/README.md):
+Monte Carlo statistics, report and figure scripts). This folder is for robot data once it exists:
+calibration runs, encoder / gyro logs, shot ranges. Planned first tools: a log parser for the NovaPi
+serial output and a script that converts calibration runs into the parameter ranges of
+`montecarlo_config_calibrated.json`.

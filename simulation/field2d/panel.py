@@ -227,7 +227,7 @@ class ProgramSection:
         gap = 6
         third = (inner - 2 * gap) // 3
         by = y + 58
-        self.load_button = Button((left, by, third, 30), "Load .py", controller.load)
+        self.load_button = Button((left, by, third, 30), "Load program", controller.load)
         self.run_button = Button((left + third + gap, by, third, 30), "Run", controller.run, primary=True)
         self.stop_button = Button((left + 2 * (third + gap), by, third, 30), "Stop", controller.stop)
         self.buttons = [self.load_button, self.run_button, self.stop_button]

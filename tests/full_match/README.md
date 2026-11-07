@@ -1,6 +1,5 @@
-# Full Match Black-Box Tests
+# Full match black-box tests
 
-Reserve complete-match procedures and reports. Define legal initial conditions,
-operator inputs, phase transitions, externally observable outcomes, measurements,
-and pass/fail criteria using verified competition rules.
-Record repeatability, configuration, video/log evidence, and corrective actions.
+Reports for CT-01…CT-05 (automatic stage with the start jig, manual cycles, cones, flag, full match)
+— plans in [competition test planning](../../docs/06_verification/competition_tests/README.md). Simulated references:
+[strategy](../../docs/07_strategy/README.md).

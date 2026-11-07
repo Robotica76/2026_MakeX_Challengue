@@ -1,45 +1,62 @@
 # Common Parts
 
+> **Revision v22 (CAD only).** Parts 10.x (Hardware) of the [Storm Breaker v22 manual](../assemblies/full_robot/v22/docs/Ensamble_StormBreaker_v22.pdf). Not built or measured yet.
+
 ## Purpose
 
-Provide a future home for genuinely reusable mechanical components and shared interface definitions.
+Hardware and parts shared by several subsystems.
 
 ## Competition Capabilities
 
-Indirect support for subsystem integration; no independent competition capability or approved part is claimed.
+—
 
 ## Requirements
 
-TBD: reuse justification, consumers, interface compatibility, traceability, and review criteria. Source any competition-derived constraint.
+Mass counts toward the 10 kg limit.
 
 ## Mechanical Interfaces
 
-TBD: shared datums, attachment conventions, fit requirements, and owning/consuming subsystems.
+All subsystems.
 
 ## Electrical Interfaces
 
-TBD where applicable: shared mounting or routing interfaces with [electrical](../../electrical/README.md).
+—
 
 ## Software Interfaces
 
-TBD where applicable: shared frame or calibration identifiers; otherwise document non-applicability after review.
+—
 
 ## Design
 
-Keep reusable component CAD in [cad](cad/README.md). Subsystems reference shared components, not copies; subsystem-specific parts stay within their subsystem. Do not establish a component catalog before selection.
+Representative M3 button-head screws placed automatically at plate–plate and motor joints (73). Joints where the head clashed with neighbours are not modelled (≈ 80, ≈ 80 g).
 
 ## Current Status
 
-Architecture scaffold only; no shared parts or interface standards approved.
+v22 CAD.
 
 ## Testing
 
-Plan fit, interchangeability, and compatibility checks across declared consumers.
+See [prototypes](prototypes/README.md).
 
 ## Known Issues
 
-TBD: reusable candidates, ownership, and compatibility requirements remain undefined.
+- Real hole patterns come from the plate drawings, not from these screw positions.
+
+## Design decisions
+
+| ID | Decision |
+| --- | --- |
+| [DEC-M13](../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md) | Numbering and folder structure |
+
+## Documentation map
+
+| Folder | Content |
+| --- | --- |
+| [cad](cad/README.md) | 1 numbered STL, robot frame |
+| [drawings](drawings/README.md) | Exploded, numbered sheets from the manual |
+| [manufacturing](manufacturing/README.md) | BOM with process / material, assembly steps, checks |
+| [prototypes](prototypes/README.md) | Simulation evidence and test plan |
 
 ## Related GitHub Issues
 
-TBD: link actual shared-interface and reuse-review issues when created.
+TBD: link actual design and validation issues when created.

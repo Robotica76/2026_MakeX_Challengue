@@ -1,13 +1,9 @@
-# Mechanical Assemblies
+# Assemblies
 
-Integration hierarchy: component → subsystem → assembly → full robot.
-
-| Assembly | Integration scope |
+| Assembly | Content |
 | --- | --- |
-| [Ball System](ball_system/README.md) | Intake, storage, feeder, and shooter references |
-| [Manipulation System](manipulation_system/README.md) | Gripper and elevation references; evaluate flag-system involvement only if justified |
-| [Full Robot](full_robot/README.md) | Chassis and selected mechanism assemblies, with electrical packaging interfaces |
+| [full_robot](full_robot/README.md) | The whole robot: **v22** STEP (initial and with the flag mast), STL, assembly manual, renders, fit analysis, CAD scripts |
+| [ball_system](ball_system/README.md) | Intake → tower → basket → launcher interfaces |
+| [manipulation_system](manipulation_system/README.md) | Elevator, gripper and flag-mast interfaces |
 
-Subsystem CAD remains in each subsystem's `cad/`; shared component CAD remains in [common_parts](../common_parts/README.md). Future assembly artifacts should record source paths/revisions, transforms, interface owners, and unresolved conflicts rather than duplicate constituent CAD. Full-robot CAD belongs only in `full_robot/`.
-
-TBD: integration owners, interface register, review gates, and acceptance evidence. No integrated assembly exists yet.
+Subsystem CAD stays in each subsystem folder (`<subsystem>/cad/v22`, numbered STL); assemblies only reference it.

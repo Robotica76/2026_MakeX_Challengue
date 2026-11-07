@@ -1,5 +1,6 @@
 # Software component tests
 
-Reserve future unit and contract tests and reports. Define inputs, expected
-outputs, edge cases, configuration, and failure behavior.
-No test runner or robot software is selected or implemented yet.
+Unit tests of the robot code run in the simulator (stand-in `novapi` / `mbuild`): see
+[tests/README](../README.md#automated-tests-that-exist-simulation-and-tools). Pending on the robot: the NovaPi
+sensor API names (`get_gyroscope`, `get_acceleration`, encoder angle) and a bundled one-file upload
+([`bundle_for_mblock.py`](../../tools/scripts/README.md)).

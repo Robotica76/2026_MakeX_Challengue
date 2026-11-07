@@ -4,3 +4,5 @@ __pycache__/
 field_screenshot.png
 .DS_Store
 simulation/analysis/results/
+simulation/field2d/generated/
+build/

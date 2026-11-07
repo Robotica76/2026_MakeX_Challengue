@@ -1,0 +1,6 @@
+# 3D viewer packages. The simulation core and the gamepad window also need pygame
+# from ../field2d/requirements.txt (the launchers install it only if it is missing,
+# so an existing pygame or pygame-ce install is kept).
+panda3d>=1.10.14    # 3D rendering (Windows, macOS incl. Apple Silicon, Linux)
+trimesh>=4.0        # reads the robot GLB
+numpy>=1.20

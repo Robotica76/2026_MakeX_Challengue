@@ -9,6 +9,13 @@ above, top rollers an "X"), so with wheel surface speeds v_fl, v_fr, v_rl, v_rr:
     omega = (-v_fl + v_fr - v_rl + v_rr) / (4 (lx + ly))  (CCW, rad/s)
 
 lx, ly are the distances from the robot centre to the wheel centres along x / y.
+For wheels at arbitrary centres (x_i, y_i), e.g. a wheel rectangle that is not
+centred on the footprint, each wheel speed is
+
+    v_i = vx + k_i vy + (k_i x_i - y_i) omega,   k = (-1, +1, +1, -1) for FL, FR, RL, RR
+
+and (vx, vy, omega) is the least-squares solution over the four wheels, which
+reduces to the formulas above for a symmetric layout.
 Ideal rolling, no slip, no motor dynamics: speeds change instantly.
 """
 
@@ -16,11 +23,12 @@ import json
 import math
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from robot import DEFAULT_CONFIG, RobotConfig, RobotPose, mecanum_wheels
 
 WHEELS = ("front_left", "front_right", "rear_left", "rear_right")
+ROLLER_SIGN = {"front_left": -1, "front_right": 1, "rear_left": 1, "rear_right": -1}
 FIELD_MOTOR_MAX_RPM = 580.0  # rules p.57: 180 smart encoder motor, no-load 580 RPM
 
 
@@ -68,11 +76,28 @@ def body_velocity(cfg: RobotConfig, wheel_rpms: Dict[str, float],
     circumference = math.pi * cfg.wheel_diameter_mm
     scale = wheel_scale or {}
     v = {w: rpm / 60.0 * circumference * scale.get(w, 1.0) for w, rpm in wheel_rpms.items()}
-    lx, ly = (abs(c) for c in mecanum_wheels(cfg)[0].center)
-    vx = (v["front_left"] + v["front_right"] + v["rear_left"] + v["rear_right"]) / 4
-    vy = (-v["front_left"] + v["front_right"] + v["rear_left"] - v["rear_right"]) / 4
-    omega = (-v["front_left"] + v["front_right"] - v["rear_left"] + v["rear_right"]) / (4 * (lx + ly))
+    rows, rhs = [], []
+    for wheel in mecanum_wheels(cfg):
+        k = ROLLER_SIGN[wheel.name]
+        x, y = wheel.center
+        rows.append((1.0, k, k * x - y))
+        rhs.append(v.get(wheel.name, 0.0))
+    vx, vy, omega = _least_squares(rows, rhs)
     return vx, vy, omega
+
+
+def _least_squares(rows: List[Tuple[float, float, float]], rhs: List[float]) -> Tuple[float, float, float]:
+    """Solve the 3x3 normal equations (A^T A) u = A^T b by Gaussian elimination."""
+    m = [[sum(r[i] * r[j] for r in rows) for j in range(3)] + [sum(r[i] * b for r, b in zip(rows, rhs))]
+         for i in range(3)]
+    for col in range(3):
+        pivot = max(range(col, 3), key=lambda r: abs(m[r][col]))
+        m[col], m[pivot] = m[pivot], m[col]
+        for r in range(3):
+            if r != col:
+                f = m[r][col] / m[col][col]
+                m[r] = [a - f * b for a, b in zip(m[r], m[col])]
+    return tuple(m[i][3] / m[i][i] for i in range(3))
 
 
 def integrate(pose: RobotPose, vx: float, vy: float, omega: float, dt: float) -> RobotPose:

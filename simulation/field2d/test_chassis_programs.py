@@ -13,7 +13,7 @@ from tempfile import TemporaryDirectory
 import field_layout as fl
 from kinematics import load_drive_train
 from mblock_runtime import GamepadInput, MotorBus, ProgramRunner, SimClock, UnsupportedAPI
-from robot import load_config, start_pose
+from robot import RobotPose, load_config, start_pose
 from simulation import Simulation, load_gyro_sign
 
 CONTROL = Path(__file__).resolve().parents[1] / "control"
@@ -21,9 +21,9 @@ AUTO = CONTROL / "test_chassis_control_automatico.py"
 MANUAL = CONTROL / "test_chassis_control_manual.py"
 
 
-def make_sim(program, time_limit=120.0, gamepad=None):
+def make_sim(program, time_limit=120.0, gamepad=None, start=None):
     cfg = load_config()
-    sim = Simulation(cfg, start_pose(cfg, fl.build_field()), load_drive_train(), time_limit,
+    sim = Simulation(cfg, start or start_pose(cfg, fl.build_field()), load_drive_train(), time_limit,
                      load_gyro_sign(), gamepad)
     sim.program = Path(program)
     return sim
@@ -92,11 +92,37 @@ class RuntimeSensorsTest(unittest.TestCase):
                "assert g < 0, g\n"             # config: clockwise positive -> CCW reads negative
                "assert abs(a - 180) < 1, a\n"  # 30 rpm for 1 s = 180 deg
                "helper.spin(0)\n")
-        sim = make_sim(self.program(src, {"helper.py": helper}), time_limit=2)
+        # Spin in mid-field: the v22 wheel rectangle is off-centre, so a spin in the start
+        # area sweeps the footprint corners past the field wall.
+        mid = RobotPose(fl.FIELD_W / 4, fl.FIELD_H / 2, 0.0)
+        sim = make_sim(self.program(src, {"helper.py": helper}), time_limit=2, start=mid)
         sim.run()
         step_for(sim, 3)
         self.assertEqual(sim.state.status, "done", sim.state.message)
         self.assertGreater(sim.pose.theta, 0.1)  # turned CCW in the field frame
+
+    def test_turn_about_offset_wheel_centre_keeps_odometry_on_footprint_centre(self):
+        # v22: the wheel rectangle is 79 mm behind the footprint centre, so a turn swings the
+        # footprint centre; odometry must report it, in closed loop and in open loop.
+        for sensors in ("True", "False"):
+            src = ("import chassis as ch\n"
+                   "ch.USE_SENSORS = %s\n"
+                   "ch.odo.calibrate(0.5)\nch.odo.reset()\n"
+                   "ch.turn_to(90)\n"
+                   "print('pose', ch.odo.x, ch.odo.y, ch.odo.heading)\n" % sensors)
+            mid = RobotPose(fl.FIELD_W / 4, fl.FIELD_H / 2, 0.0)
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                sim = make_sim(self.program(src), time_limit=6, start=mid)
+                sim.run()
+                step_for(sim, 7)
+            line = [l for l in out.getvalue().splitlines() if l.startswith("pose")][-1]
+            odo_x, odo_y, odo_h = (float(v) for v in line.split()[1:])
+            true_x, true_y, true_h = chassis_frame(sim)
+            self.assertGreater(math.hypot(true_x, true_y), 5, sensors)   # the centre did swing (~11 cm)
+            self.assertAlmostEqual(odo_x, true_x, delta=0.5, msg=sensors)
+            self.assertAlmostEqual(odo_y, true_y, delta=0.5, msg=sensors)
+            self.assertAlmostEqual(odo_h, true_h, delta=2.0, msg=sensors)
 
     def test_error_in_sibling_module_names_the_file(self):
         sim = make_sim(self.program("import helper\n", {"helper.py": "x = 1\ny = x / 0\n"}), time_limit=1)
@@ -170,11 +196,11 @@ class ChassisProgramsTest(unittest.TestCase):
             pad.apply_event({"event": "axis", "control": "left_stick", "x": 0.0, "y": 0.0})
             step_for(sim, 1.0)                                # S-curve brakes to a stop
             x1, y1, h1 = chassis_frame(sim)
-            pad.apply_event({"event": "press", "control": "plus"})   # front = F2
+            pad.apply_event({"event": "press", "control": "menu"})   # front = F_LAUNCHER (left side)
             step_for(sim, 0.2)
-            pad.apply_event({"event": "release", "control": "plus"})
+            pad.apply_event({"event": "release", "control": "menu"})
             pad.apply_event({"event": "axis", "control": "left_stick", "x": 0.0, "y": 1.0})
-            step_for(sim, 2.0)                                # "forward" is now backward
+            step_for(sim, 2.0)                                # stick up now strafes left (away from the wall)
             pad.apply_event({"event": "axis", "control": "left_stick", "x": 0.0, "y": 0.0})
             step_for(sim, 1.0)
             x2, y2, h2 = chassis_frame(sim)
@@ -182,7 +208,9 @@ class ChassisProgramsTest(unittest.TestCase):
         self.assertGreater(y1, 40)          # MAX_SPEED 100 rpm ~ 42 cm/s
         self.assertLess(abs(x1), 1)
         self.assertLess(abs(h1), 1)         # no turn requested
-        self.assertLess(y2, y1 - 40)        # F2 drove the other way
+        self.assertLess(x2, x1 - 40)        # F_LAUNCHER drove toward the launcher (left)
+        self.assertLess(abs(y2 - y1), 2)
+        self.assertLess(abs(h2), 1)
         sim.stop()
 
 

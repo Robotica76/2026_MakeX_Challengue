@@ -1,45 +1,71 @@
 # Chassis
 
+> **Revision v22 (CAD only).** Parts 1.x (Chassis and drive), 2.x (Electronics box) of the [Storm Breaker v22 manual](../assemblies/full_robot/v22/docs/Ensamble_StormBreaker_v22.pdf). Not built or measured yet.
+
 ## Purpose
 
-Investigate a mobile structural base and mounting interfaces for the robot.
+Mobile base for the whole robot: four mecanum wheels, the rails that carry every other subsystem, and (since v21) a structural electronics box at the rear.
 
 ## Competition Capabilities
 
-Candidate: navigation and stable mechanism support. Allowed motion, contact, and envelope constraints need official verification.
+Omnidirectional driving (strafing is used to place the flag and to align on the resource shelves). Rule references are to the MakeX Challenge 2026 Storm Breaker rules used for the CAD (see [resources](../../resources/rules/README.md)); confirm against the official, current version.
 
 ## Requirements
 
-TBD: verified envelope, load cases, stability criteria, access, and mobility needs. Record source/revision before setting numeric targets.
+- Footprint 500 × 500 mm and initial height ≤ 700 mm; mass ≤ 10 kg at any time (flag excluded).
+- Front wheels cannot pass `y = +45`: with the robot face against the Central Resource Area table (y = 93), the lower shelf occupies the space ahead of the wheels.
+- Electronics enclosed and protected; battery LiPo 3S 11.1 V 4200 mAh as required by the rules.
 
 ## Mechanical Interfaces
 
-TBD: wheel/contact layout and mounting datums for [ball](../assemblies/ball_system/README.md) and [manipulation](../assemblies/manipulation_system/README.md) assemblies.
+- Rails `x = ±175…199`, top at `z = 69`; three crossbars `y = −164…−18`, top at `z = 61` (tower plates and intake stand on them).
+- Electronics box `x −197…136`, `y −249…−178`, `z 72…112`, floor bolted to both rails (acts as an extra rear crossmember).
+- Track × wheelbase 442.5 × 248 mm; wheel centres `z = 40`.
 
 ## Electrical Interfaces
 
-TBD: actuator routing, power mounting, sensor mounting, and service access with [electrical](../../electrical/README.md).
+4 × 180 smart encoder motors (4 of the 13 DC-motor slots). Box holds the battery (≈330 g), NovaPi with case, power/expansion module, drivers + Bluetooth; grommets on the front wall (motors, sensors) and left wall (launcher, ESCs). Cable mass is estimated at 0.15 kg, not modelled.
 
 ## Software Interfaces
 
-TBD: motion commands, feedback semantics, limits, and fault reporting; no drive implementation selected.
+Mecanum kinematics; ramp limits from the stability study: braking ≤ 0.35 g, avoid frontal impacts above ≈ 0.85 m/s.
 
 ## Design
 
-Compare base layouts and mechanism placement. Keep component and subsystem CAD in [cad](cad/README.md); integrate references in [full_robot](../assemblies/full_robot/README.md).
+Mass 9.88 kg (CAD, robot) with CG at `y ≈ −43`, `z ≈ 181` mm. Forward tip limit is the critical one: 0.49 g empty, 0.41 g with gripper up + pin + balls. Moving motors was studied and rejected (≈ +0.03 g for a large redesign); the limit comes from the front-wheel position.
 
 ## Current Status
 
-Architecture scaffold only; no design or performance validated.
+v22 CAD complete and clash-checked against the rest of the robot. Not built.
 
 ## Testing
 
-Plan stability, mobility, mounting-load, and service-access checks after requirements are sourced.
+See [prototypes](prototypes/README.md): tip angle, braking, impact, mass/CG.
 
 ## Known Issues
 
-TBD: load distribution, field interactions, and mounting layout remain unresolved.
+- Mass margin ≈ 0.12 kg, and ~80 screws are not modelled yet (≈ 80 g).
+- Electronics dimensions (NovaPi, power module) are approximations; the box back row is 328 mm of equipment in 330 mm.
+- 3 mm shims are needed because the rear motor M4 heads stand to `z = 72`.
+
+## Design decisions
+
+| ID | Decision |
+| --- | --- |
+| [DEC-M01](../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md) | Mecanum 4 × 80 mm; front axle at y = +45 (Central Resource Area lower shelf) |
+| [DEC-M09](../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md) | CF tube rails, aluminium axles: 9.88 kg |
+| [DEC-M10](../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md) | Electronics in a structural CF box on the rear rails (rejected: low open tray v20) |
+| [DEC-M11](../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md) | Motors not relocated; braking limited to 0.35 g in software |
+
+## Documentation map
+
+| Folder | Content |
+| --- | --- |
+| [cad](cad/README.md) | 59 numbered STL, robot frame |
+| [drawings](drawings/README.md) | Exploded, numbered sheets from the manual |
+| [manufacturing](manufacturing/README.md) | BOM with process / material, assembly steps, checks |
+| [prototypes](prototypes/README.md) | Simulation evidence and test plan |
 
 ## Related GitHub Issues
 
-TBD: link actual chassis design and validation issues when created.
+TBD: link actual design and validation issues when created.

@@ -14,13 +14,13 @@ official MakeX 2026 rules cited in that issue (revision TBD).
 
 | ID | Requirement | Verification | Design response | Status |
 | --- | --- | --- | --- | --- |
-| T05-R1 | Whole robot fits inside the 500 × 500 mm Starting Area | M | CAD footprint target ≤ 480 × 480 mm | TBD (no CAD yet) |
+| T05-R1 | Whole robot fits inside the 500 × 500 mm Starting Area | M | CAD footprint target ≤ 480 × 480 mm | v22 CAD: 499.5 × 499.0 mm, meets the rule but misses the 480 mm target ([KI-001](../../05_integration/known_issues.md)) |
 | T05-R2 | Driving system unchanged during the Modification Stage | I | Drive hardware frozen before the event; software flags do not change hardware | TBD |
 | T05-R3 | Stay in own half, or return within 3 s | P | Driver practice; `odo` pose available for autonomous boundary checks | Not executed |
 | T05-R4 | Do not climb or deliberately hit the frame or central barrier | P | Accelerometer collision detection stops autonomous moves (`IMPACT_THRESHOLD`) | Not executed; threshold uncalibrated |
 | T05-R5 | Do not tilt or knock over the fortress | P | Speed limits and S-curve smoothing; tilt speed to be measured (issue step 5) | Not executed |
 | T05-R6 | Do not block the opponent for more than 3 s | P | Driver practice | Not executed |
-| T05-R7 | Space for battery, NovaPi, and power management module | I | Reserve in CAD | TBD (no CAD yet) |
+| T05-R7 | Space for battery, NovaPi, and power management module | I | Reserve in CAD | v22 CAD: all three in the rear electronics box; power module visibility at risk ([KI-003](../../05_integration/known_issues.md)) |
 | T05-R8 | 3 m straight with < 5 cm drift | P | Gyro heading hold in `drive()` and in manual mode | Not executed (simulation did not cover 3 m runs) |
 | T05-R9 | 90° turn with < 5° error | P | Closed-loop `turn_to()` on gyroscope heading | Simulation only: max 4.54° uncalibrated, p95 1.27° calibrated (see below) |
 
@@ -44,8 +44,9 @@ and driver experience. Rationale and rejected alternatives are logged in
 | Wheels | Mecanum, 8 cm nominal diameter | Effective diameter TBD (calibration step 3 of the Monte Carlo report) |
 | Motors | 4 NovaPi encoder motors: M4 = FL, M1 = FR, M3 = RL, M2 = RR (front F1) | Deduced from 2025 code; verify on robot |
 | Fronts | F1 = launcher (button "≡"), F2 = gripper (button "+") | Carried over from 2025 |
-| Turn geometry | 47 cm of wheel travel per 90°, effective radius ≈ 30 cm | Measured in 2025; recalibrate if the chassis changes |
-| Footprint / height | 2025 robot: ≈ 50 × 40 cm base, ≈ 60 cm tall | 2026 values TBD |
+| Turn geometry | v22: 0.603 cm of wheel travel per degree (a + b = 345 mm); 2025 robot: 47 cm per 90° | v22 CAD; see implementation discrepancy below |
+| Footprint / height | v22 CAD: 499.5 × 499.0 mm, 642 mm tall ([v22](../../../mechanical/assemblies/full_robot/v22/README.md)) | CAD only |
+| Wheel layout (v22) | Track 442.5 mm, wheelbase 248 mm, wheel-rectangle center 79 mm behind envelope center; a + b = 345 mm | CAD; differs from `chassis.py` turn constant ([KI-005](../../05_integration/known_issues.md)) |
 
 ## Motion software
 
@@ -102,3 +103,15 @@ verify the physical robot.
 5. Fortress tilt test (T05-R5) and center-line practice (T05-R3, R4).
 
 Review [mechanical interfaces](../../02_system_architecture/mechanical_interfaces.md) and [mass budget](../../02_system_architecture/weight_power_budget.md). Log build changes and failed concepts using the [entry template](../../08_engineering_notebook/design_log/entry_template.md); link [subsystem tests](../../06_verification/subsystem_tests/README.md).
+
+## v22 status and decisions (2026-11-06)
+
+| Item | Value | Decision |
+| --- | --- | --- |
+| Wheel geometry | Front `y = +45`, rear `y = −203`, `x = ±221.2`, wheels 80 mm | DEC-M01 (front axle limited by the Central Resource Area lower shelf) |
+| Electronics | Structural CF box on the rear rails | DEC-M10 |
+| Mass / CG | 9.88 kg, CG `y ≈ −43`, `z ≈ 181` mm (CAD) | DEC-M09 |
+| Stability | Forward tip at 0.49 g (empty) / 0.41 g (gripper up + pin + balls); braking limited to 0.35 g in software | DEC-M11 |
+| Hardware docs | CAD, drawings, BOM, test plan | [mechanical/chassis](../../../mechanical/chassis/README.md) |
+
+Register: [DL-SYS-001](../../08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md).

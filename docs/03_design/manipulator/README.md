@@ -1,48 +1,25 @@
 # Manipulator and Gripper Trade Study
 
-Compare a universal gripper against dedicated grippers for **Pins, Cones, Letter Cubes, and Bonus Cubes**. These names define requested study categories; their official identity, geometry, handling rules, and task applicability remain TBD.
+Elements under study: **Pins, Cones, Letter Cubes, Bonus Cubes** (rules p.27–43). Current
+hardware (v22): one **lead-screw jaw gripper** on a belt elevator (358 mm stroke) on the right
+side, plus the intake head used as a "puller" for props ([mechanical/gripper](../../../mechanical/gripper/README.md),
+[gripper_elevation](../../../mechanical/gripper_elevation/README.md)).
 
-## Object characterization
+## Element coverage today (simulation)
 
-| Object category | Official source / revision / section | Dimensions / mass / surface + units | Allowed contact / orientation | Required interaction | Requirement IDs |
-| --- | --- | --- | --- | --- | --- |
-| Pins | TBD | TBD | TBD | TBD | TBD |
-| Cones | TBD | TBD | TBD | TBD | TBD |
-| Letter Cubes | TBD | TBD | TBD | TBD | TBD |
-| Bonus Cubes | TBD | TBD | TBD | TBD | TBD |
+| Element | How the v22 robot handles it | Simulated result | Evidence |
+| --- | --- | --- | --- |
+| Bonus cube (X12) | Intake head pulls it off the strategy area, gripper places it in exchange area 1 | P(valid) 0.96 with a start jig | [Monte Carlo strategy](../../07_strategy/montecarlo_strategy.md) |
+| Cones | Gripper lifts and lowers onto the cone post from above | +40 (both lower cones), needs 430 mm travel (KI-009) | [manual strategy](../../07_strategy/manual_strategy.md) |
+| Letter cubes | Intake head (pull mode) pulls K and E off the fortress cube level | +60 | [scoring strategy](../../07_strategy/scoring_strategy.md) |
+| Pins | Not reachable (pins stand at 760–1050 mm) | 0 | [pin_reach.py](../../../simulation/analysis/pin_reach.py) |
 
-## Alternatives
+## Trade study (universal vs dedicated)
 
-- **Universal:** investigate one grasping concept covering all verified object categories.
-- **Dedicated:** investigate object-specific grasping concepts; whether they are fixed, exchanged, or combined is TBD and must be checked for legality.
-- Do not assume either option is lighter, faster, or more reliable without evidence.
+| Criterion | Universal (current jaw) | Dedicated tools | Evidence needed |
+| --- | --- | --- | --- |
+| Coverage | Cubes, cones; no pins | A pin tool would add a motor (none left) | Pin value vs motor reserve |
+| Repeatability | V pads, single jaw | — | Grip tests per element |
+| Mass / envelope | Inside 500 mm (jaw tip at x = 250, KI-001) | More mass | Weighing |
 
-| Criterion | Requirement / metric / units | Weight / rationale | Universal evidence / rating | Dedicated evidence / rating | Unknown / test needed |
-| --- | --- | --- | --- | --- | --- |
-| Coverage of all four categories | TBD | TBD | TBD | TBD | TBD |
-| Grasp / release repeatability | TBD | TBD | TBD | TBD | TBD |
-| Placement orientation / precision | TBD | TBD | TBD | TBD | TBD |
-| Cycle time and changeover | TBD | TBD | TBD | TBD | TBD |
-| Mass / envelope / power | TBD | TBD | TBD | TBD | TBD |
-| Mechanical / controls complexity | TBD | TBD | TBD | TBD | TBD |
-| Serviceability / student build effort | TBD | TBD | TBD | TBD | TBD |
-| Safety and official compliance | TBD | TBD | TBD | TBD | TBD |
-
-Set scoring scales and weights before evaluating alternatives. Compliance is a gate, not a tradeable score.
-
-## Object-by-object prototype comparison
-
-| Object | Universal prototype / test / result | Dedicated prototype / test / result | Setup / repetitions / uncertainty | Observed failure | Corrective action |
-| --- | --- | --- | --- | --- | --- |
-| Pins | TBD | TBD | TBD | TBD | TBD |
-| Cones | TBD | TBD | TBD | TBD | TBD |
-| Letter Cubes | TBD | TBD | TBD | TBD | TBD |
-| Bonus Cubes | TBD | TBD | TBD | TBD | TBD |
-
-## Decision record
-
-| Decision ID | Selected alternative | Evidence / rationale | Rejected alternative reasoning | Remaining risks | Student / peer reviewer | Notebook link |
-| --- | --- | --- | --- | --- | --- | --- |
-| TBD | TBD | TBD | TBD | TBD | TBD | TBD |
-
-Trace to [robot requirements](../../01_requirements/robot_requirements.md), [mechanical interfaces](../../02_system_architecture/mechanical_interfaces.md), [subsystem tests](../../06_verification/subsystem_tests/README.md), and the [design log template](../../08_engineering_notebook/design_log/entry_template.md).
+Decision so far: keep the single jaw; pins are not pursued (no motor available, KI-002).

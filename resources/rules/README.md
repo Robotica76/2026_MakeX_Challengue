@@ -1,11 +1,11 @@
-# Official Rules Register
+# Official rules
 
-Locate applicable official competition material starting from [MakeX](https://www.makex.cc/). No exact rule page, document, season/category applicability, or requirement is verified.
+| File | Edition | Use |
+| --- | --- | --- |
+| [`[English]+2026+MakeX+Challenge+Storm+Breaker+Rules+Guide(1).pdf`](%5BEnglish%5D+2026+MakeX+Challenge+Storm+Breaker+Rules+Guide%281%29.pdf) | Rules Guide **V1.1**, English (15 MB) | Source of every page reference (`p.N`) and rule ID (`R06`, `T10`, …) in the repository |
 
-| Document/topic | Official publisher/source URL | Revision/date | Access date | Season/category applicability | Reviewer/check status | Access/reproduction/storage authorization |
-| --- | --- | --- | --- | --- | --- | --- |
-| Applicable rules and amendments | TBD | TBD | TBD | TBD | Not checked; reviewer TBD | TBD; no material stored |
-
-TBD: authoritative document identification, amendment precedence, applicable sections, and conflict-resolution owner. Future derived requirements should identify source revision and section, interpretation, reviewer, and affected [mechanical](../../mechanical/README.md)/[electrical](../../electrical/README.md) interfaces.
-
-Use references rather than copied rule text. Do not infer limits, scoring, game interactions, or hardware eligibility from this scaffold.
+Rules most used by the design: T01 size (500 × 500 × 700 mm before modification), T02 mass (10 kg,
+flag excluded), T08 (5) no hook-shaped parts, T10 motor catalogue and counts, T11 / T14 battery,
+T17 flag, R06 own area, R19 stationary at the end of the automatic stage, R23, R24 X mark, R26
+strategy-area channels, R27 no blocking. Check for newer editions on [makex.cc](https://www.makex.cc/) and record
+which edition a decision used.

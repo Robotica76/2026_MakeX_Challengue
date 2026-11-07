@@ -73,9 +73,11 @@ class FieldLayoutTest(unittest.TestCase):
     def test_resize_moves_wheels_to_corners(self):
         cfg = load_config().resized(480, 300)
         self.assertEqual((cfg.length_mm, cfg.width_mm), (480, 300))
+        self.assertIsNone(cfg.wheel_centers_mm)  # CAD wheel centres do not survive a resize
+        half_w = cfg.wheel_width_mm / 2
         centers = {w.name: w.center for w in mecanum_wheels(cfg)}
-        self.assertEqual(centers["front_left"], (240 - 40, 150 - 20))
-        self.assertEqual(centers["rear_right"], (-(240 - 40), -(150 - 20)))
+        self.assertEqual(centers["front_left"], (240 - 40, 150 - half_w))
+        self.assertEqual(centers["rear_right"], (-(240 - 40), -(150 - half_w)))
         with self.assertRaises(ValueError):
             cfg.resized(150, 300)  # shorter than two 80 mm wheels
         with self.assertRaises(ValueError):

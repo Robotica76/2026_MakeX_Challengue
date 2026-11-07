@@ -1,0 +1,104 @@
+
+== red main (ORDER 13)
+   0.3 s  N1: automatic stage
+  30.4 s  manual stage, score 90
+  37.1 s  area 1: intake on
+  39.9 s  area 1: 18 balls inside
+  41.4 s  shot 1: R2 with 18 balls inside
+  54.4 s  shot 1: done, score 320
+  58.5 s  area 1 again: intake on
+  61.7 s  area 1 again: 7 balls inside
+  63.1 s  shot 2: R2 with 7 balls inside
+  68.4 s  shot 2: done, score 330
+  68.4 s  cone 1: cone at (2160, 1110), grab heading 90
+  88.6 s  cone 1: 1 cone(s) on the post, score 350
+  88.8 s  to the starting area
+ 130.5 s  modification stage (flag mast)
+ 190.6 s  final stage: letter cubes, then the flag
+ 192.5 s  letters: K and E off the fortress (662, 1528)
+ 230.1 s  move to (1892, 965) timed out
+ 232.0 s  K: cube at (2200, 865), window 877.5
+ 234.7 s  K: NOT in, score 350
+ 242.9 s  move to (1893, 848) timed out
+ 252.5 s  E: cube at (2225, 1089), window 1097.5
+ 255.2 s  E: in the channel, score 380
+ 255.4 s  back to Red Start 1: N4 hangs the flag
+collisions: none  half: ['partner half: 1 crossings, 4.2 s, up to 167 mm']  flag: carried
+
+== red partner (ORDER 0)
+   0.3 s  N1: automatic stage (partner: stays in Red Start 2)
+  30.4 s  manual stage, score 90
+  38.0 s  area 2: intake on
+  40.8 s  area 2: 7 balls inside
+  42.3 s  shot 1: R2 with 7 balls inside
+  47.3 s  shot 1: done, score 230
+  51.7 s  area 2 again: intake on
+  54.9 s  area 2 again: 4 balls inside
+  56.3 s  shot 2: R2 with 4 balls inside
+  58.9 s  shot 2: done, score 330
+  63.2 s  area 2 third: intake on
+  66.8 s  area 2 third: 2 balls inside
+  68.2 s  shot 3: R2 with 2 balls inside
+  68.6 s  shot 3: done, score 330
+  68.6 s  to the starting area
+ 130.5 s  modification stage (flag mast)
+ 190.6 s  final stage: flag on pole 1
+ 207.1 s  flag hung, score 350
+ 277.8 s  X mark (end): button_3 with 2 balls inside
+collisions: none  half: ok  flag: hung
+
+== blue main (ORDER 12)
+   0.3 s  N1: automatic stage
+  30.4 s  manual stage, score 30
+  36.1 s  cone a: cone at (2019, 542), grab heading 35
+  55.7 s  cone a: 1 cone(s) on the post, score 150
+  62.8 s  area 1: intake on
+  65.7 s  area 1: 8 balls inside
+  67.0 s  shot 1: R2 with 8 balls inside
+  74.7 s  shot 1: done, score 230
+  78.7 s  area 1 again: intake on
+  81.9 s  area 1 again: 1 balls inside
+  83.3 s  shot 2: R2 with 1 balls inside
+  83.7 s  shot 2: done, score 230
+  83.7 s  cone 1: cone at (2160, 1133), grab heading 90
+ 103.3 s  cone 1: 2 cone(s) on the post, score 250
+ 103.5 s  to the starting area
+ 130.5 s  modification stage (flag mast)
+ 190.6 s  final stage: letter cubes, then the flag
+ 192.5 s  letters: K and E off the fortress (650, 1521)
+ 229.5 s  K: cube at (2226, 872), window 877.5
+ 232.2 s  K: in the channel, score 280
+ 249.0 s  E: cube at (2222, 1110), window 1097.5
+ 251.8 s  E: NOT in, score 280
+ 252.0 s  back to Red Start 1: N4 hangs the flag
+ 264.9 s  flag hung, score 280
+ 277.3 s  X mark (end): button_3 with 1 balls inside
+collisions: none  half: ok  flag: hung
+
+== blue partner (ORDER 0)
+   0.3 s  N1: automatic stage (partner: stays in Red Start 2)
+  30.4 s  manual stage, score 30
+  38.1 s  area 2: intake on
+  41.1 s  area 2: 8 balls inside
+  42.5 s  shot 1: R2 with 8 balls inside
+  48.0 s  shot 1: done, score 130
+  52.3 s  area 2 again: intake on
+  55.6 s  area 2 again: 6 balls inside
+  57.0 s  shot 2: R2 with 6 balls inside
+  60.8 s  shot 2: done, score 170
+  65.2 s  area 2 third: intake on
+  68.8 s  area 2 third: 2 balls inside
+  70.2 s  shot 3: R2 with 2 balls inside
+  70.5 s  shot 3: done, score 190
+  70.5 s  to the starting area
+ 130.5 s  modification stage (flag mast)
+ 190.6 s  final stage: flag on pole 1
+ 207.1 s  flag hung, score 250
+ 277.3 s  X mark (end): button_3 with 2 balls inside
+collisions: none  half: ok  flag: hung
+
+RED: {'balls': 18, 'bonus_balls': 12, 'bonus_cubes': ['X12'], 'precision': 300, 'cones': 20, 'letter_cubes': 30, 'make': 0, 'flag': 50, 'pins': 0, 'x_mark': 0, 'penalties': 0, 'total': 400}
+
+BLUE: {'balls': 12, 'bonus_balls': 6, 'bonus_cubes': ['X6'], 'precision': 180, 'cones': 40, 'letter_cubes': 30, 'make': 0, 'flag': 100, 'pins': 0, 'x_mark': 30, 'penalties': 0, 'total': 380}
+
+robot contacts: none | X mark: blue | fortresses moved: {red_fortress: [-146, 284], blue_fortress: [146, -127]}

@@ -1,35 +1,29 @@
 # Stateflow and Arbitration Specification
 
-Proposed mode chain, not verified competition format:
+Proposed mode chain: `INIT → WAIT_START → AUTONOMOUS → MANUAL → MODIFICATION → FINAL → STOP`.
+The rules guide V1.1 defines an automatic stage (30 s), a manual stage, a Modification Stage
+(60 s, robot off the field) and a final stage (90 s; team flag) — check the current edition.
 
-`INIT → WAIT_START → AUTONOMOUS → MANUAL → MODIFICATION → FINAL → STOP`
+## As implemented (competition program `storm_breaker_2026.py`)
 
-Top-level mode management belongs conceptually in `software/robot/main/`; state machine/arbitration belongs conceptually in `software/autonomous/arbitration/`. No implementation is included.
+| Proposed mode | Implementation today | Trigger |
+| --- | --- | --- |
+| INIT | `constants()`, motor objects | Program start |
+| WAIT_START | Busy-wait for N1 at the end of the file (`robot_2026.py`: `wait_for_start()`, where N2/N3/N4 choose the strategy first) | N1 |
+| AUTONOMOUS | `automatic()` → `mission_N()` in `ORDER` (only if `STRATEGY > 0`) | N1 |
+| MANUAL | `manual_loop()` | End of `automatic()` |
+| MODIFICATION | Robot off the field; flag mast installed by hand ([flag_system](../../../mechanical/flag_system/README.md)) | Referee |
+| FINAL | `hang_flag()` on N4 | Driver |
+| STOP | Not explicit | Power off |
 
-## Transition contracts
+There is no separate arbitration module: one loop owns all actuators. Fault, loss of
+communication and emergency stop are **not handled** yet.
 
-| Proposed transition | Official source / rule ID | Authoritative trigger | Guard / preconditions | Exit / entry actions | Command handoff / cancellation | Test ID |
-| --- | --- | --- | --- | --- | --- | --- |
-| INIT → WAIT_START | TBD | TBD | TBD | TBD | TBD | TBD |
-| WAIT_START → AUTONOMOUS | TBD | TBD | TBD | TBD | TBD | TBD |
-| AUTONOMOUS → MANUAL | TBD | TBD | TBD | TBD | TBD | TBD |
-| MANUAL → MODIFICATION | TBD | TBD | TBD | TBD | TBD | TBD |
-| MODIFICATION → FINAL | TBD | TBD | TBD | TBD | TBD | TBD |
-| FINAL → STOP | TBD | TBD | TBD | TBD | TBD | TBD |
+## Transition contracts to complete
 
-## Arbitration contract
-
-| Mode / actuator group | Eligible command sources | Single owner | Priority / conflict resolution | Stale / denied command handling | Reviewer |
-| --- | --- | --- | --- | --- | --- |
-| TBD | TBD | TBD | TBD | TBD | TBD |
-
-## Exceptional paths to resolve
-
-| Event | Applicable modes | Requested destination / safe response | Guard / reset authority | Official / engineering basis | Verification / notebook link |
-| --- | --- | --- | --- | --- | --- |
-| Stop / emergency-stop request | TBD | TBD | TBD | TBD | TBD |
-| Fault / loss of communication | TBD | TBD | TBD | TBD | TBD |
-| Invalid or repeated transition | TBD | TBD | TBD | TBD | TBD |
-| Reset / recovery request | TBD | TBD | TBD | TBD | TBD |
-
-Verify phase meanings, timing, modification permissions, and FINAL behavior before accepting the chain. Record transition ownership decisions in [design logs](../../08_engineering_notebook/design_log/README.md) and test plans in [integration tests](../../06_verification/integration_tests/README.md). See [software architecture](../../02_system_architecture/software_architecture.md).
+| Transition | Authoritative trigger | Guard | Test |
+| --- | --- | --- | --- |
+| WAIT_START → AUTONOMOUS | N1 / referee start | Robot stationary, gyro calibrated | Full-match rehearsal |
+| AUTONOMOUS → MANUAL | 30 s | All actuators stopped (R19) | Same |
+| MANUAL → MODIFICATION | Referee | — | — |
+| FINAL → STOP | End of match | — | — |

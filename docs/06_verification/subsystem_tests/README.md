@@ -1,16 +1,17 @@
-# Subsystem Test Records
+# Subsystem Test Planning
 
-Organize proposed procedures and future results for individual subsystem designs. No test has been executed by this documentation.
+One plan per subsystem; the detailed procedures are in each mechanical subsystem's
+`prototypes/README.md`.
 
-| Test ID | Subsystem / design revision | Requirement IDs | Controlled setup / variables | Measurement / units / uncertainty | Acceptance source | Procedure / notebook / result link | Status |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| TBD | TBD | TBD | TBD | TBD | TBD | TBD | Not executed |
+| Subsystem | Test plan | Key criterion |
+| --- | --- | --- |
+| Chassis | [chassis prototypes](../../../mechanical/chassis/prototypes/README.md) | Tip angle, braking, mass |
+| Ball intake | [ball_intake prototypes](../../../mechanical/ball_intake/prototypes/README.md) | ≥ 9/10 floor pick-ups |
+| Tower (feeder) | [feeder prototypes](../../../mechanical/feeder/prototypes/README.md) | 10/10 elbow hand-offs at 0.42 m/s |
+| Basket + feed roller | [ball_storage prototypes](../../../mechanical/ball_storage/prototypes/README.md) | Holds when stopped, feeds one at a time |
+| Shooter | [shooter prototypes](../../../mechanical/shooter/prototypes/README.md) | Range table |
+| Gripper / elevator | [gripper](../../../mechanical/gripper/prototypes/README.md), [gripper_elevation](../../../mechanical/gripper_elevation/prototypes/README.md) | Grip and stroke |
+| Flag mast | [flag_system prototypes](../../../mechanical/flag_system/prototypes/README.md) | Hangs on a real bar |
+| Drive software | [T05-R8, T05-R9](../../03_design/chassis/README.md) | 3 m < 5 cm, 90° < 5° |
 
-## Review prompts
-
-- What variables must remain constant when comparing alternatives?
-- What safe setup and supervision are needed?
-- How will failed attempts and measurement uncertainty be recorded?
-- Which corrective action triggers a new prototype revision and retest?
-
-Use the [verification plan record structure](../verification_plan.md). Link [design studies](../../03_design/README.md), including [gripper comparisons](../../03_design/manipulator/README.md), and preserve observations in [notebook results](../../08_engineering_notebook/test_results/README.md).
+Reports: [`tests/subsystem`](../../../tests/subsystem/README.md).

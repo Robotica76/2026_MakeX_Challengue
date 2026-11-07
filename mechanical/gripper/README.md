@@ -1,54 +1,62 @@
 # Gripper
 
+> **Revision v22 (CAD only).** Parts 6.x (Carriage and gripper) of the [Storm Breaker v22 manual](../assemblies/full_robot/v22/docs/Ensamble_StormBreaker_v22.pdf). Not built or measured yet.
+
 ## Purpose
 
-Investigate acquisition, retention, and placement of candidate non-ball game elements.
+Pick and place pins and other non-ball elements on the right side of the robot.
 
 ## Competition Capabilities
 
-Explicitly investigate **Pins, Cones, Letter Cubes, and Bonus Cubes**. These names identify study scope, not confirmed rules or capabilities; verify official terminology, geometry, permitted interactions, and task requirements through [game-element resources](../../resources/game_elements/README.md).
+Pins, Cones, Letter Cubes, Bonus Cubes are under study. Rule references are to the MakeX Challenge 2026 Storm Breaker rules used for the CAD (see [resources](../../resources/rules/README.md)); confirm against the official, current version.
 
 ## Requirements
 
-TBD for each element: sourced geometry, contact constraints, approach/placement conditions, retention needs, and success criteria. Do not infer common handling requirements.
+Inside the 500 mm footprint (jaw tip at x = +250).
 
 ## Mechanical Interfaces
 
-TBD: attachment, loads, tool-change boundary if relevant, and pose reference with [gripper_elevation](../gripper_elevation/README.md).
+On the [gripper elevator](../gripper_elevation/README.md) carriage; holds the [flag mast](../flag_system/README.md) receptor.
 
 ## Electrical Interfaces
 
-TBD per concept: actuators, element/retention sensing, wiring, and power needs with [electrical](../../electrical/README.md).
+DC-25 jaw motor, distance sensor.
 
 ## Software Interfaces
 
-TBD: element/task selection, acquire/release commands, retention feedback, elevation interlocks, and recovery states.
+Open / close commands; distance feedback.
 
 ## Design
 
-Perform a **universal versus dedicated manipulator trade study**; a final universal gripper is not presumed. Compare one shared tool, element-specific tools, and any justified hybrid/tool-change options.
-
-| Investigation | Universal concept | Dedicated concept | Evidence needed |
-| --- | --- | --- | --- |
-| Pins | TBD | TBD | Verified geometry, contact and placement tests |
-| Cones | TBD | TBD | Verified geometry, retention and release tests |
-| Letter Cubes | TBD | TBD | Verified geometry, orientation and placement tests |
-| Bonus Cubes | TBD | TBD | Verified geometry, retention and placement tests |
-
-Compare task coverage, retention reliability, placement accuracy, mass/envelope implications, actuation/control complexity, changeover costs, and serviceability. All targets and scores remain TBD until sourced or measured. Keep models in [cad](cad/README.md); integrate references through [manipulation_system](../assemblies/manipulation_system/README.md).
+Single lead-screw jaw with V pads (v15 design, unchanged in v22).
 
 ## Current Status
 
-Architecture and trade-study scaffold only; no manipulator concept selected or demonstrated.
+v22 CAD.
 
 ## Testing
 
-Plan separate acquisition, retention, orientation, and release trials for each verified element; compare universal and dedicated concepts under equivalent conditions.
+See [prototypes](prototypes/README.md).
 
 ## Known Issues
 
-TBD: official element definitions, task constraints, tool coverage, and tool-change feasibility are unresolved.
+- Universal vs dedicated tool trade study still open (see the original study table in git history).
+
+## Design decisions
+
+| ID | Decision |
+| --- | --- |
+| [DEC-M12](../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md) | Carries the flag-mast receptor 6.17 |
+
+## Documentation map
+
+| Folder | Content |
+| --- | --- |
+| [cad](cad/README.md) | 18 numbered STL, robot frame |
+| [drawings](drawings/README.md) | Exploded, numbered sheets from the manual |
+| [manufacturing](manufacturing/README.md) | BOM with process / material, assembly steps, checks |
+| [prototypes](prototypes/README.md) | Simulation evidence and test plan |
 
 ## Related GitHub Issues
 
-TBD: link actual element-verification, trade-study, and prototype-test issues when created.
+TBD: link actual design and validation issues when created.

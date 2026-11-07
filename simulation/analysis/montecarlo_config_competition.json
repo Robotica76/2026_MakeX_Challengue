@@ -1,0 +1,101 @@
+{
+ "notes": [
+  "Scenario 'competition': the calibrated robot (montecarlo_config_calibrated.json) placed with a",
+  "start-alignment jig against the starting-area walls: start error 2 mm / 0.3 deg (estimate, to be",
+  "measured with the jig). Used by montecarlo_strategy.py; the start heading error dominates the",
+  "grab error (1 deg over 1.7 m of travel = 30 mm)."
+ ],
+ "trials": 300,
+ "seed": 2026,
+ "routine": "mc_routine_chassis.py",
+ "start": {
+  "x_mm": 1400,
+  "y_mm": 1527.5,
+  "heading_deg": 0
+ },
+ "criteria": {
+  "drive_error_cm": 1.0,
+  "drive_relative": 0.01,
+  "turn_error_deg": 1.5,
+  "required_rate": 0.95,
+  "confidence": 0.95
+ },
+ "ranges": {
+  "wheel_scale": {
+   "dist": "normal",
+   "mean": 1.0,
+   "sd": 0.002
+  },
+  "motor_gain": {
+   "dist": "normal",
+   "mean": 1.0,
+   "sd": 0.02,
+   "min": 0.9,
+   "max": 1.1
+  },
+  "motor_tau_s": {
+   "dist": "uniform",
+   "low": 0.02,
+   "high": 0.08
+  },
+  "slip_forward": {
+   "dist": "normal",
+   "mean": 1.0,
+   "sd": 0.003,
+   "max": 1.0
+  },
+  "slip_strafe": {
+   "dist": "normal",
+   "mean": 1.0,
+   "sd": 0.005,
+   "max": 1.0
+  },
+  "slip_turn": {
+   "dist": "normal",
+   "mean": 1.0,
+   "sd": 0.005,
+   "max": 1.0
+  },
+  "gyro_bias_dps": {
+   "dist": "uniform",
+   "low": -1.0,
+   "high": 1.0
+  },
+  "gyro_drift_dps": {
+   "dist": "uniform",
+   "low": 0.0,
+   "high": 0.05
+  },
+  "gyro_noise_dps": {
+   "dist": "uniform",
+   "low": 0.05,
+   "high": 0.3
+  },
+  "gyro_scale": {
+   "dist": "normal",
+   "mean": 0.0,
+   "sd": 0.002
+  },
+  "encoder_res_deg": 1.0,
+  "sleep_jitter_s": {
+   "dist": "uniform",
+   "low": 0.0,
+   "high": 0.003
+  },
+  "start_dx_mm": {
+   "dist": "normal",
+   "mean": 0.0,
+   "sd": 2.0
+  },
+  "start_dy_mm": {
+   "dist": "normal",
+   "mean": 0.0,
+   "sd": 2.0
+  },
+  "start_dtheta_deg": {
+   "dist": "normal",
+   "mean": 0.0,
+   "sd": 0.3
+  }
+ }
+}

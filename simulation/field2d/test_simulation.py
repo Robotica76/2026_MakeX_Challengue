@@ -8,9 +8,9 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import field_layout as fl
-from kinematics import DriveTrain, MotorPort, body_velocity, integrate, load_drive_train
+from kinematics import ROLLER_SIGN, DriveTrain, MotorPort, body_velocity, integrate, load_drive_train
 from mblock_runtime import MotorBus
-from robot import RobotPose, load_config, start_pose
+from robot import RobotPose, load_config, mecanum_wheels, start_pose
 from simulation import Simulation
 
 HERE = Path(__file__).parent
@@ -30,7 +30,7 @@ def run_until_done(sim, seconds=60, fps=60):
 
 class KinematicsTest(unittest.TestCase):
     def setUp(self):
-        self.cfg = load_config()
+        self.cfg = replace(load_config(), wheel_centers_mm=None)  # symmetric: wheels in the corners
 
     def wheels(self, fl_, fr, rl, rr):
         return {"front_left": fl_, "front_right": fr, "rear_left": rl, "rear_right": rr}
@@ -52,6 +52,38 @@ class KinematicsTest(unittest.TestCase):
         self.assertAlmostEqual(vx, 0)
         self.assertAlmostEqual(vy, 0)
         self.assertGreater(w, 0)
+
+    def wheel_rpms_for(self, cfg, vx, vy, w):
+        """Inverse kinematics: wheel rpm that produce (vx, vy, w) for any wheel layout."""
+        out = {}
+        for wheel in mecanum_wheels(cfg):
+            k, (x, y) = ROLLER_SIGN[wheel.name], wheel.center
+            surface = vx + k * vy + (k * x - y) * w
+            out[wheel.name] = surface / (math.pi * cfg.wheel_diameter_mm) * 60
+        return out
+
+    def test_offset_wheels_round_trip(self):
+        cfg = load_config()                      # v22: wheel rectangle 79 mm behind centre
+        self.assertIsNotNone(cfg.wheel_centers_mm)
+        for target in ((300, 0, 0), (0, -200, 0), (0, 0, 1.5), (120, 80, -0.7)):
+            got = body_velocity(cfg, self.wheel_rpms_for(cfg, *target))
+            for a, b in zip(got, target):
+                self.assertAlmostEqual(a, b, places=6)
+
+    def test_offset_wheels_spin_about_wheel_centre(self):
+        cfg = load_config()
+        xs = [x for _, x, _ in cfg.wheel_centers_mm]
+        offset = -(max(xs) + min(xs)) / 2        # footprint centre ahead of the wheel centre (79 mm)
+        vx, vy, w = body_velocity(cfg, self.wheels(-10, 10, -10, 10))
+        self.assertGreater(w, 0)
+        self.assertAlmostEqual(vx, 0, places=6)
+        self.assertAlmostEqual(vy, w * offset, places=6)  # footprint centre swings around the wheel centre
+
+    def test_wheel_outside_footprint_is_rejected(self):
+        cfg = load_config()
+        bad = (("front_left", 300.0, 221.2),) + cfg.wheel_centers_mm[1:]
+        with self.assertRaises(ValueError):
+            replace(cfg, wheel_centers_mm=bad).validate()
 
     def test_motor_direction_and_clamp(self):
         drive = DriveTrain({**PORTS, "M2": MotorPort("front_right", -1)}, max_rpm=100)
@@ -91,10 +123,11 @@ class SimulationTest(unittest.TestCase):
         self.assertAlmostEqual(sim.pose.x - sim.start_pose.x, 30 * 10 / 60 * math.pi * 80, delta=1)
 
     def test_example_leaves_field(self):
-        sim = run_until_done(self.make(heading=270))  # facing the near wall, 100 mm away
+        sim = run_until_done(self.make(heading=270))  # facing the near wall (y = 0)
         self.assertEqual(sim.state.status, "out_of_bounds")
         self.assertIn("Out of boundaries", sim.state.message)
-        self.assertAlmostEqual(sim.time, 100 / (10 / 60 * math.pi * 80), delta=0.02)
+        gap = sim.start_pose.y - sim.cfg.length_mm / 2  # front edge to the wall
+        self.assertAlmostEqual(sim.time, gap / (10 / 60 * math.pi * 80), delta=0.02)
 
     def test_sleep_uses_simulated_time(self):
         src = ("import time\nfrom mbuild.encoder_motor import encoder_motor_class\n"

@@ -1,8 +1,11 @@
 # test_chassis_control_manual.py - manual (gamepad) check of chassis.py
 # Left stick: drive and strafe. Right stick (x): turn. Heading hold keeps the
 # robot straight while driving without turning.
-#   "≡" (menu)  front = F1 (launcher)
-#   "+" (plus)  front = F2 (gripper), forward and strafe are inverted
+# Fronts (v22: intake ahead, gripper on the right, launcher on the left); stick up
+# drives toward the chosen side:
+#   N2          front = F_INTAKE (start)
+#   "+" (plus)  front = F_GRIPPER
+#   "≡" (menu)  front = F_LAUNCHER
 #   N1          reset odometry to (0, 0, 0 deg) at the current spot
 # Prints the odometry pose once per second.
 #
@@ -17,15 +20,14 @@ ch.odo.calibrate(1.0)      # robot must be still
 ch.odo.reset()
 ch.reset_smoothing()
 
-front = ch.F1
+FRONTS = (("N2", ch.F_INTAKE, "intake"), ("+", ch.F_GRIPPER, "gripper"), ("≡", ch.F_LAUNCHER, "launcher"))
+front = ch.F_INTAKE
 last_print = time.time()
 while True:
-    if gamepad.is_key_pressed("≡") and front != ch.F1:
-        front = ch.F1
-        print("front: F1 (launcher)")
-    elif gamepad.is_key_pressed("+") and front != ch.F2:
-        front = ch.F2
-        print("front: F2 (gripper)")
+    for key, side, name in FRONTS:
+        if gamepad.is_key_pressed(key) and front != side:
+            front = side
+            print("front:", name)
     if gamepad.is_key_pressed("N1"):
         ch.odo.reset()
         print("odometry reset")
