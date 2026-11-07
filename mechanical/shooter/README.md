@@ -43,6 +43,14 @@ See [prototypes](prototypes/README.md).
 - Ball mass not in the rules (30 g assumed); spin (Magnus) not modelled.
 - Brushless top speed on the D45 wheel unverified (needs ~14–15 m/s for 3 m).
 
+## Design decisions
+
+| ID | Decision |
+| --- | --- |
+| [DEC-M02](../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md) | Fixed launcher on the left, no turret |
+| [DEC-M05](../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md) | Inverted friction wheel (wheel above, hood below) |
+| [DEC-S06](../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md) | Aim assist from odometry distance |
+
 ## Documentation map
 
 | Folder | Content |

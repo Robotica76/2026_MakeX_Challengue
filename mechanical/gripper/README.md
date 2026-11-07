@@ -42,6 +42,12 @@ See [prototypes](prototypes/README.md).
 
 - Universal vs dedicated tool trade study still open (see the original study table in git history).
 
+## Design decisions
+
+| ID | Decision |
+| --- | --- |
+| [DEC-M12](../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md) | Carries the flag-mast receptor 6.17 |
+
 ## Documentation map
 
 | Folder | Content |

@@ -48,6 +48,15 @@ See [prototypes](prototypes/README.md): tip angle, braking, impact, mass/CG.
 - Electronics dimensions (NovaPi, power module) are approximations; the box back row is 328 mm of equipment in 330 mm.
 - 3 mm shims are needed because the rear motor M4 heads stand to `z = 72`.
 
+## Design decisions
+
+| ID | Decision |
+| --- | --- |
+| [DEC-M01](../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md) | Mecanum 4 × 80 mm; front axle at y = +45 (Central Resource Area lower shelf) |
+| [DEC-M09](../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md) | CF tube rails, aluminium axles: 9.88 kg |
+| [DEC-M10](../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md) | Electronics in a structural CF box on the rear rails (rejected: low open tray v20) |
+| [DEC-M11](../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md) | Motors not relocated; braking limited to 0.35 g in software |
+
 ## Documentation map
 
 | Folder | Content |

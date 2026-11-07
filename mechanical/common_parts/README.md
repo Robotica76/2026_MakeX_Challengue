@@ -42,6 +42,12 @@ See [prototypes](prototypes/README.md).
 
 - Real hole patterns come from the plate drawings, not from these screw positions.
 
+## Design decisions
+
+| ID | Decision |
+| --- | --- |
+| [DEC-M13](../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md) | Numbering and folder structure |
+
 ## Documentation map
 
 | Folder | Content |

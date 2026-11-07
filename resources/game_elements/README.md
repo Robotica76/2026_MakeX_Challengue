@@ -1,16 +1,12 @@
-# Game Element Resource Register
+# Game elements
 
-The following are requested investigation labels, not verified official definitions or specifications. Verify terminology, applicability, geometry, and permitted interactions before using them as design inputs.
+Element data used by the design and the simulators (rules guide V1.1):
 
-| Candidate element | Official publisher/source URL | Revision/date | Access date | Applicability/definition | Reviewer/check status | Access/reproduction/storage authorization |
-| --- | --- | --- | --- | --- | --- | --- |
-| Balls | TBD | TBD | TBD | TBD | Not checked; reviewer TBD | TBD; no material stored |
-| Pins | TBD | TBD | TBD | TBD | Not checked; reviewer TBD | TBD; no material stored |
-| Cones | TBD | TBD | TBD | TBD | Not checked; reviewer TBD | TBD; no material stored |
-| Letter Cubes | TBD | TBD | TBD | TBD | Not checked; reviewer TBD | TBD; no material stored |
-| Bonus Cubes | TBD | TBD | TBD | TBD | Not checked; reviewer TBD | TBD; no material stored |
-| Flag-related elements, if applicable | TBD | TBD | TBD | TBD | Not checked; reviewer TBD | TBD; no material stored |
-
-TBD per reviewed element: authoritative section references, dimensions/material properties only when sourced, measurement provenance, uncertainty, and task/contact constraints cross-checked against [rules](../rules/README.md).
-
-Support [ball-system studies](../../mechanical/assemblies/ball_system/README.md) and the [universal-versus-dedicated gripper trade study](../../mechanical/gripper/README.md). No measurements, element CAD, or copyrighted source material are included.
+| Element | Data used | Where |
+| --- | --- | --- |
+| Balls | 70 mm, 10 per own resource area box + central table levels; mass not given (30 g assumed) | [`balls.py`](../../simulation/field2d/balls.py), ballistics |
+| Pins | 290 mm, 16 on the resource-area shelves (760–1050 mm reach) | [`props.py`](../../simulation/field2d/props.py), [`pin_reach.py`](../../simulation/analysis/pin_reach.py) |
+| Cones | Hung on own cone post (405 mm) | `props.py`, [`cone_post_reach.py`](../../simulation/analysis/cone_post_reach.py) |
+| Letter cubes | 16, M-A-K-E | `props.py`, [`letter_cube_reach.py`](../../simulation/analysis/letter_cube_reach.py) |
+| Bonus cubes | X3–X12, prop cards | `props.py`, [vision_reference](../../software/vision/vision_reference/README.md) |
+| Team flag | ≥ 400 × 300 mm, pole < 10 × 10 mm | [`flag.py`](../../simulation/field2d/flag.py), [flag_system](../../mechanical/flag_system/README.md) |

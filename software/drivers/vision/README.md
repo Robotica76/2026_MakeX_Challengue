@@ -1,5 +1,5 @@
-# Vision module drivers
+# Vision drivers
 
-Reserved for future vision module transport and hardware adapters.
-Agree on electrical interfaces, messages, timestamps, coordinate frames,
-timeouts, and fault behavior with electrical and vision teams before coding.
+Hardware: Makeblock AI camera 2.0 (v22 part 5.7, on the elevator lid). No driver code yet; the
+simulator does not model the camera. Plans: [vision software](../../vision/README.md),
+[vision architecture](../../../docs/04_controls/vision/README.md).

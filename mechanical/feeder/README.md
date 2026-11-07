@@ -42,6 +42,14 @@ See [prototypes](prototypes/README.md).
 
 - The elbow motor could be removed with a transmission from the belts (frees a motor slot) but gears / belt clash with the launcher or the ball path; kept internal.
 
+## Design decisions
+
+| ID | Decision |
+| --- | --- |
+| [DEC-M03](../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md) | Tower 3 balls wide, 15°, top at z 430 (roof limit z 543) |
+| [DEC-M04](../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md) | Elbow roller + concentric cover (rejected: single top roller) |
+| [DEC-M07](../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md) | Elbow keeps its internal DC-25 (transmission from the belts clashes) |
+
 ## Documentation map
 
 | Folder | Content |

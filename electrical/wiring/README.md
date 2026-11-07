@@ -1,5 +1,7 @@
 # Wiring
 
-Workspace for future wiring documentation, not an implemented harness. Start with the [wiring diagram register](wiring_diagrams.md).
-
-TBD: diagram owner, naming/revision scheme, connector identification, harness boundaries, routing/service access, and verification evidence. Trace every future connection to [architecture](../architecture/README.md) and [power](../power/README.md); do not assume pinouts, conductor sizes, or component ratings.
+No harness yet. Inputs for the first wiring diagram: the [motor allocation](../architecture/README.md) (ports),
+the electronics box grommets (front wall: motors and sensors; left wall: launcher and ESCs; v22 part 2.6),
+and cable mass budget 0.15 kg. Register: [wiring_diagrams.md](wiring_diagrams.md). After wiring, update the
+port map in [`robot_config.json`](../../simulation/field2d/robot_config.json) and run the port check
+([tests/electrical](../../tests/electrical/README.md)).

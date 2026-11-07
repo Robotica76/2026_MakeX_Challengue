@@ -29,3 +29,13 @@ plus the X9 and the cones onto our side (Monte Carlo winner); manual: "≡" / "+
 in Red Start 1 hangs the flag. Blocks whose Python name or opcode is still assumed (gyro angle /
 rate Python names, encoder angle, timer) are listed in `simulation/field2d/mblock_project.py`
 (`SENSORS`): export a project with those blocks from mBlock to confirm them.
+
+## Design decisions
+
+- DEC-S04: the competition program is written in the Python subset blocks can express, so blocks and Python are one program.
+- DEC-S05: profiled point-to-point motion in field coordinates; long moves face their direction; `STRAFE_SLIP` calibration; start jig.
+- DEC-S06: R2 / N3 aim assist from the odometry distance.
+- DEC-T01…T03: mission order, lower half of the field, X-mark timing.
+
+Register: [DL-SYS-001](../../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md).
+Known mismatch: `hang_flag()` (proposed left-front rod) vs the v22 flag mast (right side) ([KI-008](../../../docs/05_integration/known_issues.md)).

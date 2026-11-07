@@ -34,3 +34,14 @@ unchanged:
 
 Simulated results check the control logic with ideal wheels (no slip, no motor
 dynamics, no collisions); they do not replace calibration on the robot.
+
+## Scripted drivers and match plans
+
+| File | Content |
+| --- | --- |
+| [`ai_driver.py`](ai_driver.py) | Scripted driver for `storm_breaker_2026.py`: plays the gamepad like the driver, closing the loop on the robot pose from the state stream (headless: `simulation/analysis/simulate_driver.py`) |
+| [`partner_driver.py`](partner_driver.py) | The alliance partner (same robot and program, upper half of the red area) |
+| [`match_2026.py`](match_2026.py) | The whole-match plan (280 s) as moves, used to time and score strategies (`simulate_match.py`) |
+
+Design decisions behind these programs: DEC-S04…S06, DEC-T01…T03 in
+[DL-SYS-001](../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md).

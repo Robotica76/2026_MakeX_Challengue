@@ -1,16 +1,23 @@
 # Strategy
 
-Strategy documents contain hypotheses to evaluate, not confirmed scoring rules or implemented routines.
+Match plans and the simulations that rank them. Values are **simulation results** (2D simulator,
+v22 robot model), not measured on a robot.
 
 | Document | Focus |
 | --- | --- |
-| [Scoring strategy](scoring_strategy.md) | Official-source-backed opportunity comparison |
-| [Autonomous strategy](autonomous_strategy.md) | Initial state, candidate objectives, fallback questions |
-| [Manual strategy](manual_strategy.md) | Driver workflow and task prioritization |
-| [Alliance strategy](alliance_strategy.md) | Responsibilities and coordination constraints |
+| [Scoring strategy](scoring_strategy.md) | Every scoring opportunity, its rule, the robot capability and the simulated value |
+| [Autonomous strategy](autonomous_strategy.md) | 30 s automatic stage: rules that shape it, the X12 plan, timing |
+| [Manual strategy](manual_strategy.md) | 100 s manual stage and two-robot plan with cones |
+| [Monte Carlo strategy](montecarlo_strategy.md) | Sampled-robot search of the automatic stage, every mission order, two and four robots, reinforcement learning |
+| [Alliance strategy](alliance_strategy.md) | Partner coordination (template) |
 
-| Strategy proposal | Rule / requirement IDs | Owner / peer reviewer | Evidence / notebook link | Decision / revision |
-| --- | --- | --- | --- | --- |
-| Automatic stage: central balls first, then props from the central strip to our side; the X12 bonus cube into the exchange area ([autonomous strategy](autonomous_strategy.md)) | p.27–38, R06, R19, R26 | TBD (team) / TBD | Simulation, `simulation/field2d/test_match.py` | Implemented in simulation: 14 balls + valid X12 by 29.0 s |
+## Current plan
 
-Review [competition requirements](../01_requirements/competition_requirements.md) first. Revisit architecture when strategy changes introduce new needs, and record evaluations in the [notebook](../08_engineering_notebook/README.md) with [competition-context verification](../06_verification/competition_tests/README.md).
+| Item | Decision | Evidence |
+| --- | --- | --- |
+| Automatic stage | X12 into red exchange area 1, then deny X9 (`ORDER` 12); candidate 13 (X12 then lower table balls) | DEC-T01; [Monte Carlo](montecarlo_strategy.md) |
+| Our half | Lower half of the red camp | DEC-T02 |
+| X mark | Keep 2 balls, fire at ~277.8 s | DEC-T03 |
+| Aim | At the fortress where it is (driver / assist) | DEC-S06 |
+
+Figures: [simulation/analysis/reports](../../simulation/analysis/reports/README.md).

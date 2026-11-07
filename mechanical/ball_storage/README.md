@@ -43,6 +43,13 @@ See [prototypes](prototypes/README.md).
 - Two balls entering together not simulated.
 - The 16T stands ~3 mm above the floor near the lane edge.
 
+## Design decisions
+
+| ID | Decision |
+| --- | --- |
+| [DEC-M05](../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md) | Basket floor feeds the inverted launcher; the feed roller is the gate (no servo) |
+| [DEC-M06](../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md) | Feed roller 3:1 (direct 200 RPM fails in simulation) |
+
 ## Documentation map
 
 | Folder | Content |

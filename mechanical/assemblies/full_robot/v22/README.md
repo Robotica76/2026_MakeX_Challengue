@@ -19,7 +19,7 @@ is a check against the CAD model, not a verification of the physical robot.
 | [`docs/vista_explosionada_v22.png`](docs/vista_explosionada_v22.png) | General exploded view with subsystem balloons | |
 | [`analysis/`](analysis/) | Real CAD sections and fit views against the Central Resource Area table (lower and upper shelf) | Generated with v19 geometry of the intake/tower, unchanged in v22 |
 | Numbered STL per part | 211 files `<subsystem>.<part>_<name>.stl` in each subsystem's `cad/v22` (see [part numbering](#part-numbering)) | Robot frame, assembled position |
-| [Flag mast STL](../../../flag_system/cad/README.md#v22--removable-flag-mast) | Printable mast parts, kept in the flag subsystem | |
+| [Flag mast STL](../../../flag_system/cad/README.md#v22--numbered-parts) | Printable mast parts, kept in the flag subsystem | |
 
 ## Frame and units
 

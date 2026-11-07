@@ -45,6 +45,12 @@ See [prototypes](prototypes/README.md).
 - Multi-ball behaviour not simulated.
 - The UR lift motor sits high (z ≈ 500); moving it down was not possible (front wheel motor and lead-screw nut).
 
+## Design decisions
+
+| ID | Decision |
+| --- | --- |
+| [DEC-M08](../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md) | Wide R3 (±108 mm), straight R2 (no centring needed with a 3-wide tower) |
+
 ## Documentation map
 
 | Folder | Content |

@@ -1,15 +1,13 @@
 # Vision Architecture Study
 
-Vision is an optional study area; hardware eligibility, necessity, targets, algorithms, and performance are TBD.
+Hardware: Makeblock **AI camera 2.0** on the gripper-elevator lid (v22 part 5.7). Planned use:
+locate the bonus cube for **Bonus Battle** (rules p.28) and correct the X12 grab, and aim at the
+fortress where it actually is ([DEC-S06](../../08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md)).
 
-| Requirement / rule ID | Observation needed | Candidate sensing approach | Output / units / coordinate frame | Confidence / validity / freshness | Consumer / interface ID |
-| --- | --- | --- | --- | --- | --- |
-| TBD | TBD | TBD | TBD | TBD | TBD |
+| Observation | Approach | Output / frame | Consumer | Status |
+| --- | --- | --- | --- | --- |
+| Bonus cube identity / position | AI camera colour / tag recognition; prop-card statistics in [`vision_reference`](../../../software/vision/README.md) | Bearing + distance, robot frame | Automatic X12 grab | Not coded |
+| Fortress position | Same | Bearing | R2 aim assist | Not coded |
 
-## Evaluation and uncertainty
-
-| Scenario / lighting / occlusion | Reference measurement | Error metric / units | Acceptance source | Invalid-data response | Test / result / notebook link |
-| --- | --- | --- | --- | --- | --- |
-| TBD | TBD | TBD | TBD | TBD | TBD |
-
-Do not treat an unvalidated observation as a confirmed object state. Review [software contracts](../../02_system_architecture/software_architecture.md), [electronics](../../03_design/electronics/README.md), and [subsystem tests](../../06_verification/subsystem_tests/README.md). Store evidence references in [notebook media](../../08_engineering_notebook/media/README.md).
+The simulator does not model the camera. Evaluation plan: lighting / occlusion cases on a field
+mock-up, error in mm and degrees, invalid-data response = fall back to odometry.

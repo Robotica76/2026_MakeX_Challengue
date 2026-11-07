@@ -1,7 +1,12 @@
-# Trajectory Studies
+# Trajectory studies
 
-Plan robot navigation, manipulator-motion, and ball-release trajectory investigations where verified tasks justify them. No path, target pose, field dimension, or motion constraint is established.
+Trajectories are computed inside the field simulator and the analysis scripts rather than kept here:
 
-TBD: sourced environment/task references, frame conventions, start/end conditions, model revision, collision/clearance assumptions, parameter ranges, and comparison criteria.
+| Study | Script | Output |
+| --- | --- | --- |
+| Automatic-stage route (lanes, clearances to table legs / cone posts) | [`optimize_auto_route.py`](../analysis/optimize_auto_route.py) | Waypoints written into `auto_pull_central.py` |
+| Every mission order | [`montecarlo_routes.py`](../analysis/montecarlo_routes.py) | `ORDER` of `storm_breaker_2026.py` |
+| Ball flight (shots, X mark, pins) | [`field2d/ball_physics.py`](../field2d/ball_physics.py), [`pin_shots.py`](../analysis/pin_shots.py) | Aim assist parameters |
+| Reach studies (pins, cone post, letter cubes) | [`pin_reach.py`](../analysis/pin_reach.py), [`cone_post_reach.py`](../analysis/cone_post_reach.py), [`letter_cube_reach.py`](../analysis/letter_cube_reach.py) | Feasibility (pins not reachable; cone post needs 430 mm elevator travel) |
 
-Reference authorized [field resources](../../resources/field/README.md), [models](../robot_model/README.md), and [mechanical integration](../../mechanical/assemblies/full_robot/README.md). Keep predictions distinct from measured behavior; no planning framework or executable trajectory is selected.
+Field geometry comes from [`field2d/field_layout.py`](../field2d/field_layout.py) (rules guide V1.1, estimates noted in the file).

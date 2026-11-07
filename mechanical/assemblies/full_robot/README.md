@@ -1,13 +1,24 @@
-# Full Robot Integration
+# Full robot
 
-This is the **only location for future full-robot CAD**. Integrate references to [chassis](../../chassis/README.md), [ball_system](../ball_system/README.md), [manipulation_system](../manipulation_system/README.md), and any independently justified mechanism. Constituent CAD stays in its owning subsystem or shared-component directory; do not copy it here.
-
-TBD: top-level frame, source paths/revisions, assembly transforms, mounting ownership, overall envelope, load/stability studies, mechanism interference, service access, and [electrical packaging](../../../electrical/README.md).
+The only place for whole-robot CAD. Constituent parts stay in their subsystem folders.
 
 ## Revisions
 
 | Revision | Date | Content | Status |
 | --- | --- | --- | --- |
-| [v22](v22/README.md) | 2026-10-26 | Storm Breaker v22: full robot STEP (initial and after modification with flag mast), STL, CadQuery sources, renders, CAD requirements check | CAD only, not built |
+| [v22](v22/README.md) | 2026-10-26 (CAD), 2026-11-06 (manual, numbered STL) | STEP initial and after modification (flag mast), STL, assembly manual PDF (18 sheets), exploded view, renders, Central Resource Area fit analysis, CadQuery sources | CAD only, not built |
 
-Plan whole-robot interface reviews and integration checks against sourced requirements. Record conflicts and evidence before declaring compatibility. Status: first full-robot CAD revision available ([v22](v22/README.md)); envelope and actuator counts checked in CAD only. No prototype, measured dimensions, or performance established.
+## How v22 was reached (summary)
+
+| Revision | Main change | Decision |
+| --- | --- | --- |
+| v15 | Intake with UR arm, turret launcher | — |
+| v16 | Basket behind the turret | rejected later |
+| v17 | Fixed launcher on the left, no turret; tower | DEC-M02 |
+| v18 | Elbow at the tower top; side-entry launcher | DEC-M04 |
+| v19 | Tower 3 balls wide; inverted launcher fed from the basket; CF rails | DEC-M03, M05, M08, M09 |
+| v20 | Feed roller 3:1; screws; low electronics tray | DEC-M06 |
+| v21 | Structural electronics box on the rails | DEC-M10, M11 |
+| v22 | Removable flag mast with C head; numbered parts and manual | DEC-M12, M13 |
+
+Full register: [DL-SYS-001](../../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md).

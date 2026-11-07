@@ -103,3 +103,15 @@ verify the physical robot.
 5. Fortress tilt test (T05-R5) and center-line practice (T05-R3, R4).
 
 Review [mechanical interfaces](../../02_system_architecture/mechanical_interfaces.md) and [mass budget](../../02_system_architecture/weight_power_budget.md). Log build changes and failed concepts using the [entry template](../../08_engineering_notebook/design_log/entry_template.md); link [subsystem tests](../../06_verification/subsystem_tests/README.md).
+
+## v22 status and decisions (2026-11-06)
+
+| Item | Value | Decision |
+| --- | --- | --- |
+| Wheel geometry | Front `y = +45`, rear `y = −203`, `x = ±221.2`, wheels 80 mm | DEC-M01 (front axle limited by the Central Resource Area lower shelf) |
+| Electronics | Structural CF box on the rear rails | DEC-M10 |
+| Mass / CG | 9.88 kg, CG `y ≈ −43`, `z ≈ 181` mm (CAD) | DEC-M09 |
+| Stability | Forward tip at 0.49 g (empty) / 0.41 g (gripper up + pin + balls); braking limited to 0.35 g in software | DEC-M11 |
+| Hardware docs | CAD, drawings, BOM, test plan | [mechanical/chassis](../../../mechanical/chassis/README.md) |
+
+Register: [DL-SYS-001](../../08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md).

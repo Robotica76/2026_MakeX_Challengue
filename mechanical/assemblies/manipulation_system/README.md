@@ -1,7 +1,12 @@
-# Manipulation System Assembly
+# Manipulation system assembly
 
-Investigate integration of [gripper](../../gripper/README.md) alternatives with [gripper elevation](../../gripper_elevation/README.md). Include [flag-system](../../flag_system/README.md) references only if verified needs justify that interface.
+Gripper elevator (5) + carriage and gripper (6) + flag mast (9, Modification Stage only).
 
-TBD: universal-versus-dedicated tool decision, constituent revisions, base/tool frames, attachment ownership, reach/clearance studies, cable motion, sensing, and command interlocks. Reference local subsystem CAD; do not duplicate it.
+| Interface | Geometry | Check |
+| --- | --- | --- |
+| Carriage on the elevator rail | Travel 358 mm (zc 28 → 386); 430 mm proposed for cones (KI-009) | CAD clash check at both ends |
+| Flag-mast receptor on the gripper mounting block | Receptor 6.17 at x 181.5, y −64; mast passes the lid notch, 3 mm from the AI camera | CAD clash check with the mast at both carriage positions |
+| Gripper reach | Jaw tip at x = +250 (footprint limit, KI-001) | CAD |
 
-Plan integrated acquisition, retention during motion, and placement studies for verified Pins, Cones, Letter Cubes, and Bonus Cubes. Integrate selected references through [full_robot](../full_robot/README.md). Status: scaffold only; no final tool or elevation architecture selected.
+Concept and element coverage: [manipulator design](../../../docs/03_design/manipulator/README.md). Flag mast
+position is an open decision (KI-008).

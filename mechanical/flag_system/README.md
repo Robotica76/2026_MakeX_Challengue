@@ -45,6 +45,14 @@ See [prototypes](prototypes/README.md).
 - Bar direction relative to the pin table is not dimensioned in the rules; the head can be rotated 90° in the receptor.
 - Band stiffness must let the pole slide out without dragging the flag off the bar.
 
+## Design decisions
+
+| ID | Decision |
+| --- | --- |
+| [DEC-M12](../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md) | Removable mast, C head + 2 rubber bands, on the gripper carriage |
+
+> **Open (KI-008):** in the simulated field the red cone post keeps the right-side rod of this mast ≥ 150 mm short of flagpole 2; the simulator and `hang_flag()` use a proposed rod on the left front. Decide the mast position before building it ([known issues](../../docs/05_integration/known_issues.md)).
+
 ## Documentation map
 
 | Folder | Content |

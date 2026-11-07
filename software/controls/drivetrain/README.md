@@ -55,3 +55,11 @@ Checked only in an offline Python simulation with mocked `novapi`/`mbuild`
 (ideal wheels, gyroscope bias, injected vibration): closed-loop moves and turns
 reach tolerance, S-curve has no overshoot, both `USE_SENSORS` modes produce the
 same field pose. **Not yet tested on the robot.**
+
+## Design decisions
+
+DEC-S01 (reuse 2025 code + odometry + adaptive S-curve), DEC-S02 (fronts as angles), DEC-S03 (v22
+geometry constants) in [DL-SYS-001](../../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md);
+full rationale in [DL-T05-001](../../../docs/08_engineering_notebook/design_log/DL-T05-001_chassis_motion_software.md).
+Note: the repository root holds an older copy, [`chassis.py`](../../../chassis.py) (2025 turn constant 47 cm / 90°);
+this folder's file is the maintained one.

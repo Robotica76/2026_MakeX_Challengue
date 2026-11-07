@@ -42,6 +42,12 @@ See [prototypes](prototypes/README.md).
 
 - Elevator top support is 1 mm from the Central Area roof edge when the robot face is against the table; trim 10–15 mm suggested.
 
+## Design decisions
+
+| ID | Decision |
+| --- | --- |
+| [DEC-M12](../../docs/08_engineering_notebook/design_log/DL-SYS-001_design_decisions.md) | Raises the flag mast after the Modification Stage; guide notch in the lid |
+
 ## Documentation map
 
 | Folder | Content |
