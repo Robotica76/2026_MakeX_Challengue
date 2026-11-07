@@ -1,45 +1,57 @@
 # Shooter
 
+> **Revision v22 (CAD only).** Parts 7.x (Shooter (inverted launcher)) of the [Storm Breaker v22 manual](../assemblies/full_robot/v22/docs/Ensamble_StormBreaker_v22.pdf). Not built or measured yet.
+
 ## Purpose
 
-Investigate a controlled ball-release mechanism for verified task needs.
+Fire balls toward −x into the top of the opponent's Mobile Fortress.
 
 ## Competition Capabilities
 
-Candidate: directed ball release. Targets, allowed launch behavior, and scoring conditions remain unverified.
+Ball scoring. Rule references are to the MakeX Challenge 2026 Storm Breaker rules used for the CAD (see [resources](../../resources/rules/README.md)); confirm against the official, current version.
 
 ## Requirements
 
-TBD: sourced target geometry and constraints, repeatability criteria, safe test conditions, and release readiness.
+Fixed launcher (no turret), all parts below z 543 (Central Area roof), brushless 2/2, servos 1/6.
 
 ## Mechanical Interfaces
 
-TBD: [feeder](../feeder/README.md) inlet, release reference frame, chassis mounts, and structural reactions.
+Fed by the [basket](../ball_storage/README.md); base on the left rail posts; left of the [tower](../feeder/README.md).
 
 ## Electrical Interfaces
 
-TBD: actuation, readiness feedback, power demands, routing, and protection with [electrical](../../electrical/README.md).
+2 brushless motors + 2 ESCs, 1 servo MS-12A.
 
 ## Software Interfaces
 
-TBD: readiness state, release request, feedback semantics, abort behavior, and feeder interlocks.
+Wheel-speed setpoint from a distance table; feed interlock.
 
 ## Design
 
-Compare release concepts using local [cad](cad/README.md), prototype evidence, and [simulation](../../simulation/README.md). No launch technology is selected.
+Wheel speed for a 30 g ball: 8.2–9.6 m/s at 1 m, 10.7–11.9 m/s at 2 m, 12.8–14.0 m/s at 3 m (44°).
 
 ## Current Status
 
-Architecture scaffold only; no shooter mechanism or performance validated.
+v22 CAD; simulated (2D contact + ballistics).
 
 ## Testing
 
-Plan controlled release characterization and integrated feeder trials after requirements and test safeguards are established.
+See [prototypes](prototypes/README.md).
 
 ## Known Issues
 
-TBD: target requirements, release concept, and operating limits remain unknown.
+- Ball mass not in the rules (30 g assumed); spin (Magnus) not modelled.
+- Brushless top speed on the D45 wheel unverified (needs ~14–15 m/s for 3 m).
+
+## Documentation map
+
+| Folder | Content |
+| --- | --- |
+| [cad](cad/README.md) | 18 numbered STL, robot frame |
+| [drawings](drawings/README.md) | Exploded, numbered sheets from the manual |
+| [manufacturing](manufacturing/README.md) | BOM with process / material, assembly steps, checks |
+| [prototypes](prototypes/README.md) | Simulation evidence and test plan |
 
 ## Related GitHub Issues
 
-TBD: link actual shooter trade-study and characterization issues when created.
+TBD: link actual design and validation issues when created.

@@ -1,45 +1,56 @@
 # Feeder
 
+> **Revision v22 (CAD only).** Parts 3.x (Ball tower (transfer to basket)) of the [Storm Breaker v22 manual](../assemblies/full_robot/v22/docs/Ensamble_StormBreaker_v22.pdf). Not built or measured yet.
+
 ## Purpose
 
-Investigate controlled ball transfer from storage to shooter.
+Lift balls from the intake and store them (≈ 15 when stopped), then pass them over the elbow into the basket in front of the tower.
 
 ## Competition Capabilities
 
-Candidate: repeatable ball delivery. Verify applicable handling constraints before choosing a transfer method.
+Ball transfer and storage. Rule references are to the MakeX Challenge 2026 Storm Breaker rules used for the CAD (see [resources](../../resources/rules/README.md)); confirm against the official, current version.
 
 ## Requirements
 
-TBD: delivery conditions, isolation needs, sequencing criteria, and jam recovery requirements.
+3 balls wide (227 mm internal), top at z = 430 so nothing violates the Central Resource Area roof (z 543 at y > −67).
 
 ## Mechanical Interfaces
 
-TBD: [storage](../ball_storage/README.md) outlet, [shooter](../shooter/README.md) inlet, and mounting references.
+Inlet from the [intake](../ball_intake/README.md); outlet into the [basket](../ball_storage/README.md); right plate on the elevator bulkhead ([gripper_elevation](../gripper_elevation/README.md)).
 
 ## Electrical Interfaces
 
-TBD: transfer actuation, presence detection, routing, and power allocation with [electrical](../../electrical/README.md).
+DC-37 (belts, 3:1 up) and DC-25 inside the elbow roller; S2 entry sensor (ranging sensor).
 
 ## Software Interfaces
 
-TBD: feed request/acknowledgment, shooter-ready interlock, occupancy transitions, and fault states.
+Runs with the intake; S2 counts balls in.
 
 ## Design
 
-Compare metering and transfer concepts; record alternatives in local [cad](cad/README.md) and [prototypes](prototypes/README.md). Integrate via [ball_system](../assemblies/ball_system/README.md).
+Tilted 15°, length 352 mm, belts at 0.94 m/s. Elbow roller r20 at 51 mm from the cover axis, cover R86. R2 core passes through a D34 clearance in both plates (fixed in v20).
 
 ## Current Status
 
-Architecture scaffold only; no feeder design or timing validated.
+v22 CAD; elbow and lift simulated in 2D.
 
 ## Testing
 
-Plan isolated and integrated transfer tests with synchronized observations and failure logs.
+See [prototypes](prototypes/README.md).
 
 ## Known Issues
 
-TBD: handoff geometry, timing, and readiness conditions are undefined.
+- The elbow motor could be removed with a transmission from the belts (frees a motor slot) but gears / belt clash with the launcher or the ball path; kept internal.
+
+## Documentation map
+
+| Folder | Content |
+| --- | --- |
+| [cad](cad/README.md) | 21 numbered STL, robot frame |
+| [drawings](drawings/README.md) | Exploded, numbered sheets from the manual |
+| [manufacturing](manufacturing/README.md) | BOM with process / material, assembly steps, checks |
+| [prototypes](prototypes/README.md) | Simulation evidence and test plan |
 
 ## Related GitHub Issues
 
-TBD: link actual feeder-interface and test issues when created.
+TBD: link actual design and validation issues when created.

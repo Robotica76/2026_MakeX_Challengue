@@ -1,45 +1,56 @@
 # Gripper Elevation
 
+> **Revision v22 (CAD only).** Parts 5.x (Gripper elevator and structure) of the [Storm Breaker v22 manual](../assemblies/full_robot/v22/docs/Ensamble_StormBreaker_v22.pdf). Not built or measured yet.
+
 ## Purpose
 
-Investigate positioning a selected manipulation tool relative to the robot.
+Raise and lower the gripper carriage 358 mm; also raises the flag mast after the Modification Stage.
 
 ## Competition Capabilities
 
-Candidate: controlled manipulator positioning. Required task poses and allowable motion need official verification.
+Manipulator positioning; flag hanging height. Rule references are to the MakeX Challenge 2026 Storm Breaker rules used for the CAD (see [resources](../../resources/rules/README.md)); confirm against the official, current version.
 
 ## Requirements
 
-TBD: sourced reach/envelope constraints, load cases, positional criteria, retention during motion, and recovery behavior.
+Initial height ≤ 700 mm (robot 642 mm).
 
 ## Mechanical Interfaces
 
-TBD: [gripper](../gripper/README.md) attachment, chassis mounts, pose datums, and travel-clearance boundaries.
+Carriage for the [gripper](../gripper/README.md); bulkhead shared with the [tower](../feeder/README.md); camera on the lid.
 
 ## Electrical Interfaces
 
-TBD: actuation, position/limit feedback, cable motion allowance, and power needs with [electrical](../../electrical/README.md).
+DC-37 50 RPM, AI camera 2.0.
 
 ## Software Interfaces
 
-TBD: pose requests, reference/homing semantics, feedback, travel limits, tool interlocks, and fault states.
+Position presets; flag sequence (raise, lower, strafe).
 
 ## Design
 
-Compare positioning architectures based on selected tool loads and verified tasks. Local [cad](cad/README.md) remains separate from [manipulation_system](../assemblies/manipulation_system/README.md) integration references.
+Belt drive with 90T pulleys; ribs at z 150 / 300 / 440.
 
 ## Current Status
 
-Architecture scaffold only; no lift architecture, travel, or actuator selected.
+v22 CAD.
 
 ## Testing
 
-Plan positional repeatability, load retention, clearance, and limit/recovery checks after requirements are established.
+See [prototypes](prototypes/README.md).
 
 ## Known Issues
 
-TBD: tool choice, task poses, load cases, and reference strategy are unknown.
+- Elevator top support is 1 mm from the Central Area roof edge when the robot face is against the table; trim 10–15 mm suggested.
+
+## Documentation map
+
+| Folder | Content |
+| --- | --- |
+| [cad](cad/README.md) | 26 numbered STL, robot frame |
+| [drawings](drawings/README.md) | Exploded, numbered sheets from the manual |
+| [manufacturing](manufacturing/README.md) | BOM with process / material, assembly steps, checks |
+| [prototypes](prototypes/README.md) | Simulation evidence and test plan |
 
 ## Related GitHub Issues
 
-TBD: link actual elevation trade-study and interface issues when created.
+TBD: link actual design and validation issues when created.

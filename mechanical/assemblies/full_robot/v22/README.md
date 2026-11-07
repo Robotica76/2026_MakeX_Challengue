@@ -15,6 +15,10 @@ is a check against the CAD model, not a verification of the physical robot.
 | [`cad/Robot_StormBreaker_v22_inicial_stl.zip`](cad/Robot_StormBreaker_v22_inicial_stl.zip) | Initial robot as one STL (tolerance 0.2 mm) | For quick viewing; use the STEP for engineering |
 | [`source/`](source/) | CadQuery scripts: `robot_v22.py` (model), `export_v22.py`, `clash_v22.py` (interference check), `plano_mastil_v22.py` (mast drawing) | **Not runnable from this repo:** they import `robot_v21`, `r19`, `r20`, which were not provided, and use absolute paths (`/home/claude`) |
 | [`renders/`](renders/) | Isometric, right side, and top views, with the carriage down (`mastil_bajo`) and up | |
+| [`docs/Ensamble_StormBreaker_v22.pdf`](docs/Ensamble_StormBreaker_v22.pdf) | Assembly manual (18 A3 sheets): cover, general exploded view, one numbered exploded sheet per subsystem, 10-step assembly sequence, full parts list | Added 2026-11-06 |
+| [`docs/vista_explosionada_v22.png`](docs/vista_explosionada_v22.png) | General exploded view with subsystem balloons | |
+| [`analysis/`](analysis/) | Real CAD sections and fit views against the Central Resource Area table (lower and upper shelf) | Generated with v19 geometry of the intake/tower, unchanged in v22 |
+| Numbered STL per part | 211 files `<subsystem>.<part>_<name>.stl` in each subsystem's `cad/v22` (see [part numbering](#part-numbering)) | Robot frame, assembled position |
 | [Flag mast STL](../../../flag_system/cad/README.md#v22--removable-flag-mast) | Printable mast parts, kept in the flag subsystem | |
 
 ## Frame and units
@@ -102,3 +106,28 @@ The STEP files were converted to GLB with `cascadio` (Open CASCADE, linear
 tolerance 0.5 mm) and measured per part with `trimesh`. Bounding boxes come from the
 tessellated meshes, so values carry up to about 0.5 mm of tessellation error. The
 CadQuery scripts were read but not run.
+
+## Part numbering
+
+Parts are numbered `<subsystem>.<part>` (part 1 = largest by volume inside its subsystem). The same number is used in the
+[assembly manual](docs/Ensamble_StormBreaker_v22.pdf), in the per-part STL names, and in each subsystem's manufacturing BOM.
+Hardware (`HW_`) is not shown in the exploded sheets.
+
+| No. | Subsystem | Folder (STL in `cad/v22`) |
+| --- | --- | --- |
+| 1 | Chassis and drive | [chassis](../../../chassis/cad/README.md) |
+| 2 | Electronics box | [chassis](../../../chassis/cad/README.md) |
+| 3 | Ball tower | [feeder](../../../feeder/cad/README.md) |
+| 4 | Ball intake and UR arm | [ball_intake](../../../ball_intake/cad/README.md) |
+| 5 | Gripper elevator and structure | [gripper_elevation](../../../gripper_elevation/cad/README.md) |
+| 6 | Carriage and gripper (incl. flag-mast receptor 6.17) | [gripper](../../../gripper/cad/README.md) |
+| 7 | Shooter | [shooter](../../../shooter/cad/README.md) |
+| 8 | Basket and feed roller | [ball_storage](../../../ball_storage/cad/README.md) |
+| 9 | Flag mast | [flag_system](../../../flag_system/cad/README.md) |
+| 10 | Hardware | [common_parts](../../../common_parts/cad/README.md) |
+
+Mass from the CadQuery model (densities per material, electronics by datasheet estimate): 9.88 kg robot, 9.92 kg with the
+flag mast, plus ≈ 0.08 kg of screws not modelled. Scripts that produced the manual and the numbered STL:
+`source/explosionada_v22.py`, `source/pdf_ensamble_v22.py`, `source/stl_numerados_v22.py`; documentation generator:
+`source/gen_docs.py` + `source/info.py` (same `/home/claude` path caveat as the other scripts).
+

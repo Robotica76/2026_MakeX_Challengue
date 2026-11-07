@@ -1,45 +1,57 @@
 # Ball Storage
 
+> **Revision v22 (CAD only).** Parts 8.x (Basket and feed roller) of the [Storm Breaker v22 manual](../assemblies/full_robot/v22/docs/Ensamble_StormBreaker_v22.pdf). Not built or measured yet.
+
 ## Purpose
 
-Investigate retaining and organizing balls between acquisition and feeding.
+Hold 6–8 balls next to the launcher and release them one at a time.
 
 ## Competition Capabilities
 
-Candidate: controlled ball retention. Permitted possession and handling constraints require official verification.
+Ball storage between collection and shooting. Rule references are to the MakeX Challenge 2026 Storm Breaker rules used for the CAD (see [resources](../../resources/rules/README.md)); confirm against the official, current version.
 
 ## Requirements
 
-TBD: sourced capacity constraints, retention conditions, occupancy observability, and service needs.
+Release only when the launcher is at speed (software interlock); no gate.
 
 ## Mechanical Interfaces
 
-TBD: [intake](../ball_intake/README.md) entry, [feeder](../feeder/README.md) exit, and chassis mounts.
+Receives from the elbow of the [tower](../feeder/README.md); feeds the [shooter](../shooter/README.md) at the launcher mouth (`x −163`, `y 4`, `z 389`).
 
 ## Electrical Interfaces
 
-TBD: occupancy sensing and any actuation, routing, and power needs with [electrical](../../electrical/README.md).
+DC-25 feed motor (3:1).
 
 ## Software Interfaces
 
-TBD: occupancy representation, transfer requests, full/empty semantics, and recovery interlocks.
+Roller runs only with the brushless motors at speed.
 
 ## Design
 
-Compare passive and active organization concepts without assuming either. Keep local models in [cad](cad/README.md); reference them through [ball_system](../assemblies/ball_system/README.md).
+At 200 RPM direct (0.31 m/s) a waiting ball does not climb into the wheel (simulation), hence the 3:1 gear-up added in v20.
 
 ## Current Status
 
-Architecture scaffold only; no capacity or mechanism selected.
+v22 CAD; feed simulated in 2D.
 
 ## Testing
 
-Plan retention, occupancy-estimation, and handoff trials after defining sourced constraints.
+See [prototypes](prototypes/README.md).
 
 ## Known Issues
 
-TBD: capacity, element properties, and transfer coordination remain unresolved.
+- Two balls entering together not simulated.
+- The 16T stands ~3 mm above the floor near the lane edge.
+
+## Documentation map
+
+| Folder | Content |
+| --- | --- |
+| [cad](cad/README.md) | 9 numbered STL, robot frame |
+| [drawings](drawings/README.md) | Exploded, numbered sheets from the manual |
+| [manufacturing](manufacturing/README.md) | BOM with process / material, assembly steps, checks |
+| [prototypes](prototypes/README.md) | Simulation evidence and test plan |
 
 ## Related GitHub Issues
 
-TBD: link actual storage requirements and validation issues when created.
+TBD: link actual design and validation issues when created.
