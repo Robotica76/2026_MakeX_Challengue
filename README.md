@@ -1,4 +1,4 @@
-# 2026 MakeX Challenge — Storm Breaker (Robótica 76)
+# 2026 MakeX Challenge — Storm Breaker
 
 Collaborative engineering repository of team **Robótica 76** for the 2026 MakeX Challenge
 **Storm Breaker**: robot design (CAD v22), robot programs, a field simulator, strategy studies,
