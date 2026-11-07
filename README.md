@@ -36,7 +36,7 @@ Envelope 499.5 × 499.0 × 642 mm · mass 9.88 kg (limit 10 kg) · motors 13/13,
 | [tests](tests/README.md) | Test levels, automated simulator tests, reports (none physical yet) | — |
 | [tools](tools/README.md) | Bundler and block converter for mBlock, STEP → GLB, mass estimate, calibration procedures | [scripts](tools/scripts/README.md) |
 | [resources](resources/README.md) | Rules Guide V1.1, kit tutorial, element data | [rules](resources/rules/README.md) |
-| [.github](.github/README.md) | Issue forms and PR template | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| [.github](.github/COLLABORATION.md) | Issue forms and PR template | [CONTRIBUTING.md](CONTRIBUTING.md) |
 
 ## Code
 
