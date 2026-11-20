@@ -1,0 +1,1160 @@
+{
+ "issues": [
+  {
+   "assignees": [],
+   "closedAt": null,
+   "createdAt": "2026-10-19T04:46:17Z",
+   "labels": [],
+   "number": 25,
+   "state": "OPEN",
+   "title": "T24 · Engineering notebook",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/issues/25"
+  },
+  {
+   "assignees": [],
+   "closedAt": null,
+   "createdAt": "2026-10-19T04:45:54Z",
+   "labels": [],
+   "number": 24,
+   "state": "OPEN",
+   "title": "T23 · Full match practice and driving",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/issues/24"
+  },
+  {
+   "assignees": [],
+   "closedAt": null,
+   "createdAt": "2026-10-19T04:45:30Z",
+   "labels": [],
+   "number": 23,
+   "state": "OPEN",
+   "title": "T22 · Modification Stage plan (60 s)",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/issues/23"
+  },
+  {
+   "assignees": [
+    {
+     "id": "U_kgDOCfPiXg",
+     "login": "NestiHC",
+     "name": "Nestor Castellanos",
+     "databaseId": 166978142
+    },
+    {
+     "id": "U_kgDOCh4RIA",
+     "login": "Calebssg",
+     "name": "Caleb",
+     "databaseId": 169742624
+    },
+    {
+     "id": "U_kgDOCqMVVg",
+     "login": "Rodrigo-code10",
+     "name": "Rodrigo Rolando García Santiago",
+     "databaseId": 178459990
+    },
+    {
+     "id": "U_kgDOCuBNAQ",
+     "login": "Yah0ff",
+     "name": "Yahir Fernando García García",
+     "databaseId": 182471937
+    }
+   ],
+   "closedAt": null,
+   "createdAt": "2026-10-19T04:45:00Z",
+   "labels": [],
+   "number": 22,
+   "state": "OPEN",
+   "title": "T18 · Vision: bonus cube detection (Bonus Battle)",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/issues/22"
+  },
+  {
+   "assignees": [],
+   "closedAt": null,
+   "createdAt": "2026-10-19T04:44:36Z",
+   "labels": [],
+   "number": 21,
+   "state": "OPEN",
+   "title": "T17 · Electronics, battery and power management module",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/issues/21"
+  },
+  {
+   "assignees": [],
+   "closedAt": null,
+   "createdAt": "2026-10-19T04:44:07Z",
+   "labels": [],
+   "number": 20,
+   "state": "OPEN",
+   "title": "T16 · Flag hanging mechanism",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/issues/20"
+  },
+  {
+   "assignees": [],
+   "closedAt": null,
+   "createdAt": "2026-10-19T04:43:45Z",
+   "labels": [],
+   "number": 19,
+   "state": "OPEN",
+   "title": "T15 · Make the team flag",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/issues/19"
+  },
+  {
+   "assignees": [],
+   "closedAt": null,
+   "createdAt": "2026-10-19T04:43:22Z",
+   "labels": [],
+   "number": 18,
+   "state": "OPEN",
+   "title": "T14 · Cone Transfer",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/issues/18"
+  },
+  {
+   "assignees": [],
+   "closedAt": null,
+   "createdAt": "2026-10-19T04:42:54Z",
+   "labels": [],
+   "number": 17,
+   "state": "OPEN",
+   "title": "T13 · Pin Transfer",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/issues/17"
+  },
+  {
+   "assignees": [],
+   "closedAt": null,
+   "createdAt": "2026-10-19T04:42:31Z",
+   "labels": [],
+   "number": 16,
+   "state": "OPEN",
+   "title": "T12 · Letter Cube Transfer and MAKEX Challenge",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/issues/16"
+  },
+  {
+   "assignees": [
+    {
+     "id": "U_kgDOCh4RIA",
+     "login": "Calebssg",
+     "name": "Caleb",
+     "databaseId": 169742624
+    },
+    {
+     "id": "U_kgDOCqMVVg",
+     "login": "Rodrigo-code10",
+     "name": "Rodrigo Rolando García Santiago",
+     "databaseId": 178459990
+    },
+    {
+     "id": "U_kgDOEBgknA",
+     "login": "elielgomez96-lang",
+     "name": "ELIELGF",
+     "databaseId": 270017692
+    },
+    {
+     "id": "U_kgDOFJrB4A",
+     "login": "Ame170570",
+     "name": "",
+     "databaseId": 345686496
+    }
+   ],
+   "closedAt": null,
+   "createdAt": "2026-10-19T04:42:00Z",
+   "labels": [],
+   "number": 15,
+   "state": "OPEN",
+   "title": "T09 · X Clash: turn the X mark",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/issues/15"
+  },
+  {
+   "assignees": [],
+   "closedAt": null,
+   "createdAt": "2026-10-19T04:41:34Z",
+   "labels": [],
+   "number": 14,
+   "state": "OPEN",
+   "title": "T04 · Scoring strategy by stage",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/issues/14"
+  },
+  {
+   "assignees": [],
+   "closedAt": null,
+   "createdAt": "2026-10-19T04:41:09Z",
+   "labels": [],
+   "number": 13,
+   "state": "OPEN",
+   "title": "T03 · Field measurements and practice mock-ups",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/issues/13"
+  },
+  {
+   "assignees": [],
+   "closedAt": null,
+   "createdAt": "2026-10-19T04:40:37Z",
+   "labels": [],
+   "number": 12,
+   "state": "OPEN",
+   "title": "T02 · Weight, motor and servo budget",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/issues/12"
+  },
+  {
+   "assignees": [
+    {
+     "id": "U_kgDOCh4RIA",
+     "login": "Calebssg",
+     "name": "Caleb",
+     "databaseId": 169742624
+    },
+    {
+     "id": "U_kgDOCqMVVg",
+     "login": "Rodrigo-code10",
+     "name": "Rodrigo Rolando García Santiago",
+     "databaseId": 178459990
+    },
+    {
+     "id": "U_kgDOCuBNAQ",
+     "login": "Yah0ff",
+     "name": "Yahir Fernando García García",
+     "databaseId": 182471937
+    },
+    {
+     "id": "U_kgDOEBgknA",
+     "login": "elielgomez96-lang",
+     "name": "ELIELGF",
+     "databaseId": 270017692
+    },
+    {
+     "id": "U_kgDOFJrB4A",
+     "login": "Ame170570",
+     "name": "",
+     "databaseId": 345686496
+    }
+   ],
+   "closedAt": "2026-11-09T09:25:06Z",
+   "createdAt": "2026-10-19T04:39:55Z",
+   "labels": [],
+   "number": 11,
+   "state": "CLOSED",
+   "title": "T01 · Rules compliance matrix and robot self-inspection",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/issues/11"
+  },
+  {
+   "assignees": [
+    {
+     "id": "MDQ6VXNlcjU3NDI5MjM3",
+     "login": "jcontrolresearch",
+     "name": "Julio Cesar Martinez Ramirez",
+     "databaseId": 57429237
+    },
+    {
+     "id": "U_kgDOCfPiXg",
+     "login": "NestiHC",
+     "name": "Nestor Castellanos",
+     "databaseId": 166978142
+    }
+   ],
+   "closedAt": null,
+   "createdAt": "2026-10-13T18:47:19Z",
+   "labels": [],
+   "number": 9,
+   "state": "OPEN",
+   "title": "T20 · Manual control and controller mapping",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/issues/9"
+  },
+  {
+   "assignees": [
+    {
+     "id": "MDQ6VXNlcjU3NDI5MjM3",
+     "login": "jcontrolresearch",
+     "name": "Julio Cesar Martinez Ramirez",
+     "databaseId": 57429237
+    },
+    {
+     "id": "U_kgDOCqMVVg",
+     "login": "Rodrigo-code10",
+     "name": "Rodrigo Rolando García Santiago",
+     "databaseId": 178459990
+    }
+   ],
+   "closedAt": null,
+   "createdAt": "2026-10-13T18:46:58Z",
+   "labels": [],
+   "number": 8,
+   "state": "OPEN",
+   "title": "T19 · 30-second autonomous program",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/issues/8"
+  },
+  {
+   "assignees": [
+    {
+     "id": "MDQ6VXNlcjU3NDI5MjM3",
+     "login": "jcontrolresearch",
+     "name": "Julio Cesar Martinez Ramirez",
+     "databaseId": 57429237
+    },
+    {
+     "id": "U_kgDOCqMVVg",
+     "login": "Rodrigo-code10",
+     "name": "Rodrigo Rolando García Santiago",
+     "databaseId": 178459990
+    }
+   ],
+   "closedAt": null,
+   "createdAt": "2026-10-13T18:46:46Z",
+   "labels": [],
+   "number": 7,
+   "state": "OPEN",
+   "title": "T21 · Arbitration state machine",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/issues/7"
+  },
+  {
+   "assignees": [
+    {
+     "id": "MDQ6VXNlcjU3NDI5MjM3",
+     "login": "jcontrolresearch",
+     "name": "Julio Cesar Martinez Ramirez",
+     "databaseId": 57429237
+    },
+    {
+     "id": "U_kgDOBwqqLQ",
+     "login": "luar0912",
+     "name": "RaulJR-mecatronics",
+     "databaseId": 118139437
+    },
+    {
+     "id": "U_kgDOEBgknA",
+     "login": "elielgomez96-lang",
+     "name": "ELIELGF",
+     "databaseId": 270017692
+    },
+    {
+     "id": "U_kgDOE1i3Gg",
+     "login": "ximen3122-arch",
+     "name": "",
+     "databaseId": 324581146
+    },
+    {
+     "id": "U_kgDOFJrB4A",
+     "login": "Ame170570",
+     "name": "",
+     "databaseId": 345686496
+    }
+   ],
+   "closedAt": null,
+   "createdAt": "2026-10-13T18:46:11Z",
+   "labels": [],
+   "number": 6,
+   "state": "OPEN",
+   "title": "T05 · Carry over movement robot system",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/issues/6"
+  },
+  {
+   "assignees": [],
+   "closedAt": null,
+   "createdAt": "2026-10-13T18:45:47Z",
+   "labels": [],
+   "number": 5,
+   "state": "OPEN",
+   "title": "T10 · Gripper system",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/issues/5"
+  },
+  {
+   "assignees": [],
+   "closedAt": null,
+   "createdAt": "2026-10-13T18:45:32Z",
+   "labels": [],
+   "number": 4,
+   "state": "OPEN",
+   "title": "T11 · Gripper Elevation System",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/issues/4"
+  },
+  {
+   "assignees": [
+    {
+     "id": "U_kgDOCh4RIA",
+     "login": "Calebssg",
+     "name": "Caleb",
+     "databaseId": 169742624
+    },
+    {
+     "id": "U_kgDOCqMVVg",
+     "login": "Rodrigo-code10",
+     "name": "Rodrigo Rolando García Santiago",
+     "databaseId": 178459990
+    },
+    {
+     "id": "U_kgDOEBgknA",
+     "login": "elielgomez96-lang",
+     "name": "ELIELGF",
+     "databaseId": 270017692
+    },
+    {
+     "id": "U_kgDOFJrB4A",
+     "login": "Ame170570",
+     "name": "",
+     "databaseId": 345686496
+    }
+   ],
+   "closedAt": null,
+   "createdAt": "2026-10-13T18:44:01Z",
+   "labels": [],
+   "number": 3,
+   "state": "OPEN",
+   "title": "T08 · Ball launch system",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/issues/3"
+  },
+  {
+   "assignees": [
+    {
+     "id": "U_kgDOCh4RIA",
+     "login": "Calebssg",
+     "name": "Caleb",
+     "databaseId": 169742624
+    },
+    {
+     "id": "U_kgDOCqMVVg",
+     "login": "Rodrigo-code10",
+     "name": "Rodrigo Rolando García Santiago",
+     "databaseId": 178459990
+    },
+    {
+     "id": "U_kgDOEBgknA",
+     "login": "elielgomez96-lang",
+     "name": "ELIELGF",
+     "databaseId": 270017692
+    },
+    {
+     "id": "U_kgDOFJrB4A",
+     "login": "Ame170570",
+     "name": "",
+     "databaseId": 345686496
+    }
+   ],
+   "closedAt": null,
+   "createdAt": "2026-10-13T18:43:47Z",
+   "labels": [],
+   "number": 2,
+   "state": "OPEN",
+   "title": "T07 · Ball intake system",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/issues/2"
+  },
+  {
+   "assignees": [
+    {
+     "id": "U_kgDOCh4RIA",
+     "login": "Calebssg",
+     "name": "Caleb",
+     "databaseId": 169742624
+    },
+    {
+     "id": "U_kgDOCqMVVg",
+     "login": "Rodrigo-code10",
+     "name": "Rodrigo Rolando García Santiago",
+     "databaseId": 178459990
+    },
+    {
+     "id": "U_kgDOEBgknA",
+     "login": "elielgomez96-lang",
+     "name": "ELIELGF",
+     "databaseId": 270017692
+    },
+    {
+     "id": "U_kgDOFJrB4A",
+     "login": "Ame170570",
+     "name": "",
+     "databaseId": 345686496
+    }
+   ],
+   "closedAt": null,
+   "createdAt": "2026-10-13T18:43:31Z",
+   "labels": [],
+   "number": 1,
+   "state": "OPEN",
+   "title": "T06 · Ball recollection system",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/issues/1"
+  }
+ ],
+ "prs": [
+  {
+   "author": {
+    "id": "U_kgDOCqMVVg",
+    "is_bot": false,
+    "login": "Rodrigo-code10",
+    "name": "Rodrigo Rolando García Santiago"
+   },
+   "createdAt": "2026-11-18T04:59:42Z",
+   "headRefName": "t19-30-second-autonomous-program",
+   "mergedAt": null,
+   "number": 31,
+   "state": "OPEN",
+   "title": "T19 30 second autonomous program",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/pull/31"
+  },
+  {
+   "author": {
+    "id": "U_kgDOCuBNAQ",
+    "is_bot": false,
+    "login": "Yah0ff",
+    "name": "Yahir Fernando García García"
+   },
+   "createdAt": "2026-11-09T09:24:48Z",
+   "headRefName": "t01-rules-compliance-matrix-and-robot-self-inspection",
+   "mergedAt": "2026-11-09T09:25:04Z",
+   "number": 30,
+   "state": "MERGED",
+   "title": "Competition Requirements and self inspection md",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/pull/30"
+  },
+  {
+   "author": {
+    "id": "U_kgDOCuBNAQ",
+    "is_bot": false,
+    "login": "Yah0ff",
+    "name": "Yahir Fernando García García"
+   },
+   "createdAt": "2026-10-25T10:03:04Z",
+   "headRefName": "t18-vision-bonus-cube-detection-bonus-battle",
+   "mergedAt": "2026-10-25T10:03:23Z",
+   "number": 29,
+   "state": "MERGED",
+   "title": "T18 vision bonus cube detection bonus battle",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/pull/29"
+  },
+  {
+   "author": {
+    "id": "MDQ6VXNlcjU3NDI5MjM3",
+    "is_bot": false,
+    "login": "jcontrolresearch",
+    "name": "Julio Cesar Martinez Ramirez"
+   },
+   "createdAt": "2026-10-24T05:02:31Z",
+   "headRefName": "feature/sim-chassis-control",
+   "mergedAt": "2026-10-24T05:02:44Z",
+   "number": 28,
+   "state": "MERGED",
+   "title": "Feature/sim chassis control",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/pull/28"
+  },
+  {
+   "author": {
+    "id": "MDQ6VXNlcjU3NDI5MjM3",
+    "is_bot": false,
+    "login": "jcontrolresearch",
+    "name": "Julio Cesar Martinez Ramirez"
+   },
+   "createdAt": "2026-10-24T04:18:32Z",
+   "headRefName": "feature/sim-chassis-control",
+   "mergedAt": "2026-10-24T04:18:44Z",
+   "number": 27,
+   "state": "MERGED",
+   "title": "Feature/sim chassis control",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/pull/27"
+  },
+  {
+   "author": {
+    "id": "MDQ6VXNlcjU3NDI5MjM3",
+    "is_bot": false,
+    "login": "jcontrolresearch",
+    "name": "Julio Cesar Martinez Ramirez"
+   },
+   "createdAt": "2026-10-19T05:25:34Z",
+   "headRefName": "feature/sim-2d-field-layout",
+   "mergedAt": "2026-10-23T00:31:31Z",
+   "number": 26,
+   "state": "MERGED",
+   "title": "Feature/sim 2d field layout",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/pull/26"
+  },
+  {
+   "author": {
+    "is_bot": true,
+    "login": "app/copilot-swe-agent"
+   },
+   "createdAt": "2026-10-13T20:58:21Z",
+   "headRefName": "copilot/setup-repository-architecture",
+   "mergedAt": "2026-10-13T21:10:21Z",
+   "number": 10,
+   "state": "MERGED",
+   "title": "Establish 2026 MakeX Storm Breaker engineering repository architecture",
+   "url": "https://github.com/Robotica76/2026_MakeX_Challengue/pull/10"
+  }
+ ],
+ "commits": [
+  {
+   "date": "2026-11-09T09:25:04Z",
+   "login": "Yah0ff",
+   "msg": "Merge pull request #30 from Robotica76/t01-rules-compliance-matrix-and-robot-self-inspection",
+   "name": "Yahir Fernando García García",
+   "sha": "808eb7f"
+  },
+  {
+   "date": "2026-11-09T09:23:08Z",
+   "login": "Yah0ff",
+   "msg": "Competition Requirements and self inspection md",
+   "name": "Yahir Fernando García García",
+   "sha": "58fc4cd"
+  },
+  {
+   "date": "2026-11-07T05:09:39Z",
+   "login": "jcontrolresearch",
+   "msg": "Update project title in README.md",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "ecb2b0e"
+  },
+  {
+   "date": "2026-11-07T05:05:17Z",
+   "login": "jcontrolresearch",
+   "msg": "Fixed REDME pointer",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "27661e5"
+  },
+  {
+   "date": "2026-11-07T05:01:29Z",
+   "login": "jcontrolresearch",
+   "msg": "Merge branch 'main' of https://github.com/Robotica76/2026_MakeX_Challengue",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "6bea7af"
+  },
+  {
+   "date": "2026-11-07T04:59:19Z",
+   "login": "jcontrolresearch",
+   "msg": "Documentation update",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "fb035b1"
+  },
+  {
+   "date": "2026-11-07T04:25:32Z",
+   "login": "jcontrolresearch",
+   "msg": "Update STL per subsystem",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "b36b966"
+  },
+  {
+   "date": "2026-11-07T01:25:14Z",
+   "login": "jcontrolresearch",
+   "msg": "Monte carlo simulations",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "6ce32e3"
+  },
+  {
+   "date": "2026-11-07T01:24:33Z",
+   "login": "jcontrolresearch",
+   "msg": "Simulation reports: timelapses, reinforcement learning seeds, strategy figures",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "b9e93f7"
+  },
+  {
+   "date": "2026-11-06T14:17:21Z",
+   "login": "jcontrolresearch",
+   "msg": "Animation of the reinforcement learning with a Monte Carlo per snapshot",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "b3ff77c"
+  },
+  {
+   "date": "2026-11-06T14:15:03Z",
+   "login": "jcontrolresearch",
+   "msg": "Figure: most efficient plan and best match of the 4-robot Monte Carlo",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "07da66f"
+  },
+  {
+   "date": "2026-11-06T07:21:56Z",
+   "login": "jcontrolresearch",
+   "msg": "Robots off the field in the modification stage; fortress push speed capped; extended 4-robot Monte Carlo results",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "57a366b"
+  },
+  {
+   "date": "2026-11-06T04:04:35Z",
+   "login": "jcontrolresearch",
+   "msg": "Pin module: claws in the free front of the square (simulate_driver.py N pins), launcher knock-off study",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "a17046f"
+  },
+  {
+   "date": "2026-11-06T04:04:35Z",
+   "login": "jcontrolresearch",
+   "msg": "Monte Carlo: props jitter after run() (it was discarded), seeded sampled robots in 4-robot matches, mc_four.py",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "c3a0ffa"
+  },
+  {
+   "date": "2026-11-06T03:43:10Z",
+   "login": "jcontrolresearch",
+   "msg": "pin_reach.py: footprint and slim-tool reach to the pins on the resource-area shelves",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "5f47ce5"
+  },
+  {
+   "date": "2026-11-05T14:46:00Z",
+   "login": "jcontrolresearch",
+   "msg": "timelapse.py: print the twin's driver log too",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "af83aa0"
+  },
+  {
+   "date": "2026-11-05T14:45:53Z",
+   "login": "jcontrolresearch",
+   "msg": "Four-robot 2 vs 2 match in the detailed simulator; UCB bandit on it; report",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "fecd90d"
+  },
+  {
+   "date": "2026-11-05T13:41:47Z",
+   "login": "jcontrolresearch",
+   "msg": "Summary figure of the strategy simulations",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "1cdf5b1"
+  },
+  {
+   "date": "2026-11-05T06:59:53Z",
+   "login": "jcontrolresearch",
+   "msg": "2 vs 2 strategy game, self-play reinforcement learning and Monte Carlo; fortress evasion in the driver (EVADE_MM, two_robots --red-evade)",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "ae386b2"
+  },
+  {
+   "date": "2026-11-05T06:33:34Z",
+   "login": "jcontrolresearch",
+   "msg": "timelapse.py: offscreen 3D timelapse of a whole match (our robot + optional blue twin) as an animated GIF",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "f43950c"
+  },
+  {
+   "date": "2026-11-05T05:55:41Z",
+   "login": "jcontrolresearch",
+   "msg": "3D viewer: the X mark turns on its pivot when a hit changes it, coloured for the alliance it faces",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "3ac0aa6"
+  },
+  {
+   "date": "2026-11-05T05:52:50Z",
+   "login": "jcontrolresearch",
+   "msg": "Driver stream: only our own cone posts count as hung (the twin's cones were counted)",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "b960247"
+  },
+  {
+   "date": "2026-11-05T05:46:52Z",
+   "login": "jcontrolresearch",
+   "msg": "storm_breaker_2026: global lines in declaration order (block round trip); .mblock regenerated",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "f687ab2"
+  },
+  {
+   "date": "2026-11-05T05:44:48Z",
+   "login": "jcontrolresearch",
+   "msg": "Driver keeps 2 balls for the X mark and fires them at 276.8 s (last hit wins); one X mark shared by both robots",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "47c945a"
+  },
+  {
+   "date": "2026-11-05T05:30:12Z",
+   "login": "jcontrolresearch",
+   "msg": "3D viewer: --twin ORDER adds the blue twin robot (same program and driver) on the same field",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "9cd1e68"
+  },
+  {
+   "date": "2026-11-05T05:18:28Z",
+   "login": "jcontrolresearch",
+   "msg": "Route Monte Carlo over every automatic mission order; two identical robots",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "795c372"
+  },
+  {
+   "date": "2026-11-05T04:43:21Z",
+   "login": "jcontrolresearch",
+   "msg": "Mobile fortress on casters; letter cubes K and E into the channels (+60)",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "3f7fb45"
+  },
+  {
+   "date": "2026-11-04T04:18:53Z",
+   "login": "jcontrolresearch",
+   "msg": "Hang both lower cones on our cone post in the manual stage (+40)",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "d4f1d44"
+  },
+  {
+   "date": "2026-11-03T04:05:35Z",
+   "login": "jcontrolresearch",
+   "msg": "Simulate the MAKEX Challenge bonus and R26; letter cube reach analysis",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "cfb339f"
+  },
+  {
+   "date": "2026-11-03T03:51:32Z",
+   "login": "jcontrolresearch",
+   "msg": "Simulate pins and the X mark; N3 aims at the X; the driver wins it back if flipped",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "e490575"
+  },
+  {
+   "date": "2026-11-01T04:21:56Z",
+   "login": "jcontrolresearch",
+   "msg": "Viewer: explicit 60 fps cap (it spun at ~2000 fps after the match ended)",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "85fd6e7"
+  },
+  {
+   "date": "2026-11-01T03:53:00Z",
+   "login": "jcontrolresearch",
+   "msg": "3D viewer scoreboard: total, breakdown, penalties and a flash of each change",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "1306be6"
+  },
+  {
+   "date": "2026-11-01T03:44:51Z",
+   "login": "jcontrolresearch",
+   "msg": "Viewer keeps the match clock at real time",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "fea71de"
+  },
+  {
+   "date": "2026-11-01T03:41:03Z",
+   "login": "jcontrolresearch",
+   "msg": "Automatic stage pulls the X9 and the second cone onto our side again, park west",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "cb32f6f"
+  },
+  {
+   "date": "2026-11-01T03:36:57Z",
+   "login": "jcontrolresearch",
+   "msg": "Viewer speed meter in the terminal; broad phase for prop pushing (2.1x -> 2.8x offscreen)",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "fface80"
+  },
+  {
+   "date": "2026-11-01T03:31:34Z",
+   "login": "jcontrolresearch",
+   "msg": "Faster scripted driver: predicted pose, close-and-still exit, head moving while driving",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "b101972"
+  },
+  {
+   "date": "2026-11-01T03:20:20Z",
+   "login": "jcontrolresearch",
+   "msg": "Robot pushes cubes and cones; smooth scripted driver; X12-only plan after the physics check",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "164fb9f"
+  },
+  {
+   "date": "2026-11-01T02:58:23Z",
+   "login": "jcontrolresearch",
+   "msg": "Scripted gamepad driver for the 3D viewer; R2 aim-and-shoot assist; head tracked in manual",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "35afe99"
+  },
+  {
+   "date": "2026-10-31T19:12:12Z",
+   "login": "jcontrolresearch",
+   "msg": "Blocks: mBlock's real opcodes for encoder angle, reset timer and brushless motors; figures",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "9a546bb"
+  },
+  {
+   "date": "2026-10-31T18:56:36Z",
+   "login": "jcontrolresearch",
+   "msg": "Competition program as blocks and Python, profiled chassis control, Monte Carlo strategy",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "1f9bdf1"
+  },
+  {
+   "date": "2026-10-31T18:20:52Z",
+   "login": "jcontrolresearch",
+   "msg": "Two robots per alliance: play our half only; modification stage and the team flag",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "c66aef7"
+  },
+  {
+   "date": "2026-10-31T17:57:21Z",
+   "login": "jcontrolresearch",
+   "msg": "Winning strategy over the whole match: X12 bonus in the automatic stage, ball cycles in manual",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "db09318"
+  },
+  {
+   "date": "2026-10-31T17:35:00Z",
+   "login": "jcontrolresearch",
+   "msg": "Load mBlock programs in the simulator; 2026 competition program on the chassis dynamics",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "7766423"
+  },
+  {
+   "date": "2026-10-31T17:17:00Z",
+   "login": "jcontrolresearch",
+   "msg": "Pull the lower strategy-area cones and cubes to our side in the automatic stage",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "b79f11a"
+  },
+  {
+   "date": "2026-10-31T17:06:32Z",
+   "login": "jcontrolresearch",
+   "msg": "Pull the central balls to our side in the automatic stage; collision check and route search",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "661382f"
+  },
+  {
+   "date": "2026-10-31T05:20:22Z",
+   "login": "jcontrolresearch",
+   "msg": "Simulate props and the gripper; automatic stage takes the X12 bonus cube",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "6c0f0b6"
+  },
+  {
+   "date": "2026-10-31T05:10:41Z",
+   "login": "jcontrolresearch",
+   "msg": "Add the match clock, rule monitors and the automatic-stage routine",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "a413a76"
+  },
+  {
+   "date": "2026-10-31T04:54:20Z",
+   "login": "jcontrolresearch",
+   "msg": "Add ball dynamics, the full ball path, and wheel / inertia vectors",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "2fd28fb"
+  },
+  {
+   "date": "2026-10-31T04:36:35Z",
+   "login": "jcontrolresearch",
+   "msg": "Let the intake reach follow its head; test it on the central shelf",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "a84a9a7"
+  },
+  {
+   "date": "2026-10-31T04:25:49Z",
+   "login": "jcontrolresearch",
+   "msg": "Animate the intake head, rollers and elevator from the program ports",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "1361a44"
+  },
+  {
+   "date": "2026-10-31T04:10:41Z",
+   "login": "jcontrolresearch",
+   "msg": "Simulate balls and the intake; add a ball collection demo",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "2e9e46d"
+  },
+  {
+   "date": "2026-10-31T03:42:49Z",
+   "login": "jcontrolresearch",
+   "msg": "Add rules-based field details to the 3D simulator",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "0293e20"
+  },
+  {
+   "date": "2026-10-31T03:29:59Z",
+   "login": "jcontrolresearch",
+   "msg": "Add a 3D simulator with the v22 CAD robot and a UDP state stream",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "6c28fa1"
+  },
+  {
+   "date": "2026-10-31T03:29:59Z",
+   "login": "jcontrolresearch",
+   "msg": "Use the v22 drive geometry in chassis.py and the 2D simulator",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "eaf7380"
+  },
+  {
+   "date": "2026-10-31T03:08:23Z",
+   "login": "jcontrolresearch",
+   "msg": "Add Storm Breaker v22 CAD and check it against the requirements",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "f1925b8"
+  },
+  {
+   "date": "2026-10-25T10:03:23Z",
+   "login": "Yah0ff",
+   "msg": "Merge pull request #29 from Robotica76/t18-vision-bonus-cube-detection-bonus-battle",
+   "name": "Yahir Fernando García García",
+   "sha": "8cd399b"
+  },
+  {
+   "date": "2026-10-25T09:54:11Z",
+   "login": "Yah0ff",
+   "msg": "Prop cards stats",
+   "name": "Yahir Fernando García García",
+   "sha": "ee52407"
+  },
+  {
+   "date": "2026-10-25T09:52:30Z",
+   "login": "Yah0ff",
+   "msg": "Cubes Stikers",
+   "name": "Yahir Fernando García García",
+   "sha": "663de52"
+  },
+  {
+   "date": "2026-10-25T09:00:05Z",
+   "login": "Yah0ff",
+   "msg": "Requirements file update",
+   "name": "Yahir Fernando García García",
+   "sha": "2d4d826"
+  },
+  {
+   "date": "2026-10-24T05:23:05Z",
+   "login": "jcontrolresearch",
+   "msg": "Added files resources",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "65f0032"
+  },
+  {
+   "date": "2026-10-24T05:09:56Z",
+   "login": "jcontrolresearch",
+   "msg": "Document T05 chassis motion: design study, control record, notebook entry",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "162f5b4"
+  },
+  {
+   "date": "2026-10-24T05:09:56Z",
+   "login": "jcontrolresearch",
+   "msg": "Document T05 chassis motion: design study, control record, notebook entry",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "f023eda"
+  },
+  {
+   "date": "2026-10-24T05:02:43Z",
+   "login": "jcontrolresearch",
+   "msg": "Merge pull request #28 from Robotica76/feature/sim-chassis-control",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "46cf617"
+  },
+  {
+   "date": "2026-10-24T04:58:55Z",
+   "login": "jcontrolresearch",
+   "msg": "Make the chassis Monte Carlo report bilingual (Spanish and English)",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "fd08989"
+  },
+  {
+   "date": "2026-10-24T04:51:34Z",
+   "login": "jcontrolresearch",
+   "msg": "Add Monte Carlo report of chassis.py with figures and calibration guide",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "e850190"
+  },
+  {
+   "date": "2026-10-24T04:34:01Z",
+   "login": "jcontrolresearch",
+   "msg": "Add Monte Carlo robustness study of chassis.py",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "e2769c9"
+  },
+  {
+   "date": "2026-10-24T04:18:43Z",
+   "login": "jcontrolresearch",
+   "msg": "Merge pull request #27 from Robotica76/feature/sim-chassis-control",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "1eb3ed8"
+  },
+  {
+   "date": "2026-10-24T03:57:29Z",
+   "login": "jcontrolresearch",
+   "msg": "Add macOS launcher for the 2D simulator",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "4ebf205"
+  },
+  {
+   "date": "2026-10-24T03:55:38Z",
+   "login": "jcontrolresearch",
+   "msg": "Add Windows launcher for the 2D simulator",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "e808389"
+  },
+  {
+   "date": "2026-10-24T03:51:34Z",
+   "login": "jcontrolresearch",
+   "msg": "Run chassis.py in the simulator: sensors, gamepad link, demos",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "72f10e8"
+  },
+  {
+   "date": "2026-10-20T05:02:39Z",
+   "login": "jcontrolresearch",
+   "msg": "Add emulated Makeblock Bluetooth gamepad window",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "d5561b1"
+  },
+  {
+   "date": "2026-10-20T05:02:39Z",
+   "login": "jcontrolresearch",
+   "msg": "Stop programs reliably, even when they catch the stop",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "e799ee4"
+  },
+  {
+   "date": "2026-10-24T01:18:08Z",
+   "login": "jcontrolresearch",
+   "msg": "Added chasys.py",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "6456de7"
+  },
+  {
+   "date": "2026-10-24T00:49:15Z",
+   "login": "jcontrolresearch",
+   "msg": "Add mecanum chassis control with odometry and S-curve smoothing",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "6bd40cb"
+  },
+  {
+   "date": "2026-10-23T00:31:31Z",
+   "login": "jcontrolresearch",
+   "msg": "Merge pull request #26 from Robotica76/feature/sim-2d-field-layout",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "e5c956e"
+  },
+  {
+   "date": "2026-10-20T02:42:19Z",
+   "login": "jcontrolresearch",
+   "msg": "Address PR #26 review: stoppable programs, RPM clamp, read errors",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "69fa1f9"
+  },
+  {
+   "date": "2026-10-19T05:23:23Z",
+   "login": "jcontrolresearch",
+   "msg": "Create basic_movement.py",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "57580ab"
+  },
+  {
+   "date": "2026-10-19T05:22:04Z",
+   "login": "jcontrolresearch",
+   "msg": "Play back mBlock Python programs in the 2D simulator",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "8142ef1"
+  },
+  {
+   "date": "2026-10-19T04:30:51Z",
+   "login": "jcontrolresearch",
+   "msg": "Add 2D field layout simulation with pygame viewer",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "89edf01"
+  },
+  {
+   "date": "2026-10-13T21:10:20Z",
+   "login": "jcontrolresearch",
+   "msg": "Merge pull request #10 from Robotica76/copilot/setup-repository-architecture",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "fe9c8d9"
+  },
+  {
+   "date": "2026-10-13T20:56:43Z",
+   "login": "Copilot",
+   "msg": "Add engineering documentation and physical design workspaces",
+   "name": "copilot-swe-agent[bot]",
+   "sha": "e00c0a7"
+  },
+  {
+   "date": "2026-10-13T20:53:46Z",
+   "login": "Copilot",
+   "msg": "Add software and verification architecture with collaboration templates",
+   "name": "copilot-swe-agent[bot]",
+   "sha": "d30a2a0"
+  },
+  {
+   "date": "2026-10-13T17:26:47Z",
+   "login": "jcontrolresearch",
+   "msg": "Initial commit",
+   "name": "Julio Cesar Martinez Ramirez",
+   "sha": "b14108b"
+  }
+ ],
+ "project_source": "issues del repositorio (el tablero del proyecto no fue accesible)",
+ "fetched_at": "2026-11-20 21:06 UTC"
+}

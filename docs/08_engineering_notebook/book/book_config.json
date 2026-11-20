@@ -1,0 +1,168 @@
+{
+  "title": "Libro de Ingeniería",
+  "subtitle": "Robot Storm Breaker",
+  "team": "Robotica76",
+  "competition": "MakeX 2026 · Storm Breaker",
+  "repo": "Robotica76/2026_MakeX_Challengue",
+  "project": { "owner": "Robotica76", "number": 9 },
+  "members": [
+    { "github": "jcontrolresearch", "name": "", "role": "" },
+    { "github": "Rodrigo-code10", "name": "", "role": "" },
+    { "github": "Yah0ff", "name": "", "role": "" },
+    { "github": "Calebssg", "name": "", "role": "" },
+    { "github": "NestiHC", "name": "", "role": "" },
+    { "github": "elielgomez96-lang", "name": "", "role": "" },
+    { "github": "Ame170570", "name": "", "role": "" },
+    { "github": "luar0912", "name": "", "role": "" },
+    { "github": "ximen3122-arch", "name": "", "role": "" }
+  ],
+  "how_to_read": "Este libro es el registro formal del proceso de diseño, construcción, programación y pruebas del robot del equipo. Se genera automáticamente a partir de los documentos del repositorio, del tablero del proyecto de GitHub y de los comentarios Doxygen del software, por lo que siempre refleja el estado actual del trabajo. Los documentos incluidos están escritos en inglés; los capítulos de organización, cronología y software están en español. La tabla siguiente indica dónde encontrar la evidencia que evalúan los jueces.",
+  "judging_criteria": [
+    { "criterion": "Proceso de diseño y pruebas", "what": "Registro cronológico de ideas, bocetos, cambios mecánicos, ajustes de código y resultados de pruebas.", "chapters": ["cronologia", "bitacora", "diseno", "software", "pruebas"] },
+    { "criterion": "Resolución de problemas", "what": "Qué falló o se detectó, cómo se corrigió el diseño o la estrategia y qué se aprendió.", "chapters": ["problemas", "bitacora", "simulacion"] },
+    { "criterion": "Trabajo en equipo", "what": "Roles, tareas asignadas, participación y forma de colaborar.", "chapters": ["equipo", "cronologia"] },
+    { "criterion": "Entrevista con jueces", "what": "Resumen del reto, la estrategia y las decisiones clave para presentar y defender el robot.", "chapters": ["reto", "estrategia", "bitacora"] }
+  ],
+  "chapters": [
+    {
+      "key": "presentacion",
+      "title": "Presentación del libro y del proyecto",
+      "builtin_sections": ["guide"],
+      "sources": [ "README.md", "docs/README.md" ]
+    },
+    {
+      "key": "equipo",
+      "title": "Equipo y organización",
+      "builtin_sections": ["team"],
+      "sources": [ "CONTRIBUTING.md", ".github/COLLABORATION.md" ]
+    },
+    {
+      "key": "cronologia",
+      "title": "Gestión del proyecto y cronología",
+      "builtin_sections": ["project", "timeline"]
+    },
+    {
+      "key": "reto",
+      "title": "El reto y los requisitos",
+      "sources": [
+        "docs/01_requirements/README.md",
+        "docs/01_requirements/competition_requirements.md",
+        "docs/01_requirements/robot_requirements.md",
+        "docs/01_requirements/rules_compliance_matrix.md",
+        "resources/README.md",
+        { "glob": "resources/*/README.md", "min_chars": 300 }
+      ]
+    },
+    {
+      "key": "estrategia",
+      "title": "Estrategia de juego",
+      "sources": [ { "glob": "docs/07_strategy/*.md" } ]
+    },
+    {
+      "key": "arquitectura",
+      "title": "Arquitectura del sistema",
+      "sources": [ { "glob": "docs/02_system_architecture/*.md" } ]
+    },
+    {
+      "key": "diseno",
+      "title": "Diseño mecánico y electrónico",
+      "sources": [
+        { "glob": "docs/03_design/README.md" },
+        { "glob": "docs/03_design/*/README.md" },
+        "mechanical/README.md",
+        { "glob": "mechanical/**/README.md", "min_chars": 450, "exclude": ["^mechanical/README.md$"] },
+        "electrical/README.md",
+        { "glob": "electrical/**/*.md", "min_chars": 450, "exclude": ["^electrical/README.md$"] }
+      ]
+    },
+    {
+      "key": "control",
+      "title": "Control y programación (documentación)",
+      "sources": [
+        { "glob": "docs/04_controls/*.md" },
+        { "glob": "docs/04_controls/*/README.md", "exclude": ["software_doc"] },
+        "software/README.md",
+        { "glob": "software/**/README.md", "min_chars": 450, "exclude": ["^software/README.md$"] }
+      ]
+    },
+    {
+      "key": "software",
+      "title": "Software del robot (generado desde Doxygen)",
+      "builtin": "software"
+    },
+    {
+      "key": "simulacion",
+      "title": "Simulación y análisis",
+      "sources": [
+        "simulation/README.md",
+        { "glob": "simulation/**/*.md", "min_chars": 450, "exclude": ["^simulation/README.md$"] }
+      ]
+    },
+    {
+      "key": "problemas",
+      "title": "Integración y resolución de problemas",
+      "sources": [
+        { "glob": "docs/05_integration/*.md" },
+        "docs/08_engineering_notebook/lessons_learned/README.md"
+      ]
+    },
+    {
+      "key": "pruebas",
+      "title": "Pruebas y verificación",
+      "sources": [
+        { "glob": "docs/06_verification/*.md" },
+        { "glob": "docs/06_verification/*/README.md" },
+        "docs/08_engineering_notebook/test_results/README.md",
+        "tests/README.md",
+        { "glob": "tests/**/*.md", "min_chars": 300, "exclude": ["^tests/README.md$"] }
+      ]
+    },
+    {
+      "key": "bitacora",
+      "title": "Bitácora de diseño",
+      "sources": [
+        "docs/08_engineering_notebook/README.md",
+        "docs/08_engineering_notebook/design_log/README.md",
+        { "glob": "docs/08_engineering_notebook/design_log/DL-*.md" },
+        "docs/08_engineering_notebook/media/README.md",
+        "docs/08_engineering_notebook/legacy/README.md"
+      ]
+    },
+    {
+      "key": "anexos",
+      "title": "Anexos",
+      "builtin": "pending",
+      "sources": [
+        "tools/README.md",
+        { "glob": "tools/*/README.md", "min_chars": 300 }
+      ]
+    }
+  ],
+  "en": {
+    "title": "Engineering Notebook",
+    "subtitle": "Storm Breaker Robot",
+    "how_to_read": "This book is the team's formal record of the design, construction, programming and testing process of the robot. It is generated automatically from the repository documents, the GitHub project board and the Doxygen comments of the software, so it always reflects the current state of the work. The table below shows where to find the evidence the judges evaluate.",
+    "judging_criteria": [
+      { "criterion": "Design and testing process", "what": "Chronological record of ideas, sketches, mechanical changes, code adjustments and test results." },
+      { "criterion": "Problem solving", "what": "What failed or was detected, how the design or strategy was corrected and what was learned." },
+      { "criterion": "Teamwork", "what": "Roles, assigned tasks, participation and way of collaborating." },
+      { "criterion": "Judges' interview", "what": "Summary of the challenge, the strategy and the key decisions to present and defend the robot." }
+    ],
+    "chapter_titles": {
+      "presentacion": "Introduction to the book and the project",
+      "equipo": "Team and organization",
+      "cronologia": "Project management and timeline",
+      "reto": "The challenge and requirements",
+      "estrategia": "Game strategy",
+      "arquitectura": "System architecture",
+      "diseno": "Mechanical and electronic design",
+      "control": "Control and programming (documentation)",
+      "software": "Robot software (generated from Doxygen)",
+      "simulacion": "Simulation and analysis",
+      "problemas": "Integration and problem solving",
+      "pruebas": "Testing and verification",
+      "bitacora": "Design log",
+      "anexos": "Appendices"
+    }
+  }
+}
