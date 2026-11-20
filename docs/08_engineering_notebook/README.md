@@ -11,6 +11,7 @@ strategy. It is written during the work, not at the end.
 | [Lessons learned](lessons_learned/README.md) | Evidence-backed improvements and follow-up |
 | [Media](media/README.md) | Evidence index with provenance and usage permissions |
 | [Legacy](legacy/README.md) | 2025 robot presentation |
+| [Engineering book (PDF generator)](book/README.md) | Script that builds the full *Libro de Ingeniería* PDF from the repository, GitHub project, issues and Doxygen comments |
 
 ## Shared index
 

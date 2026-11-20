@@ -225,7 +225,8 @@ def main_loop_tikz(bindings):
 # --------------------------------------------------------------------------
 # Construcción del capítulo
 # --------------------------------------------------------------------------
-def build(src_path):
+def build(src_path, tex_base=HERE):
+    """tex_base: carpeta desde la que se compila el .tex (rutas relativas de listados y diagramas)."""
     with open(src_path, encoding="utf-8") as f:
         src = f.read()
     lines = src.splitlines()
@@ -236,7 +237,7 @@ def build(src_path):
         with open(DECISIONS, encoding="utf-8") as f:
             decisions = json.load(f)
 
-    rel_src = os.path.relpath(src_path, HERE).replace("\\", "/")
+    rel_src = os.path.relpath(src_path, tex_base).replace("\\", "/")
     file_tags = next((t for t in blocks.values() if any(k == "file" for k, _ in t)), [])
     out = []
     w = out.append
@@ -302,7 +303,7 @@ def build(src_path):
 
     if os.path.exists(MANUAL_DIAGRAM):
         w(r"\subsection{Flujo de decisi\'on aut\'onomo}")
-        w(r"\input{diagrams/autonomous_flow.tex}")
+        w(r"\input{%s}" % os.path.relpath(MANUAL_DIAGRAM, tex_base).replace("\\", "/"))
 
     # 4. Arquitectura
     w(r"\section{Arquitectura: llamadas entre funciones}")
@@ -316,7 +317,7 @@ def build(src_path):
         for d in decisions["decisions"]:
             w(r"\medskip\noindent\textbf{%s -- %s}\par" % (tex(d["id"]), tex(d["title"])))
             w(r"\textbf{Decisi\'on:} %s\\" % tex(d["decision"]))
-            w(r"\textbf{Justificaci\'on:} %s" % tex(d["rationale"]))
+            w(r"\textbf{Justificaci\'on:} %s" % tex(d["rationale"]) + "\n")
 
     # 6. Referencia de funciones
     w(r"\section{Referencia de funciones y c\'odigo}")

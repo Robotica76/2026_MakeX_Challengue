@@ -137,21 +137,27 @@ Instrucciones a nivel de m\'odulo, ejecutadas en orden al encender el NovaPi:
 \medskip\noindent\textbf{SW-DEC-001 -- Un solo archivo para NovaPi}\par
 \textbf{Decisi\'on:} Todo el programa vive en un único archivo Robot.py.\\
 \textbf{Justificaci\'on:} El NovaPi de mBuild carga un solo script de Python; mantener todo junto evita problemas de importación y facilita el cambio rápido en competencia.
+
 \medskip\noindent\textbf{SW-DEC-002 -- Cinemática mecanum con signos por montaje}\par
 \textbf{Decisi\'on:} Checar\_Velocidades calcula v1..v4 y Vel\_Motores invierte M2 y M4.\\
 \textbf{Justificaci\'on:} Separar el cálculo de la aplicación permite probar la cinemática sin mover motores; los motores del lado derecho están montados en sentido opuesto.
+
 \medskip\noindent\textbf{SW-DEC-003 -- Control manual siempre activo}\par
 \textbf{Decisi\'on:} Los joysticks mueven el chasis en cada iteración de main(), incluso después de presionar un botón.\\
 \textbf{Justificaci\'on:} El conductor conserva el control del chasis y puede interrumpir las acciones de los mecanismos.
+
 \medskip\noindent\textbf{SW-DEC-004 -- Autónomo de 28 s basado en tags}\par
 \textbf{Decisi\'on:} El botón N1 ejecuta Comparacion\_QR en un ciclo limitado por novapi.timer() < 28.\\
 \textbf{Justificaci\'on:} El periodo autónomo es de 30 s; se deja 2 s de margen para no invadir el periodo manual.
+
 \medskip\noindent\textbf{SW-DEC-005 -- Conversión de píxeles a cm}\par
 \textbf{Decisi\'on:} Las distancias de la cámara se dividen entre 16.84 px/cm.\\
 \textbf{Justificaci\'on:} Constante obtenida de la calibración del tag de 10 cm; debe recalibrarse si cambia la cámara o su posición.
+
 \medskip\noindent\textbf{SW-DEC-006 -- Movimiento autónomo por tiempo}\par
 \textbf{Decisi\'on:} Mov\_Auto mueve el robot por un tiempo fijo en lugar de usar la distancia recibida.\\
 \textbf{Justificaci\'on:} Solución provisional; la conversión de distancia a velocidad/tiempo queda pendiente de calibración.
+
 \section{Referencia de funciones y c\'odigo}
 \subsection{\texttt{Checar\_Velocidades}}
 \label{fn:ChecarVelocidades}
