@@ -137,5 +137,32 @@
         { "glob": "tools/*/README.md", "min_chars": 300 }
       ]
     }
-  ]
+  ],
+  "en": {
+    "title": "Engineering Notebook",
+    "subtitle": "Storm Breaker Robot",
+    "how_to_read": "This book is the team's formal record of the design, construction, programming and testing process of the robot. It is generated automatically from the repository documents, the GitHub project board and the Doxygen comments of the software, so it always reflects the current state of the work. The table below shows where to find the evidence the judges evaluate.",
+    "judging_criteria": [
+      { "criterion": "Design and testing process", "what": "Chronological record of ideas, sketches, mechanical changes, code adjustments and test results." },
+      { "criterion": "Problem solving", "what": "What failed or was detected, how the design or strategy was corrected and what was learned." },
+      { "criterion": "Teamwork", "what": "Roles, assigned tasks, participation and way of collaborating." },
+      { "criterion": "Judges' interview", "what": "Summary of the challenge, the strategy and the key decisions to present and defend the robot." }
+    ],
+    "chapter_titles": {
+      "presentacion": "Introduction to the book and the project",
+      "equipo": "Team and organization",
+      "cronologia": "Project management and timeline",
+      "reto": "The challenge and requirements",
+      "estrategia": "Game strategy",
+      "arquitectura": "System architecture",
+      "diseno": "Mechanical and electronic design",
+      "control": "Control and programming (documentation)",
+      "software": "Robot software (generated from Doxygen)",
+      "simulacion": "Simulation and analysis",
+      "problemas": "Integration and problem solving",
+      "pruebas": "Testing and verification",
+      "bitacora": "Design log",
+      "anexos": "Appendices"
+    }
+  }
 }

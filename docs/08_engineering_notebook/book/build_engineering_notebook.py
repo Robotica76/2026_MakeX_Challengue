@@ -15,6 +15,7 @@ Opciones:
     --project-json FILE  Usa un export de `gh project item-list N --owner ORG --format json`.
     --no-pdf             Solo genera build/libro.tex (no compila).
     --skip-software      No regenera el capítulo Software (usa lo que haya en software_doc/generated).
+    --lang es|en         Idioma de todo el libro (por defecto es). en -> output/Engineering_Notebook.pdf.
     --config FILE        Otro book_config.json.
     --output FILE        Ruta del PDF final (por defecto output/Libro_de_Ingenieria.pdf).
 
@@ -45,6 +46,12 @@ SOFTWARE_DOC = os.path.join(ROOT, "docs", "04_controls", "software_doc")
 
 BOTS = ("app/", "copilot", "dependabot", "github-actions")
 warnings = []
+LANG = "es"
+
+
+def L(es, en):
+    """Devuelve el texto en el idioma elegido con --lang."""
+    return en if LANG == "en" else es
 
 
 def warn(msg):
@@ -84,7 +91,7 @@ def is_bot(login):
 
 
 def display_login(login):
-    return "Copilot (agente)" if login and login.startswith("app/copilot") else (login or "?")
+    return L("Copilot (agente)", "Copilot (agent)") if login and login.startswith("app/copilot") else (login or "?")
 
 
 # ---------------------------------------------------------------------------
@@ -173,6 +180,7 @@ def collect_github(cfg, offline, project_json):
     else:
         data.pop("project", None)
         data["project_source"] = "issues del repositorio (el tablero del proyecto no fue accesible)"
+        data["project_source_en"] = "repository issues (the project board was not accessible)"
 
     data["fetched_at"] = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     os.makedirs(DATA, exist_ok=True)
@@ -189,7 +197,7 @@ def board_items(gh):
             content = it.get("content") or {}
             items.append({
                 "title": it.get("title") or content.get("title") or "?",
-                "status": it.get("status") or "Sin estado",
+                "status": it.get("status") or L("Sin estado", "No status"),
                 "assignees": it.get("assignees") or [],
                 "number": content.get("number"),
                 "kind": content.get("type", "Issue"),
@@ -198,11 +206,36 @@ def board_items(gh):
         for i in gh.get("issues", []):
             items.append({
                 "title": i["title"],
-                "status": "Cerrado" if i["state"] == "CLOSED" else "Abierto",
+                "status": L("Cerrado", "Closed") if i["state"] == "CLOSED" else L("Abierto", "Open"),
                 "assignees": [a["login"] for a in i.get("assignees", [])],
                 "number": i["number"], "kind": "Issue",
             })
     return items
+
+
+def localized_cfg(cfg):
+    """Aplica al config las traducciones de cfg["en"] cuando --lang en."""
+    if LANG != "en":
+        return cfg
+    en = cfg.get("en", {})
+    cfg = dict(cfg)
+    for k in ("title", "subtitle", "how_to_read", "competition"):
+        if k in en:
+            cfg[k] = en[k]
+    if "judging_criteria" in en:
+        cfg["judging_criteria"] = [dict(c, **t) for c, t in zip(cfg["judging_criteria"], en["judging_criteria"])]
+    titles = en.get("chapter_titles", {})
+    cfg["chapters"] = [dict(c, title=titles.get(c.get("key"), c["title"]), **(
+        {"intro": en["chapter_intros"][c["key"]]} if c.get("key") in en.get("chapter_intros", {}) else {}))
+        for c in cfg["chapters"]]
+    return cfg
+
+
+def localized_source(path):
+    """En español usa NOMBRE.es.md si existe; en inglés NOMBRE.en.md si existe."""
+    base, ext = os.path.splitext(path)
+    alt = "%s.%s%s" % (base, LANG, ext)
+    return alt if os.path.exists(alt) else path
 
 
 # ---------------------------------------------------------------------------
@@ -218,17 +251,18 @@ def md_title(text, path):
 
 
 def md_to_tex(path, idx):
+    path = localized_source(path)
     with open(path, encoding="utf-8") as f:
         text = f.read()
     title, body = md_title(text, path)
-    env = dict(os.environ, NB_SRC_DIR=os.path.dirname(path), NB_REPO_ROOT=ROOT)
+    env = dict(os.environ, NB_SRC_DIR=os.path.dirname(path), NB_REPO_ROOT=ROOT, NB_LANG=LANG)
     cmd = ["pandoc", "-f", "gfm+footnotes", "-t", "latex", "--no-highlight", "--wrap=preserve",
            "--shift-heading-level-by=1", "--top-level-division=chapter",
            "--id-prefix=f%d-" % idx, "--lua-filter", FILTER]
     res = subprocess.run(cmd, input=body, env=env, capture_output=True, text=True, encoding="utf-8")
     if res.returncode != 0:
         warn("pandoc falló con %s: %s" % (rel(path), res.stderr.strip()[:200]))
-        return title, r"\emph{No se pudo convertir este documento.}"
+        return title, L(r"\emph{No se pudo convertir este documento.}", r"\emph{This document could not be converted.}")
     out = res.stdout.replace(r"\begin{verbatim}", r"\begin{Verbatim}").replace(
         r"\end{verbatim}", r"\end{Verbatim}")
     return title, out
@@ -250,6 +284,8 @@ def expand_sources(specs):
                     warn("No existe %s (capítulo configurado)" % rel(p))
                 continue
             r = rel(p)
+            if re.search(r"\.(es|en)\.md$", p):
+                continue
             if any(e.search(r) for e in excl) or os.path.getsize(p) < min_chars:
                 continue
             seen.add(p)
@@ -321,21 +357,24 @@ def people(cfg, gh):
 
 def chapter_team(cfg, gh):
     ppl = people(cfg, gh)
-    out = [r"\section{Integrantes y roles}",
-           "Tabla generada con la configuraci\\'on del equipo (\\texttt{book\\_config.json}) y la "
-           "actividad real registrada en GitHub: tareas asignadas en el tablero, commits y pull requests. "
-           "Los roles vac\\'ios se completan editando \\texttt{book\\_config.json}.\n"]
+    out = [L(r"\section{Integrantes y roles}", r"\section{Team members and roles}"),
+           L("Tabla generada con la configuraci\\'on del equipo (\\texttt{book\\_config.json}) y la "
+             "actividad real registrada en GitHub: tareas asignadas en el tablero, commits y pull requests. "
+             "Los roles vac\\'ios se completan editando \\texttt{book\\_config.json}.\n",
+             "Table generated from the team configuration (\\texttt{book\\_config.json}) and the real "
+             "activity recorded on GitHub: tasks assigned on the board, commits and pull requests. "
+             "Empty roles are filled in by editing \\texttt{book\\_config.json}.\n")]
     rows = []
     for p in ppl.values():
         tasks = ", ".join("T%s" % re.match(r"T(\d+)", t["title"]).group(1) if re.match(r"T\d+", t["title"])
                           else "#%s" % t["number"] for t in p["tasks"])
-        rows.append([tt(p["github"]), tex(p["name"] or "--"), tex(p["role"] or "Por definir"),
+        rows.append([tt(p["github"]), tex(p["name"] or "--"), tex(p["role"] or L("Por definir", "To be defined")),
                      tex(tasks or "--"), str(p["commits"]), str(p["prs"])])
-    out.append(longtable(["GitHub", "Nombre", "Rol", "Tareas asignadas", "Commits", "PRs"], rows,
+    out.append(longtable(["GitHub", L("Nombre", "Name"), L("Rol", "Role"), L("Tareas asignadas", "Assigned tasks"), "Commits", "PRs"], rows,
                          r"@{}p{2.8cm}p{3.2cm}p{2.8cm}p{4.2cm}p{1.2cm}p{0.9cm}@{}"))
-    out.append(r"\subsection*{Participaci\'on: tareas asignadas}")
+    out.append(L(r"\subsection*{Participaci\'on: tareas asignadas}", r"\subsection*{Participation: assigned tasks}"))
     out.append(bar_chart([(p["github"], len(p["tasks"])) for p in ppl.values() if p["tasks"]]))
-    out.append(r"\subsection*{Participaci\'on: commits}")
+    out.append(L(r"\subsection*{Participaci\'on: commits}", r"\subsection*{Participation: commits}"))
     out.append(bar_chart([(p["github"], p["commits"]) for p in ppl.values() if p["commits"]], color="orange!80!black"))
     return "\n".join(out)
 
@@ -343,10 +382,15 @@ def chapter_team(cfg, gh):
 def chapter_project(cfg, gh):
     items = board_items(gh)
     proj = cfg.get("project", {})
-    out = [r"\section{Tablero del proyecto}",
-           "Fuente de los datos: %s. Actualizado: %s.\n" % (tex(gh.get("project_source", "?")), tex(gh.get("fetched_at", "?")))]
+    src = gh.get("project_source", "?")
+    if LANG == "en":
+        src = gh.get("project_source_en") if "issues del repositorio" in src else (
+            src.replace("API de GitHub Projects (proyecto", "GitHub Projects API (project").replace(
+                "export manual", "manual export").replace("copia anterior", "previous copy"))
+    out = [L(r"\section{Tablero del proyecto}", r"\section{Project board}"),
+           L("Fuente de los datos: %s. Actualizado: %s.\n", "Data source: %s. Updated: %s.\n") % (tex(src or "?"), tex(gh.get("fetched_at", "?")))]
     if proj.get("owner"):
-        out.append("Tablero: \\url{https://github.com/orgs/%s/projects/%s}\n" % (proj["owner"], proj["number"]))
+        out.append(L("Tablero", "Board") + ": \\url{https://github.com/orgs/%s/projects/%s}\n" % (proj["owner"], proj["number"]))
     by_status = collections.OrderedDict()
     for it in items:
         by_status.setdefault(it["status"], []).append(it)
@@ -358,8 +402,8 @@ def chapter_project(cfg, gh):
     for status, its in by_status.items():
         for it in sorted(its, key=key):
             rows.append([tex("#%s" % it["number"] if it["number"] else ""), tex(it["title"]), tex(status),
-                         tex(", ".join(it["assignees"]) or "Sin asignar")])
-    out.append(longtable(["#", "Tarea", "Estado", "Responsables"], rows, r"@{}p{1cm}p{8cm}p{2.5cm}p{4.5cm}@{}"))
+                         tex(", ".join(it["assignees"]) or L("Sin asignar", "Unassigned"))])
+    out.append(longtable(["#", L("Tarea", "Task"), L("Estado", "Status"), L("Responsables", "Assignees")], rows, r"@{}p{1cm}p{8cm}p{2.5cm}p{4.5cm}@{}"))
     return "\n".join(out)
 
 
@@ -372,34 +416,36 @@ def chapter_timeline(cfg, gh):
     events = []
     for pr in gh.get("prs", []):
         who = display_login((pr.get("author") or {}).get("login"))
-        events.append((fmt_date(pr["createdAt"]), "PR abierto", "#%s %s" % (pr["number"], pr["title"]), who))
+        events.append((fmt_date(pr["createdAt"]), L("PR abierto", "PR opened"), "#%s %s" % (pr["number"], pr["title"]), who))
         if pr.get("mergedAt"):
-            events.append((fmt_date(pr["mergedAt"]), "PR integrado", "#%s %s" % (pr["number"], pr["title"]), who))
+            events.append((fmt_date(pr["mergedAt"]), L("PR integrado", "PR merged"), "#%s %s" % (pr["number"], pr["title"]), who))
     for i in gh.get("issues", []):
-        events.append((fmt_date(i["createdAt"]), "Tarea creada", "#%s %s" % (i["number"], i["title"]),
+        events.append((fmt_date(i["createdAt"]), L("Tarea creada", "Task created"), "#%s %s" % (i["number"], i["title"]),
                        ", ".join(a["login"] for a in i.get("assignees", []))))
         if i.get("closedAt"):
-            events.append((fmt_date(i["closedAt"]), "Tarea cerrada", "#%s %s" % (i["number"], i["title"]), ""))
+            events.append((fmt_date(i["closedAt"]), L("Tarea cerrada", "Task closed"), "#%s %s" % (i["number"], i["title"]), ""))
     day_commits = collections.OrderedDict()
     for c in sorted(gh.get("commits", []), key=lambda c: c["date"]):
         if c["msg"].startswith("Merge pull request") or c["msg"].startswith("Merge branch"):
             continue
         day_commits.setdefault((fmt_date(c["date"]), c.get("name") or c.get("login") or "?"), []).append(c["msg"])
     for (d, who), msgs in day_commits.items():
-        shown = "; ".join(msgs[:4]) + (" (+%d m\u00e1s)" % (len(msgs) - 4) if len(msgs) > 4 else "")
-        events.append((d, "Cambios (%d commit%s)" % (len(msgs), "s" if len(msgs) != 1 else ""), shown, who))
+        shown = "; ".join(msgs[:4]) + (L(" (+%d m\u00e1s)", " (+%d more)") % (len(msgs) - 4) if len(msgs) > 4 else "")
+        events.append((d, L("Cambios (%d commit%s)", "Changes (%d commit%s)") % (len(msgs), "s" if len(msgs) != 1 else ""), shown, who))
     events.sort(key=lambda e: (e[0], e[1]))
-    out = [r"\section{Cronolog\'ia del proceso}",
-           "Registro cronol\\'ogico generado de GitHub: tareas, pull requests (ideas y cambios de dise\\~no o "
-           "c\\'odigo) y commits. Las decisiones y sus justificaciones est\\'an en la bit\\'acora de dise\\~no.\n"]
+    out = [L(r"\section{Cronolog\'ia del proceso}", r"\section{Process timeline}"),
+           L("Registro cronol\\'ogico generado de GitHub: tareas, pull requests (ideas y cambios de dise\\~no o "
+             "c\\'odigo) y commits. Las decisiones y sus justificaciones est\\'an en la bit\\'acora de dise\\~no.\n",
+             "Chronological record generated from GitHub: tasks, pull requests (ideas and design or code "
+             "changes) and commits. Decisions and their rationale are in the design log.\n")]
     if not events:
-        out.append(r"\emph{Sin datos de GitHub (ejecutar sin \texttt{--offline} para actualizar).}")
+        out.append(L(r"\emph{Sin datos de GitHub (ejecutar sin \texttt{--offline} para actualizar).}", r"\emph{No GitHub data (run without \texttt{--offline} to update).}"))
         return "\n".join(out)
     weekly = collections.Counter(week_label(e[0]) for e in events if e[0])
-    out.append(r"\subsection*{Actividad por semana (eventos)}")
+    out.append(L(r"\subsection*{Actividad por semana (eventos)}", r"\subsection*{Weekly activity (events)}"))
     out.append(bar_chart(sorted(weekly.items()), width_cm=7.5, color="green!50!black"))
     rows = [[tex(d), tex(k), tex(desc), tex(who)] for d, k, desc, who in events]
-    out.append(longtable(["Fecha", "Tipo", "Descripci\u00f3n", "Autor"], rows, r"@{}p{1.9cm}p{2.6cm}p{8cm}p{3cm}@{}"))
+    out.append(longtable([L("Fecha", "Date"), L("Tipo", "Type"), L("Descripci\u00f3n", "Description"), L("Autor", "Author")], rows, r"@{}p{1.9cm}p{2.6cm}p{8cm}p{3cm}@{}"))
     return "\n".join(out)
 
 
@@ -408,6 +454,7 @@ def chapter_software(skip):
     gen = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(gen)
     src = gen.DEFAULT_SRC
+    gen.set_lang(LANG)
     if skip:
         path = os.path.join(SOFTWARE_DOC, "generated", "software.tex")
         if not os.path.exists(path):
@@ -424,12 +471,12 @@ def judges_guide(cfg, chapters):
     keymap = {c.get("key"): c for c in chapters if c.get("key")}
     rows = []
     for crit in cfg.get("judging_criteria", []):
-        refs = ", ".join(r"cap\'itulo~\ref{chap:%s}" % k for k in crit["chapters"] if k in keymap)
+        refs = ", ".join(L(r"cap\'itulo~\ref{chap:%s}", r"chapter~\ref{chap:%s}") % k for k in crit["chapters"] if k in keymap)
         rows.append([r"\textbf{%s}" % tex(crit["criterion"]), tex(crit["what"]), refs])
     return "\n".join([
-        r"\section{C\'omo leer este libro}",
+        L(r"\section{C\'omo leer este libro}", r"\section{How to read this book}"),
         tex(cfg.get("how_to_read", "")) + "\n",
-        longtable(["Criterio de evaluaci\u00f3n", "Qu\u00e9 se documenta", "D\u00f3nde"], rows,
+        longtable([L("Criterio de evaluaci\u00f3n", "Evaluation criterion"), L("Qu\u00e9 se documenta", "What is documented"), L("D\u00f3nde", "Where")], rows,
                   r"@{}p{3.6cm}p{7.2cm}p{4.2cm}@{}")])
 
 
@@ -440,21 +487,23 @@ def pending_report(included):
         if n:
             rows.append((n, path))
     rows.sort(reverse=True)
-    out = [r"\section{Pendientes detectados en los documentos}",
-           "Cada documento incluido se revisa en busca de marcadores \\texttt{TBD}; sirve de lista de "
-           "pendientes antes de entregar el libro.\n"]
+    out = [L(r"\section{Pendientes detectados en los documentos}", r"\section{Pending items found in the documents}"),
+           L("Cada documento incluido se revisa en busca de marcadores \\texttt{TBD}; sirve de lista de "
+             "pendientes antes de entregar el libro.\n",
+             "Every included document is scanned for \\texttt{TBD} markers; this serves as a to-do list "
+             "before handing in the book.\n")]
     if rows:
-        out.append(longtable(["TBD", "Documento"], [[str(n), tt(p)] for n, p in rows], r"@{}p{1.2cm}p{13cm}@{}"))
+        out.append(longtable(["TBD", L("Documento", "Document")], [[str(n), tt(p)] for n, p in rows], r"@{}p{1.2cm}p{13cm}@{}"))
     else:
-        out.append("No se encontraron marcadores TBD.")
+        out.append(L("No se encontraron marcadores TBD.", "No TBD markers found."))
     return "\n".join(out)
 
 
 def sources_index(included):
     rows = [[tt(p)] for p, _ in included]
-    return "\n".join([r"\section{\'Indice de documentos fuente}",
-                      "Archivos del repositorio incluidos en este libro (%d).\n" % len(rows),
-                      longtable(["Archivo"], rows, r"@{}p{15cm}@{}")])
+    return "\n".join([L(r"\section{\'Indice de documentos fuente}", r"\section{Index of source documents}"),
+                      L("Archivos del repositorio incluidos en este libro (%d).\n", "Repository files included in this book (%d).\n") % len(rows),
+                      longtable([L("Archivo", "File")], rows, r"@{}p{15cm}@{}")])
 
 
 def cover(cfg):
@@ -466,12 +515,14 @@ def cover(cfg):
     now = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
     return "\n".join([
         r"\begin{titlepage}\centering\vspace*{3cm}",
-        r"{\Huge\bfseries\color{nbblue} %s\par}\vspace{1cm}" % tex(cfg.get("title", "Libro de Ingenier\u00eda")),
+        r"{\Huge\bfseries\color{nbblue} %s\par}\vspace{1cm}" % tex(cfg.get("title", L("Libro de Ingenier\u00eda", "Engineering Notebook"))),
         r"{\Large %s\par}\vspace{0.5cm}" % tex(cfg.get("subtitle", "")),
         r"{\large %s\par}\vspace{2cm}" % tex(cfg.get("team", "")),
         r"{\normalsize %s\par}" % tex(cfg.get("competition", "")),
-        r"\vfill{\footnotesize Revisi\'on del repositorio: %s (%s) \\ Generado: %s \\ "
-        r"Generado autom\'aticamente con \texttt{build\_engineering\_notebook.py}}" % (tt(rev), tex(branch), now),
+        L(r"\vfill{\footnotesize Revisi\'on del repositorio: %s (%s) \\ Generado: %s \\ "
+          r"Generado autom\'aticamente con \texttt{build\_engineering\_notebook.py}}",
+          r"\vfill{\footnotesize Repository revision: %s (%s) \\ Generated: %s \\ "
+          r"Automatically generated with \texttt{build\_engineering\_notebook.py}}") % (tt(rev), tex(branch), now),
         r"\end{titlepage}",
         r"\tableofcontents\clearpage"])
 
@@ -553,13 +604,19 @@ def main():
     ap.add_argument("--no-pdf", action="store_true")
     ap.add_argument("--skip-software", action="store_true")
     ap.add_argument("--config", default=os.path.join(HERE, "book_config.json"))
-    ap.add_argument("--output", default=os.path.join(HERE, "output", "Libro_de_Ingenieria.pdf"))
+    ap.add_argument("--lang", choices=("es", "en"), default="es",
+                    help="idioma de TODO el libro: es (por defecto) o en")
+    ap.add_argument("--output", help="PDF final (por defecto output/Libro_de_Ingenieria.pdf o output/Engineering_Notebook.pdf)")
     a = ap.parse_args()
+    global LANG
+    LANG = a.lang
+    if not a.output:
+        a.output = os.path.join(HERE, "output", L("Libro_de_Ingenieria.pdf", "Engineering_Notebook.pdf"))
 
     if not shutil.which("pandoc"):
         sys.exit("Falta pandoc (>= 3): sudo apt install pandoc")
     with open(a.config, encoding="utf-8") as f:
-        cfg = json.load(f)
+        cfg = localized_cfg(json.load(f))
 
     os.makedirs(BUILD, exist_ok=True)
     print("1/4 Datos de GitHub...")
@@ -569,6 +626,9 @@ def main():
     print("3/4 Escribiendo build/libro.tex (%d documentos)..." % len(included))
     with open(PREAMBLE, encoding="utf-8") as f:
         pre = f.read()
+    babel = "english" if LANG == "en" else "spanish,es-noshorthands"
+    pre = pre.replace("@@BABEL@@", babel).replace("@@HEADER@@", L("Libro de Ingenier\u00eda", "Engineering Notebook"))
+    pre = pre.replace("@@SOURCE@@", L("Fuente", "Source"))
     doc = pre + "\n\\begin{document}\n" + cover(cfg) + "\n" + body + "\n\\end{document}\n"
     with open(os.path.join(BUILD, "libro.tex"), "w", encoding="utf-8") as f:
         f.write(doc)

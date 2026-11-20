@@ -60,3 +60,15 @@ muestran los estados reales de las columnas del tablero.
 - Los datos de GitHub (nombres de commits, asignados) se publican tal cual están en el repositorio;
   revisar antes de compartir el PDF fuera del equipo.
 - `build/` (intermedios) está ignorado por git; `output/` contiene el PDF generado.
+
+## Idioma / Language (`--lang`)
+
+```bash
+python3 build_engineering_notebook.py --lang es   # default -> output/Libro_de_Ingenieria.pdf
+python3 build_engineering_notebook.py --lang en   # -> output/Engineering_Notebook.pdf
+```
+
+Todo el texto generado (portada, guía, equipo, cronología, capítulo Software, etiquetas) sale en un solo idioma.
+Los textos en inglés de `book_config.json` están en la clave `"en"`. Los documentos del repositorio se incluyen tal
+cual están escritos (inglés); para traducirlos en un idioma, añade un archivo hermano `NOMBRE.es.md` o `NOMBRE.en.md`
+y el script lo usará automáticamente en lugar del original.

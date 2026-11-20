@@ -6,7 +6,7 @@
 \setmainfont{Latin Modern Roman}[RawFeature={fallback=nbfallback}]
 \setsansfont{Latin Modern Sans}[RawFeature={fallback=nbfallback}]
 \setmonofont{DejaVu Sans Mono}[Scale=0.82]
-\usepackage[spanish,es-noshorthands]{babel}
+\usepackage[@@BABEL@@]{babel}
 \usepackage{graphicx}
 \setkeys{Gin}{width=\linewidth,height=0.42\textheight,keepaspectratio}
 \usepackage{float}
@@ -34,7 +34,7 @@
 \titlespacing*{\chapter}{0pt}{-10pt}{24pt}
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{\small\color{nbgray}Robotica76 · Libro de Ingeniería · MakeX 2026 StormBreaker}
+\fancyhead[L]{\small\color{nbgray}Robotica76 · @@HEADER@@ · MakeX 2026 StormBreaker}
 \fancyfoot[C]{\thepage}
 \renewcommand{\headrulewidth}{0.3pt}
 \fancypagestyle{plain}{\fancyhf{}\fancyfoot[C]{\thepage}\renewcommand{\headrulewidth}{0pt}}
@@ -61,4 +61,4 @@
   {Á}{{\'A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1 {Ú}{{\'U}}1 {Ñ}{{\~N}}1
   {¿}{{?`}}1 {¡}{{!`}}1}
 
-\newcommand{\nbsource}[1]{{\par\footnotesize\color{nbgray}Fuente: \texttt{#1}\par}}
+\newcommand{\nbsource}[1]{{\par\footnotesize\color{nbgray}@@SOURCE@@: \texttt{#1}\par}}

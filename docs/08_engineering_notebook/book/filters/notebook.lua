@@ -1,4 +1,5 @@
 -- Filtro de pandoc para el Libro de Ingeniería.
+local EN = os.getenv("NB_LANG") == "en"
 -- Variables de entorno: NB_SRC_DIR (carpeta del .md procesado), NB_REPO_ROOT.
 
 local src_dir = os.getenv("NB_SRC_DIR") or "."
@@ -47,7 +48,7 @@ end
 function Image(el)
   local src = el.src
   if src:match("^https?://") then
-    return pandoc.Str("[imagen externa omitida]")
+    return pandoc.Str(EN and "[external image omitted]" or "[imagen externa omitida]")
   end
   local ext = (src:match("%.([%w]+)$") or ""):lower()
   local full = normalize(src:sub(1, 1) == "/" and src or (src_dir .. "/" .. src))
@@ -57,7 +58,7 @@ function Image(el)
     el.attributes["height"] = nil
     return el
   end
-  return pandoc.Emph({ pandoc.Str("[figura no incluida: " .. src .. "]") })
+  return pandoc.Emph({ pandoc.Str((EN and "[figure not included: " or "[figura no incluida: ") .. src .. "]") })
 end
 
 -- Anchos de columna proporcionales al contenido (las tablas pipe de markdown no los traen).
