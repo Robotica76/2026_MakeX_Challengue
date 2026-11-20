@@ -1,0 +1,41 @@
+{
+  "intro": "Este capítulo documenta el software del robot Storm Breaker (MakeX 2026). Se genera automáticamente a partir de los comentarios Doxygen de Robot.py.",
+  "decisions": [
+    {
+      "id": "SW-DEC-001",
+      "title": "Un solo archivo para NovaPi",
+      "decision": "Todo el programa vive en un único archivo Robot.py.",
+      "rationale": "El NovaPi de mBuild carga un solo script de Python; mantener todo junto evita problemas de importación y facilita el cambio rápido en competencia."
+    },
+    {
+      "id": "SW-DEC-002",
+      "title": "Cinemática mecanum con signos por montaje",
+      "decision": "Checar_Velocidades calcula v1..v4 y Vel_Motores invierte M2 y M4.",
+      "rationale": "Separar el cálculo de la aplicación permite probar la cinemática sin mover motores; los motores del lado derecho están montados en sentido opuesto."
+    },
+    {
+      "id": "SW-DEC-003",
+      "title": "Control manual siempre activo",
+      "decision": "Los joysticks mueven el chasis en cada iteración de main(), incluso después de presionar un botón.",
+      "rationale": "El conductor conserva el control del chasis y puede interrumpir las acciones de los mecanismos."
+    },
+    {
+      "id": "SW-DEC-004",
+      "title": "Autónomo de 28 s basado en tags",
+      "decision": "El botón N1 ejecuta Comparacion_QR en un ciclo limitado por novapi.timer() < 28.",
+      "rationale": "El periodo autónomo es de 30 s; se deja 2 s de margen para no invadir el periodo manual."
+    },
+    {
+      "id": "SW-DEC-005",
+      "title": "Conversión de píxeles a cm",
+      "decision": "Las distancias de la cámara se dividen entre 16.84 px/cm.",
+      "rationale": "Constante obtenida de la calibración del tag de 10 cm; debe recalibrarse si cambia la cámara o su posición."
+    },
+    {
+      "id": "SW-DEC-006",
+      "title": "Movimiento autónomo por tiempo",
+      "decision": "Mov_Auto mueve el robot por un tiempo fijo en lugar de usar la distancia recibida.",
+      "rationale": "Solución provisional; la conversión de distancia a velocidad/tiempo queda pendiente de calibración."
+    }
+  ]
+}

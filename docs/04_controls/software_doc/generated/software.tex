@@ -1,0 +1,255 @@
+% ARCHIVO GENERADO por generate_software_doc.py -- no editar a mano.
+\chapter{Software}
+\label{chap:software}
+\lstset{language=Python,basicstyle=\ttfamily\scriptsize,numbers=left,numberstyle=\tiny,breaklines=true,frame=single,keywordstyle=\color{blue},commentstyle=\color{gray},inputencoding=utf8,extendedchars=true,literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1 {ñ}{{\~n}}1 {Á}{{\'A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1 {Ú}{{\'U}}1 {Ñ}{{\~N}}1}
+Este capítulo documenta el software del robot Storm Breaker (MakeX 2026). Se genera automáticamente a partir de los comentarios Doxygen de Robot.py.
+
+\section{Descripci\'on general}
+Programa autónomo y de control manual del robot de Robotica76 para el reto MakeX 2026 "StormBreaker".
+
+Se ejecuta en el controlador NovaPi de mBuild con chasis de 4 ruedas mecanum (motores con encoder M1-M4), una cámara AI para leer códigos QR/tags, una garra (DC1 la mueve, DC2 la abre/cierra) y un lanzador con dos motores brushless (BL1/BL2). Funcionamiento: - Al iniciar espera 30 s, inicializa el reconocimiento de tags de la cámara y entra a main(). - main() es un ciclo de control con el gamepad: los joysticks siempre mueven el chasis y los botones activan acciones: N1 = rutina autónoma de 28 s (lee tags y se mueve según el resultado), N2 = detener motores, Up/Down = mover garra, L1/R1 = abrir/cerrar garra, N3 = lanzador (R2/L2 ajustan la potencia, N3 lo detiene).
+
+\emph{Nota:} Los nombres en español se conservan del proyecto original de mBlock.
+
+Archivo fuente: \texttt{Robot.py} (251 l\'ineas).
+\section{Hardware y variables globales}
+\begin{longtable}{@{}p{0.28\linewidth}p{0.66\linewidth}@{}}\toprule
+\textbf{Nombre} & \textbf{Descripci\'on} \\\midrule\endhead
+\texttt{pot\_lanzamiento} & Potencia del lanzador (porcentaje) aplicada a BL1/BL2. \\
+\texttt{aper\_pot\_griper} & Potencia del motor de apertura/cierre de la garra (DC2). \\
+\texttt{mov\_pot\_griper} & Potencia del motor de movimiento de la garra (DC1). \\
+\texttt{v1} & Velocidad objetivo de la rueda M1 (la calcula Checar\_Velocidades). \\
+\texttt{v2} & Velocidad objetivo de la rueda M2. \\
+\texttt{v3} & Velocidad objetivo de la rueda M3. \\
+\texttt{v4} & Velocidad objetivo de la rueda M4. \\
+\texttt{Bandera} & Bandera para salir de ciclos (1 = terminado). \\
+\texttt{encoder\_motor\_M1} & Motor con encoder del chasis en M1. \\
+\texttt{encoder\_motor\_M2} & Motor con encoder del chasis en M2. \\
+\texttt{encoder\_motor\_M3} & Motor con encoder del chasis en M3. \\
+\texttt{encoder\_motor\_M4} & Motor con encoder del chasis en M4. \\
+\texttt{ai\_camera\_p1} & Cámara AI en PORT3 usada para detectar tags/QR. \\
+\bottomrule\end{longtable}
+\section{C\'omo se ejecuta el programa}
+\subsection{Secuencia de arranque}
+Instrucciones a nivel de m\'odulo, ejecutadas en orden al encender el NovaPi:
+
+\begin{figure}[H]\centering
+\begin{tikzpicture}[>=Stealth,
+  st/.style={draw,rounded corners,fill=green!10,align=center,minimum width=3.2cm,minimum height=0.8cm,font=\footnotesize},
+  fin/.style={draw,ellipse,fill=gray!15,font=\footnotesize}]
+\node[fin] (start) at (0,0) {Encendido};
+\node[st,below=0.6cm of start] (b0) {\texttt{sleep(30)}};
+\draw[->] (start) -- (b0);
+\node[st,below=0.6cm of b0] (b1) {\texttt{InicializarTag()}};
+\draw[->] (b0) -- (b1);
+\node[st,below=0.6cm of b1] (b2) {\texttt{main()}};
+\draw[->] (b1) -- (b2);
+\end{tikzpicture}
+\caption{Secuencia de arranque (generada del c\'odigo).}\end{figure}
+\subsection{Ciclo principal y botones del gamepad}
+\begin{center}\begin{tabular}{@{}ll@{}}\toprule
+\textbf{Tecla} & \textbf{Acci\'on} \\\midrule
+\texttt{N1} & \texttt{Comparacion\_QR()} \\
+\texttt{N2} & \texttt{Reset\_Motores()} \\
+\texttt{Up} & \texttt{Mov\_Griper\_N(1)} \\
+\texttt{Down} & \texttt{Mov\_Griper\_N(0)} \\
+\texttt{L1} & \texttt{Apertura\_Griper\_N(1)} \\
+\texttt{R1} & \texttt{Apertura\_Griper\_N(0)} \\
+\texttt{N3} & \texttt{Lanzador()} \\
+\bottomrule\end{tabular}\end{center}
+\begin{figure}[H]\centering
+\begin{tikzpicture}[>=Stealth,
+  st/.style={draw,rounded corners,fill=orange!10,align=center,minimum width=3.6cm,font=\footnotesize},
+  dc/.style={draw,diamond,aspect=2.6,fill=yellow!15,align=center,font=\scriptsize,inner sep=1pt}]
+\node[st] (loop) at (0,0) {Inicio de iteraci\'on\\\texttt{while True}};
+\node[dc,below=0.55cm of loop] (d0) {Tecla \texttt{N1}?};
+\node[st,right=1.6cm of d0] (a0) {\texttt{Comparacion\_QR()}};
+\draw[->] (d0) -- node[above,font=\scriptsize]{s\'i} (a0);
+\draw[->] (loop) -- node[right,font=\scriptsize]{no} (d0);
+\node[dc,below=0.55cm of d0] (d1) {Tecla \texttt{N2}?};
+\node[st,right=1.6cm of d1] (a1) {\texttt{Reset\_Motores()}};
+\draw[->] (d1) -- node[above,font=\scriptsize]{s\'i} (a1);
+\draw[->] (d0) -- node[right,font=\scriptsize]{no} (d1);
+\node[dc,below=0.55cm of d1] (d2) {Tecla \texttt{Up}?};
+\node[st,right=1.6cm of d2] (a2) {\texttt{Mov\_Griper\_N(1)}};
+\draw[->] (d2) -- node[above,font=\scriptsize]{s\'i} (a2);
+\draw[->] (d1) -- node[right,font=\scriptsize]{no} (d2);
+\node[dc,below=0.55cm of d2] (d3) {Tecla \texttt{Down}?};
+\node[st,right=1.6cm of d3] (a3) {\texttt{Mov\_Griper\_N(0)}};
+\draw[->] (d3) -- node[above,font=\scriptsize]{s\'i} (a3);
+\draw[->] (d2) -- node[right,font=\scriptsize]{no} (d3);
+\node[dc,below=0.55cm of d3] (d4) {Tecla \texttt{L1}?};
+\node[st,right=1.6cm of d4] (a4) {\texttt{Apertura\_Griper\_N(1)}};
+\draw[->] (d4) -- node[above,font=\scriptsize]{s\'i} (a4);
+\draw[->] (d3) -- node[right,font=\scriptsize]{no} (d4);
+\node[dc,below=0.55cm of d4] (d5) {Tecla \texttt{R1}?};
+\node[st,right=1.6cm of d5] (a5) {\texttt{Apertura\_Griper\_N(0)}};
+\draw[->] (d5) -- node[above,font=\scriptsize]{s\'i} (a5);
+\draw[->] (d4) -- node[right,font=\scriptsize]{no} (d5);
+\node[dc,below=0.55cm of d5] (d6) {Tecla \texttt{N3}?};
+\node[st,right=1.6cm of d6] (a6) {\texttt{Lanzador()}};
+\draw[->] (d6) -- node[above,font=\scriptsize]{s\'i} (a6);
+\draw[->] (d5) -- node[right,font=\scriptsize]{no} (d6);
+\node[st,below=0.7cm of d6] (drive) {Mover chasis con joysticks\\\texttt{Checar\_Velocidades} + \texttt{Vel\_Motores}};
+\draw[->] (d6) -- node[right,font=\scriptsize]{no} (drive);
+\draw[->] (a0.east) -- ++(0.6,0) |- (drive.east);
+\draw[->] (a1.east) -- ++(0.6,0) |- (drive.east);
+\draw[->] (a2.east) -- ++(0.6,0) |- (drive.east);
+\draw[->] (a3.east) -- ++(0.6,0) |- (drive.east);
+\draw[->] (a4.east) -- ++(0.6,0) |- (drive.east);
+\draw[->] (a5.east) -- ++(0.6,0) |- (drive.east);
+\draw[->] (a6.east) -- ++(0.6,0) |- (drive.east);
+\draw[->] (drive.west) -- ++(-1.2,0) |- (loop.west);
+\end{tikzpicture}
+\caption{Ciclo principal \texttt{main()}: se eval\'ua una sola acci\'on por iteraci\'on y siempre se actualiza el chasis.}\end{figure}
+\subsection{Flujo de decisi\'on aut\'onomo}
+\input{diagrams/autonomous_flow.tex}
+\section{Arquitectura: llamadas entre funciones}
+\begin{figure}[H]\centering\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[node distance=1cm, >=Stealth,
+  fn/.style={draw,rounded corners,fill=blue!8,font=\footnotesize\ttfamily,minimum height=0.7cm,inner sep=4pt}]
+\node[fn] (InicializarTag) at (0.00,0.00) {InicializarTag};
+\node[fn] (main) at (0.00,-1.10) {main};
+\node[fn] (ComparacionQR) at (5.20,0.00) {Comparacion\_QR};
+\node[fn] (MovGriperN) at (5.20,-1.10) {Mov\_Griper\_N};
+\node[fn] (ResetMotores) at (5.20,-2.20) {Reset\_Motores};
+\node[fn] (AperturaGriperN) at (5.20,-3.30) {Apertura\_Griper\_N};
+\node[fn] (Lanzador) at (5.20,-4.40) {Lanzador};
+\node[fn] (ComparacionValores) at (10.40,0.00) {Comparacion\_Valores};
+\node[fn] (MovAuto) at (15.60,0.00) {Mov\_Auto};
+\node[fn] (ChecarVelocidades) at (20.80,0.00) {Checar\_Velocidades};
+\node[fn] (VelMotores) at (20.80,-1.10) {Vel\_Motores};
+\draw[->] (ComparacionQR) -- (MovAuto);
+\draw[->] (ComparacionQR) -- (ComparacionValores);
+\draw[->] (MovAuto) -- (ChecarVelocidades);
+\draw[->] (MovAuto) -- (VelMotores);
+\draw[->] (ComparacionValores) -- (MovAuto);
+\draw[->] (main) -- (ChecarVelocidades);
+\draw[->] (main) -- (VelMotores);
+\draw[->] (main) -- (ComparacionQR);
+\draw[->] (main) -- (ResetMotores);
+\draw[->] (main) -- (MovGriperN);
+\draw[->] (main) -- (AperturaGriperN);
+\draw[->] (main) -- (Lanzador);
+\end{tikzpicture}
+}\caption{Grafo de llamadas (generado con el an\'alisis del c\'odigo).}\end{figure}
+\section{Decisiones de dise\~no}
+\medskip\noindent\textbf{SW-DEC-001 -- Un solo archivo para NovaPi}\par
+\textbf{Decisi\'on:} Todo el programa vive en un único archivo Robot.py.\\
+\textbf{Justificaci\'on:} El NovaPi de mBuild carga un solo script de Python; mantener todo junto evita problemas de importación y facilita el cambio rápido en competencia.
+\medskip\noindent\textbf{SW-DEC-002 -- Cinemática mecanum con signos por montaje}\par
+\textbf{Decisi\'on:} Checar\_Velocidades calcula v1..v4 y Vel\_Motores invierte M2 y M4.\\
+\textbf{Justificaci\'on:} Separar el cálculo de la aplicación permite probar la cinemática sin mover motores; los motores del lado derecho están montados en sentido opuesto.
+\medskip\noindent\textbf{SW-DEC-003 -- Control manual siempre activo}\par
+\textbf{Decisi\'on:} Los joysticks mueven el chasis en cada iteración de main(), incluso después de presionar un botón.\\
+\textbf{Justificaci\'on:} El conductor conserva el control del chasis y puede interrumpir las acciones de los mecanismos.
+\medskip\noindent\textbf{SW-DEC-004 -- Autónomo de 28 s basado en tags}\par
+\textbf{Decisi\'on:} El botón N1 ejecuta Comparacion\_QR en un ciclo limitado por novapi.timer() < 28.\\
+\textbf{Justificaci\'on:} El periodo autónomo es de 30 s; se deja 2 s de margen para no invadir el periodo manual.
+\medskip\noindent\textbf{SW-DEC-005 -- Conversión de píxeles a cm}\par
+\textbf{Decisi\'on:} Las distancias de la cámara se dividen entre 16.84 px/cm.\\
+\textbf{Justificaci\'on:} Constante obtenida de la calibración del tag de 10 cm; debe recalibrarse si cambia la cámara o su posición.
+\medskip\noindent\textbf{SW-DEC-006 -- Movimiento autónomo por tiempo}\par
+\textbf{Decisi\'on:} Mov\_Auto mueve el robot por un tiempo fijo en lugar de usar la distancia recibida.\\
+\textbf{Justificaci\'on:} Solución provisional; la conversión de distancia a velocidad/tiempo queda pendiente de calibración.
+\section{Referencia de funciones y c\'odigo}
+\subsection{\texttt{Checar\_Velocidades}}
+\label{fn:ChecarVelocidades}
+Calcula las velocidades de las cuatro ruedas a partir de la velocidad deseada del chasis (cinemática mecanum).
+
+\begin{tabular}{@{}p{0.15\linewidth}p{0.78\linewidth}@{}}
+\textbf{Par\'ametro} & \textbf{Descripci\'on} \\
+\texttt{Vx} & Componente hacia adelante/atrás. \\
+\texttt{Vy} & Componente lateral. \\
+\texttt{W} & Componente de rotación. \\
+\texttt{ri} & Ganancia de rotación (factor aplicado a W). \\
+\end{tabular}\\[4pt]
+\emph{Poscondición:} Se actualizan las globales v1..v4; llamar a Vel\_Motores() para aplicarlas.\\
+\lstinputlisting[firstline=64,lastline=70,firstnumber=64]{../../../software/robot/main/Robot.py}
+\subsection{\texttt{Vel\_Motores}}
+\label{fn:VelMotores}
+Aplica las velocidades globales v1..v4 a los motores (M2 y M4 van invertidos por el sentido de montaje).
+
+\lstinputlisting[firstline=73,lastline=78,firstnumber=73]{../../../software/robot/main/Robot.py}
+\subsection{\texttt{Comparacion\_QR}}
+\label{fn:ComparacionQR}
+Rutina autónoma de decisión basada en los tags vistos por la cámara AI.
+
+Lee el tag izquierdo (id 2) y el derecho (id 3). Si no encuentra ninguno asume dos conos y avanza. Si ambos tags están en la misma posición, agarra el cubo (valor de tag 2) o se mueve, vuelve a leer el tag y compara ambas lecturas. En otro caso compara los dos tags directamente. El resultado se delega a Comparacion\_Valores() y Mov\_Auto().
+
+\emph{Nota:} Contiene un time.sleep(30) temporal marcado "QUITAR" para pruebas.\\
+Llama a: \texttt{Mov\_Auto} (\ref{fn:MovAuto}), \texttt{Comparacion\_Valores} (\ref{fn:ComparacionValores})\\
+\lstinputlisting[firstline=86,lastline=113,firstnumber=86]{../../../software/robot/main/Robot.py}
+\subsection{\texttt{Mov\_Auto}}
+\label{fn:MovAuto}
+Mueve el robot de forma autónoma durante un tiempo fijo.
+
+\begin{tabular}{@{}p{0.15\linewidth}p{0.78\linewidth}@{}}
+\textbf{Par\'ametro} & \textbf{Descripci\'on} \\
+\texttt{tipo} & Tipo de movimiento: 1 = primero lateral y luego hacia adelante; otro valor = solo hacia adelante. \\
+\texttt{distancia} & Distancia objetivo en cm (aún no se usa; el movimiento es por tiempo, ver el comentario interno). \\
+\end{tabular}\\[4pt]
+\emph{Nota:} Cada fase corre hasta que novapi.timer() es igual a 20.\\
+Llama a: \texttt{Checar\_Velocidades} (\ref{fn:ChecarVelocidades}), \texttt{Vel\_Motores} (\ref{fn:VelMotores})\\
+\lstinputlisting[firstline=119,lastline=132,firstnumber=119]{../../../software/robot/main/Robot.py}
+\subsection{\texttt{InicializarTag}}
+\label{fn:InicializarTag}
+Inicializa el reconocimiento de tags de la cámara AI.
+
+Activa la función de tags, espera 10 s a que la cámara arranque y luego configura el modo de tag y el tamaño real del tag (10).
+
+\lstinputlisting[firstline=137,lastline=141,firstnumber=137]{../../../software/robot/main/Robot.py}
+\subsection{\texttt{Comparacion\_Valores}}
+\label{fn:ComparacionValores}
+Compara dos lecturas de tags y se mueve hacia el objetivo elegido.
+
+\begin{tabular}{@{}p{0.15\linewidth}p{0.78\linewidth}@{}}
+\textbf{Par\'ametro} & \textbf{Descripci\'on} \\
+\texttt{Val1} & Valor del primer tag. \\
+\texttt{Dist1} & Distancia del primer tag en píxeles (se convierte a cm con 16.84 px/cm). \\
+\texttt{Pos1} & 1 si el primer tag está al lado izquierdo de la imagen (se niega la distancia). \\
+\texttt{Val2} & Valor del segundo tag. \\
+\texttt{Dist2} & Distancia del segundo tag en píxeles (se convierte a cm). \\
+\texttt{Pos2} & 1 si el segundo tag está al lado izquierdo de la imagen. \\
+\texttt{modo} & 1 = caso de dos cubos; otro valor = caso de tres posiciones. \\
+\end{tabular}\\[4pt]
+Llama a: \texttt{Mov\_Auto} (\ref{fn:MovAuto})\\
+\lstinputlisting[firstline=151,lastline=172,firstnumber=151]{../../../software/robot/main/Robot.py}
+\subsection{\texttt{Mov\_Griper\_N}}
+\label{fn:MovGriperN}
+Mueve la garra con el motor DC1 al 50\% de potencia.
+
+\begin{tabular}{@{}p{0.15\linewidth}p{0.78\linewidth}@{}}
+\textbf{Par\'ametro} & \textbf{Descripci\'on} \\
+\texttt{modo} & 1 = un sentido; otro valor = sentido contrario. \\
+\end{tabular}\\[4pt]
+\lstinputlisting[firstline=176,lastline=182,firstnumber=176]{../../../software/robot/main/Robot.py}
+\subsection{\texttt{Reset\_Motores}}
+\label{fn:ResetMotores}
+Detiene los motores del chasis M2, M3 y M4.
+
+\lstinputlisting[firstline=185,lastline=188,firstnumber=185]{../../../software/robot/main/Robot.py}
+\subsection{\texttt{main}}
+\label{fn:main}
+Ciclo principal del gamepad (nunca termina).
+
+Atiende el inicio autónomo (N1, 28 s), paro de motores (N2), garra (Up/Down, L1/R1) y lanzador (N3), y mueve continuamente el chasis con los joysticks.
+
+Llama a: \texttt{Checar\_Velocidades} (\ref{fn:ChecarVelocidades}), \texttt{Vel\_Motores} (\ref{fn:VelMotores}), \texttt{Comparacion\_QR} (\ref{fn:ComparacionQR}), \texttt{Reset\_Motores} (\ref{fn:ResetMotores}), \texttt{Mov\_Griper\_N} (\ref{fn:MovGriperN}), \texttt{Apertura\_Griper\_N} (\ref{fn:AperturaGriperN}), \texttt{Lanzador} (\ref{fn:Lanzador})\\
+\lstinputlisting[firstline=193,lastline=215,firstnumber=193]{../../../software/robot/main/Robot.py}
+\subsection{\texttt{Apertura\_Griper\_N}}
+\label{fn:AperturaGriperN}
+Abre o cierra la garra con el motor DC2 al 50\% de potencia.
+
+\begin{tabular}{@{}p{0.15\linewidth}p{0.78\linewidth}@{}}
+\textbf{Par\'ametro} & \textbf{Descripci\'on} \\
+\texttt{modo} & 1 = un sentido; otro valor = sentido contrario. \\
+\end{tabular}\\[4pt]
+\lstinputlisting[firstline=219,lastline=225,firstnumber=219]{../../../software/robot/main/Robot.py}
+\subsection{\texttt{Lanzador}}
+\label{fn:Lanzador}
+Ciclo de control del lanzador.
+
+Mantiene los motores brushless BL1/BL2 a pot\_lanzamiento; R2 aumenta y L2 disminuye la potencia en 5. Al presionar N3 detiene ambos motores y sale del ciclo.
+
+\lstinputlisting[firstline=230,lastline=246,firstnumber=230]{../../../software/robot/main/Robot.py}
