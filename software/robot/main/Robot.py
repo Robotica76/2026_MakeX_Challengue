@@ -1,16 +1,16 @@
 ## @file Robot.py
-#  @brief Autonomous and manual control program for the Robotica76 robot, MakeX 2026 "StormBreaker" challenge.
-#  @details Runs on the mBuild NovaPi controller with a 4-wheel mecanum/omni drive (encoder motors M1-M4),
-#  an AI camera used to read QR/tag codes, a gripper (DC1 moves, DC2 opens/closes) and a
-#  two-motor brushless launcher (BL1/BL2).
+#  @brief Programa autónomo y de control manual del robot de Robotica76 para el reto MakeX 2026 "StormBreaker".
+#  @details Se ejecuta en el controlador NovaPi de mBuild con chasis de 4 ruedas mecanum (motores con encoder M1-M4),
+#  una cámara AI para leer códigos QR/tags, una garra (DC1 la mueve, DC2 la abre/cierra) y un
+#  lanzador con dos motores brushless (BL1/BL2).
 #
-#  Operation:
-#  - On boot the script waits 30 s, initializes the camera tag recognition and enters main().
-#  - main() is a gamepad loop: the joysticks always drive the chassis, and buttons trigger actions:
-#    N1 = 28 s autonomous routine (reads tags and moves accordingly), N2 = stop motors,
-#    Up/Down = gripper move, L1/R1 = gripper open/close, N3 = launcher (R2/L2 adjust power, N3 stops).
+#  Funcionamiento:
+#  - Al iniciar espera 30 s, inicializa el reconocimiento de tags de la cámara y entra a main().
+#  - main() es un ciclo de control con el gamepad: los joysticks siempre mueven el chasis y los botones
+#    activan acciones: N1 = rutina autónoma de 28 s (lee tags y se mueve según el resultado), N2 = detener motores,
+#    Up/Down = mover garra, L1/R1 = abrir/cerrar garra, N3 = lanzador (R2/L2 ajustan la potencia, N3 lo detiene).
 #
-#  @note Spanish identifiers are kept from the original mBlock project.
+#  @note Los nombres en español se conservan del proyecto original de mBlock.
 
 import novapi
 from mbuild.encoder_motor import encoder_motor_class
@@ -19,16 +19,16 @@ from mbuild import power_expand_board
 from mbuild import gamepad
 import time
 
-## @name Global state
+## @name Variables globales
 #  @{
-## @var pot_lanzamiento  Launcher power (percent) applied to BL1/BL2.
-## @var aper_pot_griper  Power of the gripper open/close motor (DC2).
-## @var mov_pot_griper   Power of the gripper movement motor (DC1).
-## @var v1  Target speed of wheel M1 (set by Checar_Velocidades).
-## @var v2  Target speed of wheel M2.
-## @var v3  Target speed of wheel M3.
-## @var v4  Target speed of wheel M4.
-## @var Bandera  Flag used to exit loops (1 = finished).
+## @var pot_lanzamiento  Potencia del lanzador (porcentaje) aplicada a BL1/BL2.
+## @var aper_pot_griper  Potencia del motor de apertura/cierre de la garra (DC2).
+## @var mov_pot_griper   Potencia del motor de movimiento de la garra (DC1).
+## @var v1  Velocidad objetivo de la rueda M1 (la calcula Checar_Velocidades).
+## @var v2  Velocidad objetivo de la rueda M2.
+## @var v3  Velocidad objetivo de la rueda M3.
+## @var v4  Velocidad objetivo de la rueda M4.
+## @var Bandera  Bandera para salir de ciclos (1 = terminado).
 #  @}
 # Initialization of variables global
 pot_lanzamiento = 0
@@ -40,13 +40,13 @@ v3 = 0
 v4 = 0
 Bandera = 0
 
-## @name Hardware objects
+## @name Objetos de hardware
 #  @{
-## @var encoder_motor_M1 Chassis encoder motor on M1.
-## @var encoder_motor_M2 Chassis encoder motor on M2.
-## @var encoder_motor_M3 Chassis encoder motor on M3.
-## @var encoder_motor_M4 Chassis encoder motor on M4.
-## @var ai_camera_p1 AI camera on PORT3 used for tag/QR detection.
+## @var encoder_motor_M1 Motor con encoder del chasis en M1.
+## @var encoder_motor_M2 Motor con encoder del chasis en M2.
+## @var encoder_motor_M3 Motor con encoder del chasis en M3.
+## @var encoder_motor_M4 Motor con encoder del chasis en M4.
+## @var ai_camera_p1 Cámara AI en PORT3 usada para detectar tags/QR.
 #  @}
 # new class
 encoder_motor_M1 = encoder_motor_class("M1", "INDEX1")
@@ -55,12 +55,12 @@ encoder_motor_M3 = encoder_motor_class("M3", "INDEX1")
 encoder_motor_M4 = encoder_motor_class("M4", "INDEX1")
 ai_camera_p1 = ai_camera_class("PORT3", "INDEX1")
 
-## @brief Computes the four wheel speeds from a desired chassis velocity (mecanum kinematics).
-#  @param Vx Forward/backward component.
-#  @param Vy Lateral (strafe) component.
-#  @param W  Rotation component.
-#  @param ri Rotation gain (distance factor applied to W).
-#  @post Global v1..v4 are updated; call Vel_Motores() to apply them.
+## @brief Calcula las velocidades de las cuatro ruedas a partir de la velocidad deseada del chasis (cinemática mecanum).
+#  @param Vx Componente hacia adelante/atrás.
+#  @param Vy Componente lateral.
+#  @param W  Componente de rotación.
+#  @param ri Ganancia de rotación (factor aplicado a W).
+#  @post Se actualizan las globales v1..v4; llamar a Vel_Motores() para aplicarlas.
 def Checar_Velocidades(Vx, Vy, W, ri):
     global v1, v2, v3, v4
     aux_VelAngular = W * ri
@@ -69,7 +69,7 @@ def Checar_Velocidades(Vx, Vy, W, ri):
     v3 = Vx + Vy - aux_VelAngular
     v4 = Vx - Vy + aux_VelAngular
 
-## @brief Applies the global wheel speeds v1..v4 to the motors (M2 and M4 are inverted for mounting direction).
+## @brief Aplica las velocidades globales v1..v4 a los motores (M2 y M4 van invertidos por el sentido de montaje).
 def Vel_Motores():
     global v1, v2, v3, v4
     encoder_motor_M1.set_speed(v1 * 1)
@@ -77,12 +77,12 @@ def Vel_Motores():
     encoder_motor_M3.set_speed(v3 * 1)
     encoder_motor_M4.set_speed(v4 * -1)
 
-## @brief Autonomous decision routine based on the tags seen by the AI camera.
-#  @details Reads the left (id 2) and right (id 3) tags. If neither is found it assumes
-#  two cones and moves forward. If both tags are at the same position it either grabs the cube
-#  (tag value 2) or moves, re-reads the tag and compares both readings. Otherwise it compares the
-#  two tags directly. Results are delegated to Comparacion_Valores() and Mov_Auto().
-#  @note Contains a temporary 30 s sleep marked "QUITAR" (remove) for testing.
+## @brief Rutina autónoma de decisión basada en los tags vistos por la cámara AI.
+#  @details Lee el tag izquierdo (id 2) y el derecho (id 3). Si no encuentra ninguno asume
+#  dos conos y avanza. Si ambos tags están en la misma posición, agarra el cubo (valor de tag 2)
+#  o se mueve, vuelve a leer el tag y compara ambas lecturas. En otro caso compara los dos tags
+#  directamente. El resultado se delega a Comparacion_Valores() y Mov_Auto().
+#  @note Contiene un time.sleep(30) temporal marcado "QUITAR" para pruebas.
 def Comparacion_QR():
     B1 = 0
     B2 = 0
@@ -112,10 +112,10 @@ def Comparacion_QR():
       else:
         Comparacion_Valores(ai_camera_p1.ai_camera_tag_analysis_result_get(2, 1), ai_camera_p1.ai_camera_tag_spatial_attribute_get(2, 1, 1), 0, ai_camera_p1.ai_camera_tag_analysis_result_get(3, 1), ai_camera_p1.ai_camera_tag_spatial_attribute_get(3, 1, 1), 0, 0)
 
-## @brief Moves the robot autonomously for a fixed time.
-#  @param tipo Movement type: 1 = lateral movement then forward; otherwise forward only.
-#  @param distancia Target distance in cm (currently unused; movement is time based, see the TODO inside).
-#  @note Each phase runs until novapi.timer() equals 20.
+## @brief Mueve el robot de forma autónoma durante un tiempo fijo.
+#  @param tipo Tipo de movimiento: 1 = primero lateral y luego hacia adelante; otro valor = solo hacia adelante.
+#  @param distancia Distancia objetivo en cm (aún no se usa; el movimiento es por tiempo, ver el comentario interno).
+#  @note Cada fase corre hasta que novapi.timer() es igual a 20.
 def Mov_Auto(tipo, distancia):
     # Con la DISTANCIA obtener la velocidad de los motores y el tiempo que se debe de mover
     if tipo == 1:
@@ -131,23 +131,23 @@ def Mov_Auto(tipo, distancia):
         time.sleep(0.001)
         Vel_Motores()
 
-## @brief Initializes the AI camera tag recognition.
-#  @details Enables the tag function, waits 10 s for the camera to start, then sets the tag
-#  mode and the real tag size (10).
+## @brief Inicializa el reconocimiento de tags de la cámara AI.
+#  @details Activa la función de tags, espera 10 s a que la cámara arranque y luego configura
+#  el modo de tag y el tamaño real del tag (10).
 def InicializarTag():
     ai_camera_p1.ai_camera_set_func_switch(4, 1)
     time.sleep(10)
     ai_camera_p1.ai_camera_tag_func_mode_set(3, 1)
     ai_camera_p1.ai_camera_tag_actual_size_set(10, 1)
 
-## @brief Compares two tag readings and moves toward the selected target.
-#  @param Val1 Value of the first tag.
-#  @param Dist1 Distance of the first tag in pixels (converted to cm using 16.84 px/cm).
-#  @param Pos1 1 if the first tag is on the left side of the image (distance is negated).
-#  @param Val2 Value of the second tag.
-#  @param Dist2 Distance of the second tag in pixels (converted to cm).
-#  @param Pos2 1 if the second tag is on the left side of the image.
-#  @param modo 1 = two-cube case, any other value = three-position case.
+## @brief Compara dos lecturas de tags y se mueve hacia el objetivo elegido.
+#  @param Val1 Valor del primer tag.
+#  @param Dist1 Distancia del primer tag en píxeles (se convierte a cm con 16.84 px/cm).
+#  @param Pos1 1 si el primer tag está al lado izquierdo de la imagen (se niega la distancia).
+#  @param Val2 Valor del segundo tag.
+#  @param Dist2 Distancia del segundo tag en píxeles (se convierte a cm).
+#  @param Pos2 1 si el segundo tag está al lado izquierdo de la imagen.
+#  @param modo 1 = caso de dos cubos; otro valor = caso de tres posiciones.
 def Comparacion_Valores(Val1, Dist1, Pos1, Val2, Dist2, Pos2, modo):
     Dist1 = Dist1 / 16.84   # Dist1 esta en pixeles y se divide entre 16.84 para obtener la distancia en cm
     Dist2 = Dist2 / 16.84   # Dist2 esta en pixeles y se divide entre 16.84 para obtener la distancia en cm
@@ -171,8 +171,8 @@ def Comparacion_Valores(Val1, Dist1, Pos1, Val2, Dist2, Pos2, modo):
         print("3 DER")
         Mov_Auto(1, Dist2)
 
-## @brief Moves the gripper with motor DC1 at 50% power.
-#  @param modo 1 = one direction, any other value = opposite direction.
+## @brief Mueve la garra con el motor DC1 al 50% de potencia.
+#  @param modo 1 = un sentido; otro valor = sentido contrario.
 def Mov_Griper_N(modo):
     global mov_pot_griper
     mov_pot_griper = 50
@@ -181,15 +181,15 @@ def Mov_Griper_N(modo):
     else:
       power_expand_board.set_power("DC1", mov_pot_griper * -1)
 
-## @brief Stops chassis motors M2, M3 and M4.
+## @brief Detiene los motores del chasis M2, M3 y M4.
 def Reset_Motores():
     encoder_motor_M2.set_speed(0)
     encoder_motor_M3.set_speed(0)
     encoder_motor_M4.set_speed(0)
 
-## @brief Main gamepad loop (never returns).
-#  @details Handles autonomous start (N1, 28 s), motor stop (N2), gripper (Up/Down, L1/R1) and
-#  launcher (N3), and continuously drives the chassis with the joysticks.
+## @brief Ciclo principal del gamepad (nunca termina).
+#  @details Atiende el inicio autónomo (N1, 28 s), paro de motores (N2), garra (Up/Down, L1/R1) y
+#  lanzador (N3), y mueve continuamente el chasis con los joysticks.
 def main():
     global pot_lanzamiento
     while True:
@@ -214,8 +214,8 @@ def main():
         Checar_Velocidades(gamepad.get_joystick("Ly"), gamepad.get_joystick("Lx"), gamepad.get_joystick("Rx"), 1)
         Vel_Motores()
 
-## @brief Opens or closes the gripper with motor DC2 at 50% power.
-#  @param modo 1 = one direction, any other value = opposite direction.
+## @brief Abre o cierra la garra con el motor DC2 al 50% de potencia.
+#  @param modo 1 = un sentido; otro valor = sentido contrario.
 def Apertura_Griper_N(modo): 
     global aper_pot_griper
     aper_pot_griper = 50
@@ -224,9 +224,9 @@ def Apertura_Griper_N(modo):
     else:
       power_expand_board.set_power("DC2", aper_pot_griper * -1)
 
-## @brief Launcher control loop.
-#  @details Runs the brushless motors BL1/BL2 at pot_lanzamiento; R2 increases and L2 decreases
-#  the power by 5. Pressing N3 stops both motors and exits the loop.
+## @brief Ciclo de control del lanzador.
+#  @details Mantiene los motores brushless BL1/BL2 a pot_lanzamiento; R2 aumenta y L2 disminuye
+#  la potencia en 5. Al presionar N3 detiene ambos motores y sale del ciclo.
 def Lanzador():
     global pot_lanzamiento
     Bandera = 0
@@ -245,7 +245,7 @@ def Lanzador():
           power_expand_board.set_power("BL2", 0)
           Bandera = 1
 
-# Program entry point
+# Punto de entrada del programa
 time.sleep(30)
 InicializarTag()
 main()
