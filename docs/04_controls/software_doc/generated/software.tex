@@ -7,14 +7,14 @@ Este capítulo documenta el software del robot Storm Breaker (MakeX 2026). Se ge
 \section{Descripci\'on general}
 Control principal del robot con movimiento omnidireccional, griper, lanzador y visión QR.
 
-Este módulo integra todos los subsistemas del robot: - Tracción omnidireccional de 4 ruedas mediante motores encoder (M1–M4). - Griper con movimiento vertical (DC1) y apertura/cierre de pinzas (DC2). - Lanzador de pelotas con dos motores brushless (BL1, BL2). - Visión artificial con cámara de IA para lectura y comparación de etiquetas QR. - Control manual mediante gamepad con mapeo de teclas a acciones. - Modo autónomo de 28 s que usa la cámara para seleccionar y alcanzar el cubo de mayor valor detectado en campo.
+Este módulo integra todos los subsistemas del robot: - Tracción omnidireccional de 4 ruedas mediante motores encoder (M1–M4). - Griper con movimiento vertical (DC1) y apertura/cierre de pinzas (SM1). - Lanzador de pelotas con dos motores brushless (BL1, BL2). - Visión artificial con cámara de IA para lectura y comparación de etiquetas QR. - Control manual mediante gamepad con mapeo de teclas a acciones. - Modo autónomo de 28 s que usa la cámara para seleccionar y alcanzar el cubo de mayor valor detectado en campo.
 
-Archivo fuente: \texttt{Robot.py} (476 l\'ineas).
+Archivo fuente: \texttt{Robot.py} (540 l\'ineas).
 \section{Hardware y variables globales}
 \begin{longtable}{@{}p{0.28\linewidth}p{0.66\linewidth}@{}}\toprule
 \textbf{Nombre} & \textbf{Descripci\'on} \\\midrule\endhead
 \texttt{pot\_lanzamiento} & Potencia del lanzador (porcentaje) aplicada a BL1/BL2. \\
-\texttt{aper\_pot\_griper} & Potencia del motor de apertura/cierre de la garra (DC2). \\
+\texttt{aper\_pot\_griper} & Potencia del motor de apertura/cierre de la garra (SM1). \\
 \texttt{mov\_pot\_griper} & Potencia del motor de movimiento de la garra (DC1). \\
 \texttt{v1} & Velocidad objetivo de la rueda M1 (la calcula Checar\_Velocidades). \\
 \texttt{v2} & Velocidad objetivo de la rueda M2. \\
@@ -53,13 +53,15 @@ Instrucciones a nivel de m\'odulo, ejecutadas en orden al encender el NovaPi:
 \node[fn] (InicializarTag) at (0.00,0.00) {InicializarTag};
 \node[fn] (MovGriper) at (0.00,-1.10) {Mov\_Griper};
 \node[fn] (AperturaGriper) at (0.00,-2.20) {Apertura\_Griper};
-\node[fn] (modoautomatico) at (0.00,-3.30) {modo\_automatico};
-\node[fn] (lanzamiento) at (0.00,-4.40) {lanzamiento};
-\node[fn] (ResetMotores) at (0.00,-5.50) {Reset\_Motores};
-\node[fn] (main) at (0.00,-6.60) {main};
+\node[fn] (AnguloBrush) at (0.00,-3.30) {Angulo\_Brush};
+\node[fn] (modoautomatico) at (0.00,-4.40) {modo\_automatico};
+\node[fn] (lanzamiento) at (0.00,-5.50) {lanzamiento};
+\node[fn] (ResetMotores) at (0.00,-6.60) {Reset\_Motores};
+\node[fn] (main) at (0.00,-7.70) {main};
 \node[fn] (ComparacionQR) at (5.20,0.00) {Comparacion\_QR};
-\node[fn] (Lanzador) at (5.20,-1.10) {Lanzador};
-\node[fn] (getpressedkey) at (5.20,-2.20) {get\_pressed\_key};
+\node[fn] (ChecarServo) at (5.20,-1.10) {ChecarServo};
+\node[fn] (Lanzador) at (5.20,-2.20) {Lanzador};
+\node[fn] (getpressedkey) at (5.20,-3.30) {get\_pressed\_key};
 \node[fn] (ComparacionValores) at (10.40,0.00) {Comparacion\_Valores};
 \node[fn] (MovAuto) at (15.60,0.00) {Mov\_Auto};
 \node[fn] (ChecarVelocidades) at (20.80,0.00) {Checar\_Velocidades};
@@ -69,6 +71,7 @@ Instrucciones a nivel de m\'odulo, ejecutadas en orden al encender el NovaPi:
 \draw[->] (MovAuto) -- (ChecarVelocidades);
 \draw[->] (MovAuto) -- (VelMotores);
 \draw[->] (ComparacionValores) -- (MovAuto);
+\draw[->] (AperturaGriper) -- (ChecarServo);
 \draw[->] (modoautomatico) -- (ComparacionQR);
 \draw[->] (lanzamiento) -- (Lanzador);
 \draw[->] (main) -- (getpressedkey);
@@ -115,7 +118,7 @@ Aplica la ecuación de cinemática inversa holonómica para una configuración d
 \texttt{W} & Velocidad angular de giro sobre el eje Z del robot. Valores positivos giran en sentido horario, negativos en antihorario. \\
 \texttt{ri} & Factor de escala (radio efectivo) que pondera la contribución angular. Normalmente se pasa 1 para mantener las unidades consistentes. \\
 \end{tabular}\\[4pt]
-\lstinputlisting[firstline=83,lastline=90,firstnumber=83]{../../../software/robot/main/Robot.py}
+\lstinputlisting[firstline=86,lastline=93,firstnumber=86]{../../../software/robot/main/Robot.py}
 \subsection{\texttt{Vel\_Motores}}
 \label{fn:VelMotores}
 Aplica las velocidades especificadas a los cuatro motores encoder del robot.
@@ -129,7 +132,7 @@ Los motores M2 y M4 reciben la velocidad multiplicada por -1 para compensar su o
 \texttt{v3} & Velocidad deseada para el motor M3 (float, rango típico -100 a 100). \\
 \texttt{v4} & Velocidad deseada para el motor M4 (float, rango típico -100 a 100). Se aplicará con signo invertido al motor físico. \\
 \end{tabular}\\[4pt]
-\lstinputlisting[firstline=105,lastline=109,firstnumber=105]{../../../software/robot/main/Robot.py}
+\lstinputlisting[firstline=108,lastline=112,firstnumber=108]{../../../software/robot/main/Robot.py}
 \subsection{\texttt{Comparacion\_QR}}
 \label{fn:ComparacionQR}
 Lee las etiquetas QR de la cámara y decide el movimiento autónomo del robot.
@@ -137,7 +140,7 @@ Lee las etiquetas QR de la cámara y decide el movimiento autónomo del robot.
 Consulta los slots 2 y 3 de la cámara (cubos izquierdo y derecho) y aplica la siguiente lógica de decisión: - Si ambos slots devuelven 'Null' -> se asume presencia de 2 conos; el robot avanza 55 unidades hacia la izquierda (tipo 1). - Si las distancias de los slots 2 y 3 son iguales -> los cubos están alineados en un solo bloque; se analiza el slot 1 individualmente: - Si su valor es 2 (máximo posible), se imprime "Agarrar Cubo" y no se realiza movimiento adicional. - En caso contrario, se guarda el valor y la posición del primer cubo, el robot avanza 44 u para posicionarse frente al segundo cubo, se re-lee el QR y se llama a Comparacion\_Valores() en modo 1. - Si las distancias son distintas -> los cubos están en posiciones diferentes; se llama directamente a Comparacion\_Valores() en modo 0 con los datos de los slots 2 y 3.
 
 Llama a: \texttt{Mov\_Auto} (\ref{fn:MovAuto}), \texttt{Comparacion\_Valores} (\ref{fn:ComparacionValores})\\
-\lstinputlisting[firstline=132,lastline=170,firstnumber=132]{../../../software/robot/main/Robot.py}
+\lstinputlisting[firstline=133,lastline=171,firstnumber=133]{../../../software/robot/main/Robot.py}
 \subsection{\texttt{Mov\_Auto}}
 \label{fn:MovAuto}
 Desplaza el robot de forma autónoma en la dirección indicada durante 20 segundos.
@@ -150,14 +153,14 @@ Calcula las velocidades mediante Checar\_Velocidades(), reinicia el temporizador
 \texttt{distancia} & Distancia objetivo en centímetros (parámetro reservado, no utilizado en el cálculo actual del tiempo de movimiento). \\
 \end{tabular}\\[4pt]
 Llama a: \texttt{Checar\_Velocidades} (\ref{fn:ChecarVelocidades}), \texttt{Vel\_Motores} (\ref{fn:VelMotores})\\
-\lstinputlisting[firstline=188,lastline=200,firstnumber=188]{../../../software/robot/main/Robot.py}
+\lstinputlisting[firstline=189,lastline=201,firstnumber=189]{../../../software/robot/main/Robot.py}
 \subsection{\texttt{InicializarTag}}
 \label{fn:InicializarTag}
 Configura la cámara de IA para detectar y analizar etiquetas QR.
 
 Realiza la secuencia de inicialización en tres pasos: 1. Activa el modo de reconocimiento de etiquetas (switch de función 4). 2. Espera 10 segundos para que el hardware de la cámara se estabilice. 3. Establece el modo de función de etiqueta en 3 (detección de QR/ArUco) y define el tamaño físico real de las etiquetas en 10 cm, necesario para que la cámara calcule distancias en unidades métricas.
 
-\lstinputlisting[firstline=211,lastline=215,firstnumber=211]{../../../software/robot/main/Robot.py}
+\lstinputlisting[firstline=212,lastline=216,firstnumber=212]{../../../software/robot/main/Robot.py}
 \subsection{\texttt{Comparacion\_Valores}}
 \label{fn:ComparacionValores}
 Compara los valores QR de dos cubos y mueve el robot hacia el de mayor valor.
@@ -175,7 +178,7 @@ Convierte primero las distancias de píxeles a centímetros dividiendo entre el 
 \texttt{modo} & Estrategia de comparación a aplicar. 1 = los cubos están en bloques distintos (se usa offset de 44 u). 0 = los cubos están en el mismo bloque (desplazamiento directo). \\
 \end{tabular}\\[4pt]
 Llama a: \texttt{Mov\_Auto} (\ref{fn:MovAuto})\\
-\lstinputlisting[firstline=252,lastline=274,firstnumber=252]{../../../software/robot/main/Robot.py}
+\lstinputlisting[firstline=253,lastline=275,firstnumber=253]{../../../software/robot/main/Robot.py}
 \subsection{\texttt{Mov\_Griper}}
 \label{fn:MovGriper}
 Controla el movimiento vertical del griper (ascenso o descenso).
@@ -186,7 +189,18 @@ Establece la potencia de mov\_pot\_griper en 50 \% y la aplica al canal DC1 de l
 \textbf{Par\'ametro} & \textbf{Descripci\'on} \\
 \texttt{modo} & Entero que indica la dirección de movimiento vertical. 1              = ascender el griper (potencia positiva en DC1). Cualquier otro = descender el griper (potencia negativa en DC1). \\
 \end{tabular}\\[4pt]
-\lstinputlisting[firstline=290,lastline=296,firstnumber=290]{../../../software/robot/main/Robot.py}
+\lstinputlisting[firstline=289,lastline=298,firstnumber=289]{../../../software/robot/main/Robot.py}
+\subsection{\texttt{ChecarServo}}
+\label{fn:ChecarServo}
+Verifica el estado del smartservo 1 y lo detiene si detecta sobrecarga o bloqueo.
+
+Espera 300 ms tras el inicio del movimiento para que el servo alcance velocidad estable, luego lee la corriente y la velocidad del smartservo\_1. Dependiendo del @p modo, aplica uno de dos criterios de parada: - Modo 1 (apertura): detiene el servo si la corriente supera 900 mA o la velocidad cae por debajo de 2 rpm, lo que indica que las pinzas llegaron al tope mecánico o encontraron resistencia excesiva. - Modo 0 (cierre): detiene el servo si la corriente supera 900 mA o la velocidad sube por encima de -2 rpm (el signo negativo refleja la dirección inversa del cierre), indicando bloqueo o tope mecánico. Al detectar la condición de parada, envía velocidad 0 al servo y espera 500 ms para que el mecanismo se estabilice antes de regresar el control.
+
+\begin{tabular}{@{}p{0.15\linewidth}p{0.78\linewidth}@{}}
+\textbf{Par\'ametro} & \textbf{Descripci\'on} \\
+\texttt{modo} & Entero que indica la dirección de movimiento que se está supervisando. 1              = supervisión de apertura de pinzas. Cualquier otro = supervisión de cierre de pinzas. \\
+\end{tabular}\\[4pt]
+\lstinputlisting[firstline=317,lastline=330,firstnumber=317]{../../../software/robot/main/Robot.py}
 \subsection{\texttt{Apertura\_Griper}}
 \label{fn:AperturaGriper}
 Controla la apertura o el cierre de las pinzas del griper.
@@ -197,14 +211,26 @@ Establece la potencia de aper\_pot\_griper en 50 \% y la aplica al canal DC2 de 
 \textbf{Par\'ametro} & \textbf{Descripci\'on} \\
 \texttt{modo} & Entero que indica la acción a realizar sobre las pinzas. 1              = abrir las pinzas (potencia positiva en DC2). Cualquier otro = cerrar las pinzas (potencia negativa en DC2). \\
 \end{tabular}\\[4pt]
-\lstinputlisting[firstline=308,lastline=314,firstnumber=308]{../../../software/robot/main/Robot.py}
+Llama a: \texttt{ChecarServo} (\ref{fn:ChecarServo})\\
+\lstinputlisting[firstline=342,lastline=352,firstnumber=342]{../../../software/robot/main/Robot.py}
+\subsection{\texttt{Angulo\_Brush}}
+\label{fn:AnguloBrush}
+Ajusta el ángulo del smartservo 2 (brush) mediante el gamepad.
+
+Incrementa o decrementa la variable global @p ang\_pot\_brush en pasos de 5 grados mientras la tecla correspondiente permanezca presionada, respetando los límites físicos del mecanismo: - Límite superior: 176 grados (modo 1, tecla "Left"). - Límite inferior: 4 grados   (modo 0, tecla "Right"). Tras cada paso aplica el nuevo ángulo al servo con una velocidad de movimiento de 20 unidades y espera 300 ms para que el servo alcance la posición antes de leer de nuevo el gamepad, evitando saltos bruscos. La variable global @p ang\_pot\_brush conserva el ángulo entre llamadas, de modo que el brush retiene su posición al soltar la tecla.
+
+\begin{tabular}{@{}p{0.15\linewidth}p{0.78\linewidth}@{}}
+\textbf{Par\'ametro} & \textbf{Descripci\'on} \\
+\texttt{modo} & Entero que indica la dirección de ajuste del ángulo. 1              = incrementar el ángulo (mover hacia 176°, tecla "Left"). Cualquier otro = decrementar el ángulo (mover hacia 4°, tecla "Right"). \\
+\end{tabular}\\[4pt]
+\lstinputlisting[firstline=370,lastline=383,firstnumber=370]{../../../software/robot/main/Robot.py}
 \subsection{\texttt{Lanzador}}
 \label{fn:Lanzador}
 Bucle interactivo de control de los motores brushless del lanzador.
 
 Permite al operador ajustar la potencia de lanzamiento en tiempo real mediante el gamepad mientras el robot está en movimiento. El bucle se ejecuta hasta que el operador presiona N3: - R2 incrementa pot\_lanzamiento en 5 unidades (máximo 100). - L2 decrementa pot\_lanzamiento en 5 unidades (mínimo -100). - La potencia actualizada se aplica simultáneamente a BL1 y BL2. - N3 establece ambos motores a 0 y sale del bucle. La variable global pot\_lanzamiento conserva el último valor entre llamadas, por lo que la función lanzamiento() la pre-inicializa antes de llamar aquí.
 
-\lstinputlisting[firstline=332,lastline=348,firstnumber=332]{../../../software/robot/main/Robot.py}
+\lstinputlisting[firstline=399,lastline=415,firstnumber=399]{../../../software/robot/main/Robot.py}
 \subsection{\texttt{modo\_automatico}}
 \label{fn:modoautomatico}
 Activa el modo autónomo del robot durante un período de 28 segundos.
@@ -212,7 +238,7 @@ Activa el modo autónomo del robot durante un período de 28 segundos.
 Reinicia el temporizador interno de novapi y ejecuta Comparacion\_QR() en un bucle continuo mientras el tiempo transcurrido sea menor a 28 s. Al expirar el tiempo, el bucle termina y el control regresa al llamador (normalmente el bucle principal de main()).
 
 Llama a: \texttt{Comparacion\_QR} (\ref{fn:ComparacionQR})\\
-\lstinputlisting[firstline=361,lastline=364,firstnumber=361]{../../../software/robot/main/Robot.py}
+\lstinputlisting[firstline=426,lastline=429,firstnumber=426]{../../../software/robot/main/Robot.py}
 \subsection{\texttt{lanzamiento}}
 \label{fn:lanzamiento}
 Prepara e inicia el lanzador de pelotas con una potencia inicial del 20 \%.
@@ -220,21 +246,21 @@ Prepara e inicia el lanzador de pelotas con una potencia inicial del 20 \%.
 Asigna 20 a la variable global pot\_lanzamiento como punto de partida seguro (suficiente para girar los motores sin un arranque brusco) y delega el control al bucle interactivo Lanzador().
 
 Llama a: \texttt{Lanzador} (\ref{fn:Lanzador})\\
-\lstinputlisting[firstline=372,lastline=375,firstnumber=372]{../../../software/robot/main/Robot.py}
+\lstinputlisting[firstline=437,lastline=440,firstnumber=437]{../../../software/robot/main/Robot.py}
 \subsection{\texttt{Reset\_Motores}}
 \label{fn:ResetMotores}
 Detiene por completo los motores de tracción del robot.
 
 Envía velocidad 0 a los cuatro motores encoder (M1–M4), deteniendo cualquier movimiento en curso. No afecta al griper ni al lanzador. Útil como parada de emergencia o al finalizar una secuencia autónoma.
 
-\lstinputlisting[firstline=387,lastline=391,firstnumber=387]{../../../software/robot/main/Robot.py}
+\lstinputlisting[firstline=450,lastline=454,firstnumber=450]{../../../software/robot/main/Robot.py}
 \subsection{\texttt{get\_pressed\_key}}
 \label{fn:getpressedkey}
 Detecta y devuelve la primera tecla registrada que esté presionada.
 
 Itera sobre la tupla TECLAS en orden de declaración y consulta el estado de cada tecla al gamepad. Retorna en cuanto encuentra una tecla activa, garantizando un costo O(n) en el peor caso pero O(1) en promedio para la tecla más común. Si ninguna tecla está activa, retorna None para que el llamador no ejecute ninguna acción.
 
-\lstinputlisting[firstline=402,lastline=406,firstnumber=402]{../../../software/robot/main/Robot.py}
+\lstinputlisting[firstline=465,lastline=469,firstnumber=465]{../../../software/robot/main/Robot.py}
 \subsection{\texttt{main}}
 \label{fn:main}
 Ciclo principal del control del robot.
@@ -242,4 +268,4 @@ Ciclo principal del control del robot.
 Ejecuta indefinidamente las siguientes operaciones en cada iteración: 1. Pausa de 1 ms (time.sleep(0.001)) para evitar rebotes de señal y reducir la carga de CPU al mínimo necesario. 2. Consulta get\_pressed\_key() para detectar teclas activas del gamepad. Si se detecta una tecla registrada en acciones\_gamepad, se ejecuta su función asociada con los argumentos definidos. 3. Lee los tres ejes del gamepad (Ly, Lx, Rx) para calcular las velocidades omnidireccionales mediante Checar\_Velocidades() y las aplica a los motores con Vel\_Motores(). El control manual de joystick es continuo: opera en paralelo con las acciones de tecla, salvo cuando una acción bloquea el hilo (p. ej. modo\_automatico() o Lanzador() tienen sus propios bucles internos).
 
 Llama a: \texttt{get\_pressed\_key} (\ref{fn:getpressedkey}), \texttt{Checar\_Velocidades} (\ref{fn:ChecarVelocidades}), \texttt{Vel\_Motores} (\ref{fn:VelMotores})\\
-\lstinputlisting[firstline=452,lastline=467,firstnumber=452]{../../../software/robot/main/Robot.py}
+\lstinputlisting[firstline=518,lastline=533,firstnumber=518]{../../../software/robot/main/Robot.py}
