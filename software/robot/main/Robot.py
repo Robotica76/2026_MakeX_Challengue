@@ -1,3 +1,16 @@
+## @file robot_control.py
+#  @brief Control principal del robot con movimiento omnidireccional, griper, lanzador y visión QR.
+#  @details Este módulo integra todos los subsistemas del robot:
+#           - Tracción omnidireccional de 4 ruedas mediante motores encoder (M1–M4).
+#           - Griper con movimiento vertical (DC1) y apertura/cierre de pinzas (DC2).
+#           - Lanzador de pelotas con dos motores brushless (BL1, BL2).
+#           - Visión artificial con cámara de IA para lectura y comparación de etiquetas QR.
+#           - Control manual mediante gamepad con mapeo de teclas a acciones.
+#           - Modo autónomo de 28 s que usa la cámara para seleccionar y alcanzar el cubo
+#             de mayor valor detectado en campo.
+#  @author  Equipo de robótica
+#  @date    2024
+
 import novapi
 from mbuild.encoder_motor import encoder_motor_class
 from mbuild.ai_camera import ai_camera_class
@@ -5,192 +18,459 @@ from mbuild import power_expand_board
 from mbuild import gamepad
 import time
 
-# Initialization of variables global
-pot_lanzamiento = 0       # Variable para controlar la potencia del lanzamiento   
-aper_pot_griper = 0       # Variable para apertura la potencia del griper  
-mov_pot_griper = 0        # Variable para controlar la potencia del movimiento del griper  
-bandera = 0               # Variable para controlar el bucle del lanzamiento
+## @name Variables globales
+#  @{
+## @var pot_lanzamiento  Potencia del lanzador (porcentaje) aplicada a BL1/BL2.
+## @var aper_pot_griper  Potencia del motor de apertura/cierre de la garra (DC2).
+## @var mov_pot_griper   Potencia del motor de movimiento de la garra (DC1).
+## @var v1  Velocidad objetivo de la rueda M1 (la calcula Checar_Velocidades).
+## @var v2  Velocidad objetivo de la rueda M2.
+## @var v3  Velocidad objetivo de la rueda M3.
+## @var v4  Velocidad objetivo de la rueda M4.
+## @var Bandera  Bandera para salir de ciclos (1 = terminado).
+## @var TECLAS Tupla de nombres de teclas del gamepad que están registradas en el sistema.
+## @var acciones_gamepad  Diccionario que mapea cada tecla registrada a su función y argumentos.
+#  @}
 
-# Declaracion de los motores y camara
-encoder_motor_M1 = encoder_motor_class("M1", "INDEX1")    # Motor 1, puerto M1, indice 1
-encoder_motor_M2 = encoder_motor_class("M2", "INDEX1")    # Motor 2, puerto M2, indice 1
-encoder_motor_M3 = encoder_motor_class("M3", "INDEX1")    # Motor 3, puerto M3, indice 1
-encoder_motor_M4 = encoder_motor_class("M4", "INDEX1")    # Motor 4, puerto M4, indice 1
-ai_camera_p1 = ai_camera_class("PORT3", "INDEX1")         # Camara, puerto PORT3, indice 1
+pot_lanzamiento = 0
+aper_pot_griper = 0
+mov_pot_griper = 0
+bandera = 0
 
-# Teclas registradas del control que activan una acción
+## @brief Aplica las velocidades globales v1..v4 a los motores (M2 y M4 van invertidos por el sentido de montaje).
+encoder_motor_M1 = encoder_motor_class("M1", "INDEX1")
+encoder_motor_M2 = encoder_motor_class("M2", "INDEX1")
+encoder_motor_M3 = encoder_motor_class("M3", "INDEX1")
+encoder_motor_M4 = encoder_motor_class("M4", "INDEX1")
+ai_camera_p1 = ai_camera_class("PORT3", "INDEX1")
+
+
+
+## @var TECLAS
+#  @brief Tupla de nombres de teclas del gamepad que están registradas en el sistema.
+#  @details Solo las teclas incluidas aquí son evaluadas por get_pressed_key().
+#           Cualquier otra tecla del gamepad se ignora en el bucle principal.
 TECLAS = ("N1", "N2", "N3", "Up", "Down", "L1", "R1")
 
-def Checar_Velocidades(Vx, Vy, W, ri):                    # Funcion (ecuacion) para calcular la velocidad de los motores
-    aux_VelAngular = W * ri                               # Variable auxiliar para la velocidad angular
-    return Vx - Vy - aux_VelAngular, Vx + Vy + aux_VelAngular, Vx + Vy - aux_VelAngular, Vx - Vy + aux_VelAngular   #Retorna el calculo de la velocidad de los motores M1, M2, M3 y M4
 
-def Vel_Motores(v1, v2, v3, v4):                          # Funcion para asignar la velocidad a los motores
-    encoder_motor_M1.set_speed(v1 * 1)                    # Asignar la velocidad al motor M1
-    encoder_motor_M2.set_speed(v2 * -1)                   # Asignar la velocidad al motor M2
-    encoder_motor_M3.set_speed(v3 * 1)                    # Asignar la velocidad al motor M3    
-    encoder_motor_M4.set_speed(v4 * -1)                   # Asignar la velocidad al motor M4  
+# ===========================================================================
+# Cinemática
+# ===========================================================================
 
-def Comparacion_QR():                                     # Funcion para comparar los valores de los QR y tomar decisiones
-    B1 = 0                                                # Variable para almacenar el valor del QR del bloque 1
-    B2 = 0                                                # Variable para almacenar el valor del QR del bloque 2                  
-    PC1 = 0                                               # Variable para almacenar la posicion del QR del bloque 1
-    PC2 = 0                                               # Variable para almacenar la posicion del QR del bloque 2            
-    BD1 = 0                                               # Variable para almacenar la distancia del QR del bloque 1 (Del punto de referencia al QR)
-    cuboIzq = ai_camera_p1.ai_camera_tag_analysis_result_get(2, 1)  # Variable para almacenar el valor del QR del bloque izquierdo
-    cuboDer = ai_camera_p1.ai_camera_tag_analysis_result_get(3, 1)  # Variable para almacenar el valor del QR del bloque derecho
-    if cuboIzq == 'Null' and cuboDer == 'Null':           # Si no hay QR detectados, se asume que hay 2 conos
-      print("2 Conos")
-      Mov_Auto(1, 55)                                     # Mover el robot hacia el ultimo cubo, con más probabilidad de obtener el cubo con mayor valor
+## @brief Calcula las velocidades de los cuatro motores para un robot omnidireccional.
+#  @details Aplica la ecuación de cinemática inversa holonómica para una configuración
+#           de cuatro ruedas mecanum o similares. La velocidad angular se pondera con
+#           el factor @p ri antes de sumarse o restarse a cada rueda:
+#           @code
+#           aux = W * ri
+#           v1 = Vx - Vy - aux   (rueda M1)
+#           v2 = Vx + Vy + aux   (rueda M2)
+#           v3 = Vx + Vy - aux   (rueda M3)
+#           v4 = Vx - Vy + aux   (rueda M4)
+#           @endcode
+#           Los signos permiten que el robot se traslade en cualquier dirección y
+#           rote simultáneamente sin cambiar la orientación de las ruedas.
+#  @param Vx  Componente de velocidad en el eje X del robot (avance/retroceso).
+#             Valores positivos avanzan, negativos retroceden.
+#  @param Vy  Componente de velocidad en el eje Y del robot (desplazamiento lateral).
+#             Valores positivos desplazan a la derecha, negativos a la izquierda.
+#  @param W   Velocidad angular de giro sobre el eje Z del robot.
+#             Valores positivos giran en sentido horario, negativos en antihorario.
+#  @param ri  Factor de escala (radio efectivo) que pondera la contribución angular.
+#             Normalmente se pasa 1 para mantener las unidades consistentes.
+#  @return    Tupla de cuatro flotantes (v1, v2, v3, v4) con las velocidades
+#             calculadas para los motores M1, M2, M3 y M4 respectivamente.
+def Checar_Velocidades(Vx, Vy, W, ri):
+    aux_VelAngular = W * ri
+    return (
+        Vx - Vy - aux_VelAngular,   # v1 -> M1
+        Vx + Vy + aux_VelAngular,   # v2 -> M2
+        Vx + Vy - aux_VelAngular,   # v3 -> M3
+        Vx - Vy + aux_VelAngular    # v4 -> M4
+    )
+
+
+## @brief Aplica las velocidades especificadas a los cuatro motores encoder del robot.
+#  @details Los motores M2 y M4 reciben la velocidad multiplicada por -1 para compensar
+#           su orientación física invertida respecto a M1 y M3. De este modo, una misma
+#           velocidad lógica produce el movimiento correcto en todos los motores.
+#           Esta función no realiza cálculos; solo envía los valores a los drivers.
+#  @param v1 Velocidad deseada para el motor M1 (float, rango típico -100 a 100).
+#  @param v2 Velocidad deseada para el motor M2 (float, rango típico -100 a 100).
+#            Se aplicará con signo invertido al motor físico.
+#  @param v3 Velocidad deseada para el motor M3 (float, rango típico -100 a 100).
+#  @param v4 Velocidad deseada para el motor M4 (float, rango típico -100 a 100).
+#            Se aplicará con signo invertido al motor físico.
+#  @return   None
+def Vel_Motores(v1, v2, v3, v4):
+    encoder_motor_M1.set_speed(v1 *  1)
+    encoder_motor_M2.set_speed(v2 * -1)
+    encoder_motor_M3.set_speed(v3 *  1)
+    encoder_motor_M4.set_speed(v4 * -1)
+
+
+# ===========================================================================
+# Visión y autonomía
+# ===========================================================================
+
+## @brief Lee las etiquetas QR de la cámara y decide el movimiento autónomo del robot.
+#  @details Consulta los slots 2 y 3 de la cámara (cubos izquierdo y derecho) y
+#           aplica la siguiente lógica de decisión:
+#           - Si ambos slots devuelven 'Null' -> se asume presencia de 2 conos;
+#              el robot avanza 55 unidades hacia la izquierda (tipo 1).
+#           - Si las distancias de los slots 2 y 3 son iguales -> los cubos están
+#              alineados en un solo bloque; se analiza el slot 1 individualmente:
+#              - Si su valor es 2 (máximo posible), se imprime "Agarrar Cubo" y no
+#                se realiza movimiento adicional.
+#              - En caso contrario, se guarda el valor y la posición del primer cubo,
+#                el robot avanza 44 u para posicionarse frente al segundo cubo,
+#                se re-lee el QR y se llama a Comparacion_Valores() en modo 1.
+#           - Si las distancias son distintas -> los cubos están en posiciones
+#              diferentes; se llama directamente a Comparacion_Valores() en modo 0
+#              con los datos de los slots 2 y 3.
+#  @return None
+def Comparacion_QR():
+    B1  = 0    # Valor QR del cubo 1
+    B2  = 0    # Valor QR del cubo 2
+    PC1 = 0    # Posicion lateral del cubo 1 (0=derecha, 1=izquierda)
+    PC2 = 0    # Posicion lateral del cubo 2 (0=derecha, 1=izquierda)
+    BD1 = 0    # Distancia en pixeles del cubo 1
+
+    cuboIzq = ai_camera_p1.ai_camera_tag_analysis_result_get(2, 1)
+    cuboDer = ai_camera_p1.ai_camera_tag_analysis_result_get(3, 1)
+
+    if cuboIzq == 'Null' and cuboDer == 'Null':
+        print("2 Conos")
+        Mov_Auto(1, 55)
     else:
-      if ai_camera_p1.ai_camera_tag_spatial_attribute_get(2, 1, 1) == ai_camera_p1.ai_camera_tag_spatial_attribute_get(3, 1, 1):  # Si los QR detectados están a la misma distancia, se asume que hay 1 cubo
-        if ai_camera_p1.ai_camera_tag_analysis_result_get(1, 1) == 2:         # Si el valor del QR detectado es 12, loa agrra ya que es del de mayor valor
-          print("Agarrar Cubo")
+        dist2 = ai_camera_p1.ai_camera_tag_spatial_attribute_get(2, 1, 1)
+        dist3 = ai_camera_p1.ai_camera_tag_spatial_attribute_get(3, 1, 1)
+
+        if dist2 == dist3:
+            if ai_camera_p1.ai_camera_tag_analysis_result_get(1, 1) == 2:
+                print("Agarrar Cubo")
+            else:
+                B1  = ai_camera_p1.ai_camera_tag_analysis_result_get(1, 1)
+                BD1 = ai_camera_p1.ai_camera_tag_spatial_attribute_get(1, 1, 1)
+                if BD1 < 320:
+                    PC1 = 1
+                Mov_Auto(1, 44)
+                time.sleep(30)  # TODO: eliminar en version final
+                B2      = ai_camera_p1.ai_camera_tag_analysis_result_get(1, 1)
+                dist_b2 = ai_camera_p1.ai_camera_tag_spatial_attribute_get(1, 1, 1)
+                if dist_b2 < 320:
+                    PC2 = 1
+                Comparacion_Valores(B1, BD1, PC1, B2, dist_b2, PC2, 1)
         else:
-          B1 = ai_camera_p1.ai_camera_tag_analysis_result_get(1, 1)           # Variable para almacenar el valor del QR del bloque 1
-          BD1 = ai_camera_p1.ai_camera_tag_spatial_attribute_get(1, 1, 1)     # Variable para almacenar la distancia del QR del bloque 1 (Del punto de referencia al QR)
-          if ai_camera_p1.ai_camera_tag_spatial_attribute_get(1, 1, 1) < 320: # Si la distancia del QR del bloque 1 es menor a 320, se asume que está a la izquierda
-            PC1 = 1                                                           # Variable para almacenar la posicion del QR del bloque 1
-          Mov_Auto(1, 44)                                                     # Se mueve el robot hasta el bloque 2, para seguir con la comparacion
-          time.sleep(30) # QUITAR
-          B2 = ai_camera_p1.ai_camera_tag_analysis_result_get(1, 1)           # Variable para almacenar el valor del QR del bloque 2
-          if ai_camera_p1.ai_camera_tag_spatial_attribute_get(1, 1, 1) < 320: # Si la distancia del QR del bloque 2 es menor a 320, se asume que está a la izquierda
-            PC2 = 1                                                           # Variable para almacenar la posicion del QR del bloque 2
-          Comparacion_Valores(B1, BD1, PC1, B2, ai_camera_p1.ai_camera_tag_spatial_attribute_get(1, 1, 1), PC2, 1)  # Se llama a la funcion Comparacion_Valores para comparar los valores de los QR y tomar decisiones
-      else:
-        Comparacion_Valores(ai_camera_p1.ai_camera_tag_analysis_result_get(2, 1), ai_camera_p1.ai_camera_tag_spatial_attribute_get(2, 1, 1), 0, ai_camera_p1.ai_camera_tag_analysis_result_get(3, 1), ai_camera_p1.ai_camera_tag_spatial_attribute_get(3, 1, 1), 0, 0) # Se llama a la funcion Comparacion_Valores para comparar los valores de los QR y tomar decisiones (Se ausme que esyan en el mismo bloque)
+            Comparacion_Valores(
+                ai_camera_p1.ai_camera_tag_analysis_result_get(2, 1),
+                ai_camera_p1.ai_camera_tag_spatial_attribute_get(2, 1, 1), 0,
+                ai_camera_p1.ai_camera_tag_analysis_result_get(3, 1),
+                ai_camera_p1.ai_camera_tag_spatial_attribute_get(3, 1, 1), 0, 0
+            )
 
-def Mov_Auto(tipo, distancia):                            # Funcion para mover el robot de manera automatica, dependiendo del tipo de movimiento y la distancia a recorrer
-    # Con la DISTANCIA obtener la velocidad de los motores y el tiempo que se debe de mover
-    if tipo == 1:                                         # Si el tipo de movimiento es 1, se asume que es un movimiento hacia izquierda
-      v1, v2, v3, v4 = Checar_Velocidades(0, 1, 0, 1)     # Se obtiene la velocidad de los motores para el movimiento hacia izquierda
-      novapi.reset_timer()                                # Se reinicia el timer para medir el tiempo que se debe de mover
-      while novapi.timer() < 20:                          # Se mide el tiempo que se debe de mover, en este caso 20 segundos
-          time.sleep(0.001)                               # Se espera 1 milisegundo para evitar que el programa se congele
-          Vel_Motores(v1, v2, v3, v4)                     # Se asigna la velocidad a los motores para el movimiento hacia izquierda
-    elif tipo == 2:                                       # Si el tipo de movimiento es 2, se asume que es un movimiento hacia derecha             
-      v1, v2, v3, v4 = Checar_Velocidades(0, -1, 0, 1)    # Se obtiene la velocidad de los motores para el movimiento hacia derecha
-      novapi.reset_timer()                                # Se reinicia el timer para medir el tiempo que se debe de mover        
-      while  novapi.timer() < 20:                         # Se mide el tiempo que se debe de mover, en este caso 20 segundos
-          time.sleep(0.001)                               # Se espera 1 milisegundo para evitar que el programa se congele       
-          Vel_Motores(v1, v2, v3, v4)                     # Se asigna la velocidad a los motores para el movimiento hacia derecha
 
-def InicializarTag():                                     # Funcion para inicializar la camara
-    ai_camera_p1.ai_camera_set_func_switch(4, 1)          # Se activa la funcion de reconocimiento de etiquetas
-    time.sleep(10)                                        # Se espera 10 segundos para que la camara se inicialice
-    ai_camera_p1.ai_camera_tag_func_mode_set(3, 1)        # Se activa la funcion de deteccion de QR
-    ai_camera_p1.ai_camera_tag_actual_size_set(10, 1)     # Se establece el tamaño actual de los QR a 10 cm
+## @brief Desplaza el robot de forma autónoma en la dirección indicada durante 20 segundos.
+#  @details Calcula las velocidades mediante Checar_Velocidades(), reinicia el
+#           temporizador interno de novapi y mantiene los motores activos hasta
+#           que el temporizador supera los 20 segundos. El parámetro @p distancia
+#           está reservado para una futura implementación que escale el tiempo
+#           de movimiento; actualmente no afecta el comportamiento.
+#           - Tipo 1: movimiento lateral izquierda  (Vy = +1).
+#           - Tipo 2: movimiento lateral derecha    (Vy = -1).
+#  @param tipo      Entero que indica la dirección de movimiento.
+#                   1 = desplazamiento hacia la izquierda.
+#                   2 = desplazamiento hacia la derecha.
+#                   Cualquier otro valor no produce movimiento.
+#  @param distancia Distancia objetivo en centímetros (parámetro reservado,
+#                   no utilizado en el cálculo actual del tiempo de movimiento).
+#  @return None
+def Mov_Auto(tipo, distancia):
+    if tipo == 1:
+        v1, v2, v3, v4 = Checar_Velocidades(0,  1, 0, 1)
+        novapi.reset_timer()
+        while novapi.timer() < 20:
+            time.sleep(0.001)
+            Vel_Motores(v1, v2, v3, v4)
+    elif tipo == 2:
+        v1, v2, v3, v4 = Checar_Velocidades(0, -1, 0, 1)
+        novapi.reset_timer()
+        while novapi.timer() < 20:
+            time.sleep(0.001)
+            Vel_Motores(v1, v2, v3, v4)
 
-def Comparacion_Valores(Val1, Dist1, Pos1, Val2, Dist2, Pos2, modo):    # Funcion para comparar los valores de los QR y tomar decisiones dependiendo del modo de comparacion
-    Dist1 = Dist1 / 16.84   # Dist1 esta en pixeles y se divide entre 16.84 para obtener la distancia en cm
-    Dist2 = Dist2 / 16.84   # Dist2 esta en pixeles y se divide entre 16.84 para obtener la distancia en cm
-    if modo == 1:                                         # Si el modo de comparacion es 1, se asume que hay 2 bloques de QR y se comparan los valores de los QR de cada bloque
-      if Val1 > Val2:                                     # Si el valor del QR del bloque 1 es mayor que el valor del QR del bloque 2, se asume que el bloque 1 es el de mayor valor
-        if Pos1 == 1:                                     # Si la posicion del QR del bloque 1 es a la izquierda
-          Dist1 = Dist1 * -1                              # Se multiplica la distancia por -1 para que el robot se mueva hacia la izquierda
-        print("2 CUBO IZQ")
-        Mov_Auto(1, (-44 + Dist1))                        # Se mueve el robot hacia el bloque 1, con la distancia calculada (del punto de referencia al otro de referencia con la ditancia de se punto al QR)
-      else:                                               # Si el valor del QR del bloque 2 es mayor que el valor del QR del bloque 1, se asume que el bloque 2 es el de mayor valor
-        if Pos2 == 1:                                     # Si la posicion del QR del bloque 2 es a la izquierda    
-            Dist2 = Dist2 * -1                            # Se multiplica la distancia por -1 para que el robot se mueva hacia la izquierda          
-        print("2 CUBO DER")
-        Mov_Auto(1, Dist2)                                # Se mueve el robot con la distancia calculada (del punto de referencia a la distancia del QR)
-    else:                                                 # Si el modo de comparacion es 0, se asume que hay 2 cubos en el mismo bloque y se comparan los valores de los QR de cada cubo
-      if Val1 > Val2:                                     # Si el valor del QR del cubo 1 es mayor que el valor del QR del cubo 2, se asume que el cubo 1 es el de mayor valor  
-        Dist1 = Dist1 * -1                                # Se multiplica la distancia por -1 para que el robot se mueva hacia la izquierda (ya que el mayor es el cubo de la izquierda)
-        print("3 IZQ")
-        Mov_Auto(1, Dist1)                                # Se mueve el robot con la distancia calculada (del punto de referencia a la distancia del cubo)
-      else:                                               # Si el valor del QR del cubo 2 es mayor que el valor del QR del cubo 1, se asume que el cubo 2 es el de mayor valor
-        print("3 DER")
-        Mov_Auto(1, Dist2)                                # Se mueve el robot con la distancia calculada (del punto de referencia a la distancia del cubo (derecha))                
 
-def Mov_Griper(modo):                                     # Funcion que asciende y desciende el griper
-    global mov_pot_griper
-    mov_pot_griper = 50                                   # Se inicializa la potencia del griper al 50%
-    if modo == 1:                                         # Si modo es igual a 1, el griper ascendera, en caso contrario, descendera  
-      power_expand_board.set_power("DC1", mov_pot_griper)
+## @brief Configura la cámara de IA para detectar y analizar etiquetas QR.
+#  @details Realiza la secuencia de inicialización en tres pasos:
+#           1. Activa el modo de reconocimiento de etiquetas (switch de función 4).
+#           2. Espera 10 segundos para que el hardware de la cámara se estabilice.
+#           3. Establece el modo de función de etiqueta en 3 (detección de QR/ArUco)
+#              y define el tamaño físico real de las etiquetas en 10 cm, necesario
+#              para que la cámara calcule distancias en unidades métricas.
+#  @return None
+def InicializarTag():
+    ai_camera_p1.ai_camera_set_func_switch(4, 1)
+    time.sleep(10)
+    ai_camera_p1.ai_camera_tag_func_mode_set(3, 1)
+    ai_camera_p1.ai_camera_tag_actual_size_set(10, 1)
+
+
+## @brief Compara los valores QR de dos cubos y mueve el robot hacia el de mayor valor.
+#  @details Convierte primero las distancias de píxeles a centímetros dividiendo
+#           entre el factor de calibración 16.84 px/cm. Luego, dependiendo del @p modo,
+#           aplica una de dos estrategias:
+#
+#           Modo 1 — Cubos en bloques distintos:
+#           - Si Val1 > Val2 -> el cubo 1 es el objetivo. Si está a la izquierda
+#             (Pos1 == 1) se invierte Dist1 para moverse en esa dirección.
+#             El robot se desplaza (-44 + Dist1) unidades desde el punto de referencia.
+#           - Si Val2 >= Val1 -> el cubo 2 es el objetivo. Si está a la izquierda
+#             (Pos2 == 1) se invierte Dist2. El robot se desplaza Dist2 unidades.
+#
+#           Modo 0 — Cubos en el mismo bloque:
+#           - Si Val1 > Val2 -> el cubo 1 (izquierda) es el objetivo; Dist1 se
+#             invierte y el robot se desplaza esa distancia hacia la izquierda.
+#           - Si Val2 >= Val1 -> el cubo 2 (derecha) es el objetivo; el robot se
+#             desplaza Dist2 unidades hacia la derecha.
+#
+#  @param Val1  Valor numérico leído del QR del cubo 1 (entero, mayor = mejor).
+#  @param Dist1 Distancia en píxeles desde el punto de referencia de la cámara
+#               hasta el QR del cubo 1. Se convierte internamente a centímetros.
+#  @param Pos1  Posición lateral del cubo 1 respecto al centro de la imagen.
+#               1 = cubo a la izquierda (coordenada X < 320 px).
+#               0 = cubo a la derecha  (coordenada X >= 320 px).
+#  @param Val2  Valor numérico leído del QR del cubo 2 (entero, mayor = mejor).
+#  @param Dist2 Distancia en píxeles desde el punto de referencia de la cámara
+#               hasta el QR del cubo 2. Se convierte internamente a centímetros.
+#  @param Pos2  Posición lateral del cubo 2 respecto al centro de la imagen.
+#               1 = cubo a la izquierda (coordenada X < 320 px).
+#               0 = cubo a la derecha  (coordenada X >= 320 px).
+#  @param modo  Estrategia de comparación a aplicar.
+#               1 = los cubos están en bloques distintos (se usa offset de 44 u).
+#               0 = los cubos están en el mismo bloque (desplazamiento directo).
+#  @return None
+def Comparacion_Valores(Val1, Dist1, Pos1, Val2, Dist2, Pos2, modo):
+    Dist1 = Dist1 / 16.84
+    Dist2 = Dist2 / 16.84
+
+    if modo == 1:
+        if Val1 > Val2:
+            if Pos1 == 1:
+                Dist1 = Dist1 * -1
+            print("2 CUBO IZQ")
+            Mov_Auto(1, (-44 + Dist1))
+        else:
+            if Pos2 == 1:
+                Dist2 = Dist2 * -1
+            print("2 CUBO DER")
+            Mov_Auto(1, Dist2)
     else:
-      power_expand_board.set_power("DC1", mov_pot_griper * -1)
+        if Val1 > Val2:
+            Dist1 = Dist1 * -1
+            print("3 IZQ")
+            Mov_Auto(1, Dist1)
+        else:
+            print("3 DER")
+            Mov_Auto(1, Dist2)
 
-def Reset_Motores():        #funcion que restaura la velocidad de todos los motores en 0
+
+# ===========================================================================
+# Griper
+# ===========================================================================
+
+## @brief Controla el movimiento vertical del griper (ascenso o descenso).
+#  @details Establece la potencia de mov_pot_griper en 50 % y la aplica al
+#           canal DC1 de la placa de expansión de potencia. El signo positivo
+#           hace ascender el griper y el negativo lo hace descender.
+#           La variable global mov_pot_griper se actualiza en cada llamada.
+#  @param modo Entero que indica la dirección de movimiento vertical.
+#              1              = ascender el griper (potencia positiva en DC1).
+#              Cualquier otro = descender el griper (potencia negativa en DC1).
+#  @return None
+def Mov_Griper(modo):
+    global mov_pot_griper
+    mov_pot_griper = 50
+    if modo == 1:
+        power_expand_board.set_power("DC1",  mov_pot_griper)
+    else:
+        power_expand_board.set_power("DC1", -mov_pot_griper)
+
+
+## @brief Controla la apertura o el cierre de las pinzas del griper.
+#  @details Establece la potencia de aper_pot_griper en 50 % y la aplica al
+#           canal DC2 de la placa de expansión de potencia. El signo positivo
+#           abre las pinzas y el negativo las cierra.
+#           La variable global aper_pot_griper se actualiza en cada llamada.
+#  @param modo Entero que indica la acción a realizar sobre las pinzas.
+#              1              = abrir las pinzas (potencia positiva en DC2).
+#              Cualquier otro = cerrar las pinzas (potencia negativa en DC2).
+#  @return None
+def Apertura_Griper(modo):
+    global aper_pot_griper
+    aper_pot_griper = 50
+    if modo == 1:
+        power_expand_board.set_power("DC2",  aper_pot_griper)
+    else:
+        power_expand_board.set_power("DC2", -aper_pot_griper)
+
+
+# ===========================================================================
+# Lanzador
+# ===========================================================================
+
+## @brief Bucle interactivo de control de los motores brushless del lanzador.
+#  @details Permite al operador ajustar la potencia de lanzamiento en tiempo real
+#           mediante el gamepad mientras el robot está en movimiento. El bucle
+#           se ejecuta hasta que el operador presiona N3:
+#           - R2 incrementa pot_lanzamiento en 5 unidades (máximo 100).
+#           - L2 decrementa pot_lanzamiento en 5 unidades (mínimo -100).
+#           - La potencia actualizada se aplica simultáneamente a BL1 y BL2.
+#           - N3 establece ambos motores a 0 y sale del bucle.
+#           La variable global pot_lanzamiento conserva el último valor entre llamadas,
+#           por lo que la función lanzamiento() la pre-inicializa antes de llamar aquí.
+#  @return None
+def Lanzador():
+    global pot_lanzamiento
+    bandera = 0
+    while not (bandera == 1):
+        time.sleep(0.001)
+        if gamepad.is_key_pressed("R2"):
+            pot_lanzamiento = min(100, pot_lanzamiento + 5)
+        if gamepad.is_key_pressed("L2"):
+            pot_lanzamiento = max(-100, pot_lanzamiento - 5)
+
+        power_expand_board.set_power("BL1", pot_lanzamiento)
+        power_expand_board.set_power("BL2", pot_lanzamiento)
+
+        if gamepad.is_key_pressed("N3"):
+            power_expand_board.set_power("BL1", 0)
+            power_expand_board.set_power("BL2", 0)
+            bandera = 1
+
+
+# ===========================================================================
+# Modos de operación
+# ===========================================================================
+
+## @brief Activa el modo autónomo del robot durante un período de 28 segundos.
+#  @details Reinicia el temporizador interno de novapi y ejecuta Comparacion_QR()
+#           en un bucle continuo mientras el tiempo transcurrido sea menor a 28 s.
+#           Al expirar el tiempo, el bucle termina y el control regresa al llamador
+#           (normalmente el bucle principal de main()).
+#  @return None
+def modo_automatico():
+    novapi.reset_timer()
+    while novapi.timer() < 28:
+        Comparacion_QR()
+
+
+## @brief Prepara e inicia el lanzador de pelotas con una potencia inicial del 20 %.
+#  @details Asigna 20 a la variable global pot_lanzamiento como punto de partida
+#           seguro (suficiente para girar los motores sin un arranque brusco) y
+#           delega el control al bucle interactivo Lanzador().
+#  @return None
+def lanzamiento():
+    global pot_lanzamiento
+    pot_lanzamiento = 20
+    Lanzador()
+
+
+# ===========================================================================
+# Control del gamepad
+# ===========================================================================
+
+## @brief Detiene por completo los motores de tracción del robot.
+#  @details Envía velocidad 0 a los cuatro motores encoder (M1–M4), deteniendo
+#           cualquier movimiento en curso. No afecta al griper ni al lanzador.
+#           Útil como parada de emergencia o al finalizar una secuencia autónoma.
+#  @return None
+def Reset_Motores():
     encoder_motor_M1.set_speed(0)
     encoder_motor_M2.set_speed(0)
     encoder_motor_M3.set_speed(0)
     encoder_motor_M4.set_speed(0)
 
-def Apertura_Griper(modo):  #funcion que apertura o cierra el griper
-    global aper_pot_griper
-    aper_pot_griper = 50    #Se inicializa la potencia del griper al 50%
-    if modo == 1:           #Si modo es igual a 1, el griper se abrira, en caso contrario, se cerrara
-      power_expand_board.set_power("DC2", aper_pot_griper)
-    else:
-      power_expand_board.set_power("DC2", aper_pot_griper * -1)
 
-def Lanzador():      #funcion que activa los motores brushles para el lanzamiento de pelotas
-                     #R2 aumenta la potencia, L2 disminuye la potencia y N3 detiene los motores y sale del ciclo  
-    global pot_lanzamiento
-    bandera = 0          
-    while not (bandera == 1):
-        time.sleep(0.001)                     # Evitar el rebote de los botones
-        if gamepad.is_key_pressed("R2"):
-          pot_lanzamiento = min(100, pot_lanzamiento + 5)  #sube la potencia del motor en 5, con un maximo de 100
-
-        if gamepad.is_key_pressed("L2"):
-          pot_lanzamiento = max(-100, pot_lanzamiento - 5) #baja la potencia del motor en 5, con un minimo de -100
-
-        power_expand_board.set_power("BL1", pot_lanzamiento) #aplica la potencia al motor 1
-        power_expand_board.set_power("BL2", pot_lanzamiento) #aplica la potencia al motor 2
-
-        if gamepad.is_key_pressed("N3"):              #apaga los motores del lanzador y terminar el ciclo
-          power_expand_board.set_power("BL1", 0)
-          power_expand_board.set_power("BL2", 0)
-          bandera = 1 
-
-def modo_automatico():   # funcion del modo autónomo:durante 28 segundos busca y compara los tags QR con la camara
-   novapi.reset_timer()   #reinicia el temporizador 
-   while novapi.timer() < 28: #todo se repite durante 28 segundos
-     Comparacion_QR()    #activa a comparacion de los tags de la camara
-
-def lanzamiento():      #prepara el motor brushles con potencia inicial de 20
-   global pot_lanzamiento
-   pot_lanzamiento = 20
-   Lanzador()           #manda los datos a la funcion lanzador
-   
-def get_pressed_key():    #funcion que obtiene el boton presionado
-    for tecla in TECLAS:  #recorre cada tecla registrada
+## @brief Detecta y devuelve la primera tecla registrada que esté presionada.
+#  @details Itera sobre la tupla TECLAS en orden de declaración y consulta
+#           el estado de cada tecla al gamepad. Retorna en cuanto encuentra
+#           una tecla activa, garantizando un costo O(n) en el peor caso pero
+#           O(1) en promedio para la tecla más común. Si ninguna tecla está
+#           activa, retorna None para que el llamador no ejecute ninguna acción.
+#  @return str  Nombre de la primera tecla presionada (p. ej. "N1", "Up", "L1").
+#  @return None Si ninguna de las teclas registradas está presionada en ese instante.
+def get_pressed_key():
+    for tecla in TECLAS:
         if gamepad.is_key_pressed(tecla):
-            return tecla  #regresa la tecla que esta presionada 
-    return None           #En caso de que ninguna tecla este presionada 
+            return tecla
+    return None
 
-# Diccionario que guarda cada funcion a ejecutar 
+
+## @var acciones_gamepad
+#  @brief Diccionario que mapea cada tecla registrada a su función y argumentos.
+#  @details Estructura: { "TECLA": (funcion, (arg1, arg2, ...)) }
+#           Permite ejecutar cualquier acción en O(1) sin bloques if/elif anidados.
+#
+#  | Tecla | Función          | Argumento | Efecto                              |
+#  |-------|------------------|-----------|-------------------------------------|
+#  | N1    | modo_automatico  | —         | Inicia el modo autónomo (28 s)      |
+#  | N2    | Reset_Motores    | —         | Detiene los 4 motores de tracción   |
+#  | N3    | lanzamiento      | —         | Inicia el lanzador (pot. inicial 20)|
+#  | Up    | Mov_Griper       | 1         | Asciende el griper                  |
+#  | Down  | Mov_Griper       | 0         | Desciende el griper                 |
+#  | L1    | Apertura_Griper  | 1         | Abre las pinzas del griper          |
+#  | R1    | Apertura_Griper  | 0         | Cierra las pinzas del griper        |
 acciones_gamepad = {
-    "N1": (modo_automatico,   ()),      #N1: modo autonomo
-    "N2": (Reset_Motores,     ()),      #N2: Resetea los motores de la llanta
-    "N3": (lanzamiento,       ()),      #N3: Activa el lanzador
-    "Up":   (Mov_Griper,      (1,)),    #Cruceta arriba: Asciende el griper
-    "Down": (Mov_Griper,      (0,)),    #Cruceta abajo: Desciende el griper 
-    "L1":   (Apertura_Griper, (1,)),    #L1: abre el griper
-    "R1":   (Apertura_Griper, (0,)),    #R1: cierra el griper
+    "N1":   (modo_automatico,   ()),
+    "N2":   (Reset_Motores,     ()),
+    "N3":   (lanzamiento,       ()),
+    "Up":   (Mov_Griper,        (1,)),
+    "Down": (Mov_Griper,        (0,)),
+    "L1":   (Apertura_Griper,   (1,)),
+    "R1":   (Apertura_Griper,   (0,)),
 }
 
+
+# ===========================================================================
+# Bucle principal
+# ===========================================================================
+
+## @brief Ciclo principal del control del robot.
+#  @details Ejecuta indefinidamente las siguientes operaciones en cada iteración:
+#           1. Pausa de 1 ms (time.sleep(0.001)) para evitar rebotes de señal
+#              y reducir la carga de CPU al mínimo necesario.
+#           2. Consulta get_pressed_key() para detectar teclas activas del gamepad.
+#              Si se detecta una tecla registrada en acciones_gamepad, se ejecuta
+#              su función asociada con los argumentos definidos.
+#           3. Lee los tres ejes del gamepad (Ly, Lx, Rx) para calcular las
+#              velocidades omnidireccionales mediante Checar_Velocidades() y las
+#              aplica a los motores con Vel_Motores().
+#           El control manual de joystick es continuo: opera en paralelo con las
+#           acciones de tecla, salvo cuando una acción bloquea el hilo (p. ej.
+#           modo_automatico() o Lanzador() tienen sus propios bucles internos).
+#  @return None  (bucle infinito; solo termina por interrupción externa)
 def main():
-    #ciclo principal que controla el movimiento del robot y lee el control
     while True:
-        time.sleep(0.001)                   #Evita el rebote de la señal del control
+        time.sleep(0.001)
 
-        tecla = get_pressed_key()          # O(n) aquí, una sola vez, busca la tecla que esta presionada 
-        if tecla in acciones_gamepad:      # O(1) real
+        tecla = get_pressed_key()
+        if tecla in acciones_gamepad:
             funcion, args = acciones_gamepad[tecla]
-            funcion(*args)                 #ejecuta la funcion correspondiente a la tecla asignada junto con sus argumentos
+            funcion(*args)
 
-        v1, v2, v3, v4 = Checar_Velocidades(  #se obtiene le movimiento a partir del joystick
-            gamepad.get_joystick("Ly"), #moviento de avance/retroceso
-            gamepad.get_joystick("Lx"), #movimiento lateral(izquierda/derecha)
-            gamepad.get_joystick("Rx"), #giro
-            1
+        v1, v2, v3, v4 = Checar_Velocidades(
+            gamepad.get_joystick("Ly"),   # Eje de avance / retroceso
+            gamepad.get_joystick("Lx"),   # Eje de desplazamiento lateral
+            gamepad.get_joystick("Rx"),   # Eje de giro (rotacion)
+            1                             # Factor ri (escala angular)
         )
-        Vel_Motores(v1,v2,v3,v4)
+        Vel_Motores(v1, v2, v3, v4)
 
-time.sleep(30)  #Inicializacion de la camara
-InicializarTag() #configura la camara para poder leer los tags
-main()   #inicializa el ciclo principal
+
+# ===========================================================================
+# Punto de entrada — secuencia de arranque
+# ===========================================================================
+
+time.sleep(30)      # Espera 30 s para que el hardware de la camara se estabilice
+InicializarTag()    # Configura la camara para lectura de etiquetas QR
+main()              # Inicia el bucle principal de control (bloquea indefinidamente)
