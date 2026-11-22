@@ -1,0 +1,11 @@
+{
+  "intro": "This chapter documents the Storm Breaker robot software (MakeX 2026). It is generated automatically from the Doxygen comments in Robot.py.",
+  "decisions": [
+    {"id": "SW-DEC-001", "title": "Single file for the NovaPi", "decision": "The whole program lives in one file, Robot.py.", "rationale": "The mBuild NovaPi loads a single Python script; keeping everything together avoids import problems and makes quick changes at a competition easier."},
+    {"id": "SW-DEC-002", "title": "Mecanum kinematics with mounting-dependent signs", "decision": "Checar_Velocidades computes v1..v4 and Vel_Motores inverts M2 and M4.", "rationale": "Separating computation from application allows the kinematics to be tested without moving motors; the right-side motors are mounted in the opposite direction."},
+    {"id": "SW-DEC-003", "title": "Manual control always active", "decision": "The joysticks drive the chassis on every iteration of main(), even after a button is pressed.", "rationale": "The driver keeps control of the chassis and can interrupt mechanism actions."},
+    {"id": "SW-DEC-004", "title": "28 s tag-based autonomous", "decision": "Button N1 runs Comparacion_QR in a loop bounded by novapi.timer() < 28.", "rationale": "The autonomous period is 30 s; a 2 s margin avoids overlapping the manual period."},
+    {"id": "SW-DEC-005", "title": "Pixel to cm conversion", "decision": "Camera distances are divided by 16.84 px/cm.", "rationale": "Constant obtained from calibrating a 10 cm tag; it must be recalibrated if the camera or its position changes."},
+    {"id": "SW-DEC-006", "title": "Time-based autonomous movement", "decision": "Mov_Auto moves the robot for a fixed time instead of using the distance it receives.", "rationale": "Provisional solution; converting distance to speed/time is pending calibration."}
+  ]
+}
