@@ -1,6 +1,6 @@
 # 2026 MakeX Challenge — Storm Breaker
 
-Collaborative engineering repository of team **Robótica 76** for the 2026 MakeX Challenge
+Collaborative engineering repository of team **Robótica 76** in collaboration with **[CRM-UTM](https://www.instagram.com/crm.utm/) (Universidad Tecnologica de la Mixteca)** for the 2026 MakeX Challenge
 **Storm Breaker**: robot design (CAD v22), robot programs, a field simulator, strategy studies,
 and the documentation that ties them together.
 
