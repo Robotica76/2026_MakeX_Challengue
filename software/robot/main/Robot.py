@@ -2,7 +2,7 @@
 #  @brief Control principal del robot con movimiento omnidireccional, griper, lanzador y visión QR.
 #  @details Este módulo integra todos los subsistemas del robot:
 #           - Tracción omnidireccional de 4 ruedas mediante motores encoder (M1–M4).
-#           - Griper con movimiento vertical (DC1) y apertura/cierre de pinzas (DC2).
+#           - Griper con movimiento vertical (DC1) y apertura/cierre de pinzas (SM1).
 #           - Lanzador de pelotas con dos motores brushless (BL1, BL2).
 #           - Visión artificial con cámara de IA para lectura y comparación de etiquetas QR.
 #           - Control manual mediante gamepad con mapeo de teclas a acciones.
@@ -14,6 +14,7 @@
 import novapi
 from mbuild.encoder_motor import encoder_motor_class
 from mbuild.ai_camera import ai_camera_class
+from mbuild.smartservo import smartservo_class
 from mbuild import power_expand_board
 from mbuild import gamepad
 import time
@@ -21,7 +22,7 @@ import time
 ## @name Variables globales
 #  @{
 ## @var pot_lanzamiento  Potencia del lanzador (porcentaje) aplicada a BL1/BL2.
-## @var aper_pot_griper  Potencia del motor de apertura/cierre de la garra (DC2).
+## @var aper_pot_griper  Potencia del motor de apertura/cierre de la garra (SM1).
 ## @var mov_pot_griper   Potencia del motor de movimiento de la garra (DC1).
 ## @var v1  Velocidad objetivo de la rueda M1 (la calcula Checar_Velocidades).
 ## @var v2  Velocidad objetivo de la rueda M2.
@@ -35,6 +36,7 @@ import time
 pot_lanzamiento = 0
 aper_pot_griper = 0
 mov_pot_griper = 0
+ang_pot_brush = 0
 bandera = 0
 
 ## @brief Aplica las velocidades globales v1..v4 a los motores (M2 y M4 van invertidos por el sentido de montaje).
@@ -42,20 +44,21 @@ encoder_motor_M1 = encoder_motor_class("M1", "INDEX1")
 encoder_motor_M2 = encoder_motor_class("M2", "INDEX1")
 encoder_motor_M3 = encoder_motor_class("M3", "INDEX1")
 encoder_motor_M4 = encoder_motor_class("M4", "INDEX1")
+## @brief Instancia de la cámara de IA para lectura de etiquetas QR.
 ai_camera_p1 = ai_camera_class("PORT3", "INDEX1")
-
+## @brief Instancias de los smartservos para el griper y el brush.
+smartservo_1 = smartservo_class("M5", "INDEX1")
+smartservo_2 = smartservo_class("M6", "INDEX1")
 
 
 ## @var TECLAS
 #  @brief Tupla de nombres de teclas del gamepad que están registradas en el sistema.
 #  @details Solo las teclas incluidas aquí son evaluadas por get_pressed_key().
 #           Cualquier otra tecla del gamepad se ignora en el bucle principal.
-TECLAS = ("N1", "N2", "N3", "Up", "Down", "L1", "R1")
+TECLAS = ("N1", "N2", "N3", "Up", "Down", "L1", "R1", "Left", "Right")
 
 
-# ===========================================================================
 # Cinemática
-# ===========================================================================
 
 ## @brief Calcula las velocidades de los cuatro motores para un robot omnidireccional.
 #  @details Aplica la ecuación de cinemática inversa holonómica para una configuración
@@ -109,9 +112,7 @@ def Vel_Motores(v1, v2, v3, v4):
     encoder_motor_M4.set_speed(v4 * -1)
 
 
-# ===========================================================================
 # Visión y autonomía
-# ===========================================================================
 
 ## @brief Lee las etiquetas QR de la cámara y decide el movimiento autónomo del robot.
 #  @details Consulta los slots 2 y 3 de la cámara (cubos izquierdo y derecho) y
@@ -274,9 +275,7 @@ def Comparacion_Valores(Val1, Dist1, Pos1, Val2, Dist2, Pos2, modo):
             Mov_Auto(1, Dist2)
 
 
-# ===========================================================================
 # Griper
-# ===========================================================================
 
 ## @brief Controla el movimiento vertical del griper (ascenso o descenso).
 #  @details Establece la potencia de mov_pot_griper en 50 % y la aplica al
@@ -291,9 +290,44 @@ def Mov_Griper(modo):
     global mov_pot_griper
     mov_pot_griper = 50
     if modo == 1:
-        power_expand_board.set_power("DC1",  mov_pot_griper)
+        while gamepad.is_key_pressed("Up"):
+            power_expand_board.set_power("DC1",  mov_pot_griper)
     else:
-        power_expand_board.set_power("DC1", -mov_pot_griper)
+        while gamepad.is_key_pressed("Down"):
+            power_expand_board.set_power("DC1", -mov_pot_griper)
+    power_expand_board.set_power("DC1", 0)
+
+
+## @brief Verifica el estado del smartservo 1 y lo detiene si detecta sobrecarga o bloqueo.
+#  @details Espera 300 ms tras el inicio del movimiento para que el servo alcance
+#           velocidad estable, luego lee la corriente y la velocidad del smartservo_1.
+#           Dependiendo del @p modo, aplica uno de dos criterios de parada:
+#           - Modo 1 (apertura): detiene el servo si la corriente supera 900 mA
+#             o la velocidad cae por debajo de 2 rpm, lo que indica que las pinzas
+#             llegaron al tope mecánico o encontraron resistencia excesiva.
+#           - Modo 0 (cierre): detiene el servo si la corriente supera 900 mA
+#             o la velocidad sube por encima de -2 rpm (el signo negativo refleja
+#             la dirección inversa del cierre), indicando bloqueo o tope mecánico.
+#           Al detectar la condición de parada, envía velocidad 0 al servo y espera
+#           500 ms para que el mecanismo se estabilice antes de regresar el control.
+#  @param modo Entero que indica la dirección de movimiento que se está supervisando.
+#              1              = supervisión de apertura de pinzas.
+#              Cualquier otro = supervisión de cierre de pinzas.
+#  @return None
+def ChecarServo(modo):
+    time.sleep(0.3)
+    Corriente = 0
+    Velocidad = 0
+    Corriente = smartservo_1.get_value("current")
+    Velocidad = smartservo_1.get_value("speed")
+    if modo == 1:
+        if Corriente > 900 or Velocidad < 2:
+            smartservo_1.move(0, 0)
+            time.sleep(0.5)
+    else:
+        if Corriente > 900 or Velocidad > -2:
+            smartservo_1.move(0, 0)
+            time.sleep(0.5)
 
 
 ## @brief Controla la apertura o el cierre de las pinzas del griper.
@@ -306,17 +340,50 @@ def Mov_Griper(modo):
 #              Cualquier otro = cerrar las pinzas (potencia negativa en DC2).
 #  @return None
 def Apertura_Griper(modo):
-    global aper_pot_griper
-    aper_pot_griper = 50
+    aper_pot_griper = 80
     if modo == 1:
-        power_expand_board.set_power("DC2",  aper_pot_griper)
+        while gamepad.is_key_pressed("L1"):
+            smartservo_1.set_power(aper_pot_griper)
+            ChecarServo(1)
     else:
-        power_expand_board.set_power("DC2", -aper_pot_griper)
+        while gamepad.is_key_pressed("R1"):
+            smartservo_1.set_power(aper_pot_griper * -1)
+            ChecarServo(0)
+    smartservo_1.set_power(0)
 
 
-# ===========================================================================
+## @brief Ajusta el ángulo del smartservo 2 (brush) mediante el gamepad.
+#  @details Incrementa o decrementa la variable global @p ang_pot_brush en pasos
+#           de 5 grados mientras la tecla correspondiente permanezca presionada,
+#           respetando los límites físicos del mecanismo:
+#           - Límite superior: 176 grados (modo 1, tecla "Left").
+#           - Límite inferior: 4 grados   (modo 0, tecla "Right").
+#           Tras cada paso aplica el nuevo ángulo al servo con una velocidad de
+#           movimiento de 20 unidades y espera 300 ms para que el servo alcance
+#           la posición antes de leer de nuevo el gamepad, evitando saltos bruscos.
+#           La variable global @p ang_pot_brush conserva el ángulo entre llamadas,
+#           de modo que el brush retiene su posición al soltar la tecla.
+#  @param modo Entero que indica la dirección de ajuste del ángulo.
+#              1              = incrementar el ángulo (mover hacia 176°, tecla "Left").
+#              Cualquier otro = decrementar el ángulo (mover hacia 4°, tecla "Right").
+#  @return None
+def Angulo_Brush(modo):
+    global ang_pot_brush
+    if modo == 1:
+      while gamepad.is_key_pressed("Left"):
+        if ang_pot_brush < 176:
+          ang_pot_brush = (ang_pot_brush + 5)
+          smartservo_2.move_to(ang_pot_brush, 20)
+          time.sleep(0.3)
+    else:
+      while gamepad.is_key_pressed("Right"):
+        if ang_pot_brush > 4:
+          ang_pot_brush = (ang_pot_brush + -5)
+          smartservo_2.move_to(ang_pot_brush, 20)
+          time.sleep(0.3)
+
+
 # Lanzador
-# ===========================================================================
 
 ## @brief Bucle interactivo de control de los motores brushless del lanzador.
 #  @details Permite al operador ajustar la potencia de lanzamiento en tiempo real
@@ -348,9 +415,7 @@ def Lanzador():
             bandera = 1
 
 
-# ===========================================================================
 # Modos de operación
-# ===========================================================================
 
 ## @brief Activa el modo autónomo del robot durante un período de 28 segundos.
 #  @details Reinicia el temporizador interno de novapi y ejecuta Comparacion_QR()
@@ -375,9 +440,7 @@ def lanzamiento():
     Lanzador()
 
 
-# ===========================================================================
 # Control del gamepad
-# ===========================================================================
 
 ## @brief Detiene por completo los motores de tracción del robot.
 #  @details Envía velocidad 0 a los cuatro motores encoder (M1–M4), deteniendo
@@ -420,20 +483,23 @@ def get_pressed_key():
 #  | Down  | Mov_Griper       | 0         | Desciende el griper                 |
 #  | L1    | Apertura_Griper  | 1         | Abre las pinzas del griper          |
 #  | R1    | Apertura_Griper  | 0         | Cierra las pinzas del griper        |
+#  | Left  | Angulo_Brush     | 1         | Ajusta el ángulo del brush          |
+#  | Right | Angulo_Brush     | 0         | Ajusta el ángulo del brush          |
+
 acciones_gamepad = {
     "N1":   (modo_automatico,   ()),
     "N2":   (Reset_Motores,     ()),
-    "N3":   (lanzamiento,       ()),
+    "N3":   (lanzamiento,       ()),        ##MODIFICAR
     "Up":   (Mov_Griper,        (1,)),
     "Down": (Mov_Griper,        (0,)),
     "L1":   (Apertura_Griper,   (1,)),
     "R1":   (Apertura_Griper,   (0,)),
+    "Left": (Angulo_Brush,      (1,)),
+    "Right": (Angulo_Brush,     (0,)),
 }
 
 
-# ===========================================================================
 # Bucle principal
-# ===========================================================================
 
 ## @brief Ciclo principal del control del robot.
 #  @details Ejecuta indefinidamente las siguientes operaciones en cada iteración:
@@ -467,9 +533,7 @@ def main():
         Vel_Motores(v1, v2, v3, v4)
 
 
-# ===========================================================================
-# Punto de entrada — secuencia de arranque
-# ===========================================================================
+# Punto de entrada
 
 time.sleep(30)      # Espera 30 s para que el hardware de la camara se estabilice
 InicializarTag()    # Configura la camara para lectura de etiquetas QR
